@@ -15,6 +15,8 @@ import {
   LogOut,
   Bell,
   CalendarClock,
+  Gavel,
+  Wrench,
 } from "lucide-react";
 
 import { useSidebar } from "@/components/ui/sidebar";
@@ -116,6 +118,7 @@ const transactionMenuItems = [
   { title: "Payments", icon: CreditCard, url: "/payments" },
   { title: "Expenses", icon: ReceiptText, url: "/expenses" },
   { title: "EMI", icon: CalendarClock, url: "/emi" },
+  { title: "Bidding", icon: Gavel, url: "/bidding" },
 ];
 
 const managementMenuItems = [
@@ -123,6 +126,7 @@ const managementMenuItems = [
   { title: "Reports", icon: BarChart3, url: "/reports" },
   { title: "Public Page Analytics", icon: BarChart3, url: "/analytics/public-page" },
   { title: "Marketplace Analytics", icon: BarChart3, url: "/analytics/marketplace" },
+  { title: "Vehicle Inspection", icon: Wrench, url: "/vehicles" },
   { title: "Alerts", icon: Bell, url: "/alerts" },
 ];
 

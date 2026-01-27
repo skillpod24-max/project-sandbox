@@ -292,8 +292,9 @@ const Marketplace = () => {
     return vehicles.filter(v => compareList.includes(v.id));
   }, [vehicles, compareList]);
 
-  // Limit vehicles shown initially
-  const displayedVehicles = showAllVehicles ? filteredVehicles : filteredVehicles.slice(0, 12);
+  // Limit vehicles shown initially - admin controlled (default 6)
+  const vehiclesPerPage = 6;
+  const displayedVehicles = showAllVehicles ? filteredVehicles : filteredVehicles.slice(0, vehiclesPerPage);
 
   if (loading) {
     return <CarLoader />;
@@ -602,7 +603,7 @@ const Marketplace = () => {
         </div>
 
         {/* Vehicle Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {displayedVehicles.map((vehicle) => (
             <MarketplaceVehicleCard
               key={vehicle.id}
@@ -624,7 +625,7 @@ const Marketplace = () => {
         </div>
 
         {/* Load More Button */}
-        {filteredVehicles.length > 12 && !showAllVehicles && (
+        {filteredVehicles.length > vehiclesPerPage && !showAllVehicles && (
           <div className="text-center mt-8">
             <Button 
               size="lg"

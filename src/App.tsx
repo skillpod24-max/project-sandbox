@@ -34,6 +34,8 @@ import MarketplaceDealer from "./pages/marketplace/MarketplaceDealer";
 import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
 import CompareVehicles from "./pages/marketplace/CompareVehicles";
 import MarketplaceAnalytics from "./pages/MarketplaceAnalytics";
+import Bidding from "./pages/Bidding";
+import VehicleInspection from "./pages/VehicleInspection";
 
 const queryClient = new QueryClient();
 
@@ -194,6 +196,8 @@ const App = () => (
               </Layout>
             }
           />
+          <Route path="/bidding" element={<Bidding />} />
+          <Route path="/inspection/:vehicleId" element={<VehicleInspection />} />
 
           {/* ---------- 404 ---------- */}
           <Route path="*" element={<NotFound />} />
