@@ -647,6 +647,8 @@ setVehicleImages(prev => ({
     setPurchasePriceDisplay("");
     setSellingPriceDisplay("");
     setStrikeoutPriceDisplay("");
+    setHighlightsText("");
+    setFeaturesText("");
 
     setPendingImages([]);
     setPendingDocs([]);

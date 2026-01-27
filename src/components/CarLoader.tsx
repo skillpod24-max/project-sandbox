@@ -29,8 +29,8 @@ const CarLoader = ({
 
         {/* Car */}
         <g className="animate-car">
-          <rect x="60" y="45" rx="10" ry="10" width="120" height="30" fill="#16A34A" />
-          <rect x="85" y="30" rx="6" ry="6" width="60" height="20" fill="#22C55E" />
+          <rect x="60" y="45" rx="10" ry="10" width="120" height="30" fill="#2563EB" />
+          <rect x="85" y="30" rx="6" ry="6" width="60" height="20" fill="#3B82F6" />
 
           {/* Windows */}
           <rect x="92" y="34" width="20" height="14" rx="3" fill="#E5E7EB" />

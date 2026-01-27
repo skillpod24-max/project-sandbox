@@ -51,9 +51,9 @@ export default function MarketplaceEMICalculator({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 md:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-white text-xl">
               <Calculator className="h-6 w-6" />
@@ -74,7 +74,7 @@ export default function MarketplaceEMICalculator({
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           {/* Vehicle Price */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">

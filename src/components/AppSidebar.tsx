@@ -122,6 +122,7 @@ const managementMenuItems = [
   { title: "Documents", icon: FileText, url: "/documents" },
   { title: "Reports", icon: BarChart3, url: "/reports" },
   { title: "Public Page Analytics", icon: BarChart3, url: "/analytics/public-page" },
+  { title: "Marketplace Analytics", icon: BarChart3, url: "/analytics/marketplace" },
   { title: "Alerts", icon: Bell, url: "/alerts" },
 ];
 
