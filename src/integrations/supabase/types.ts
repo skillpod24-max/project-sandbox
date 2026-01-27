@@ -14,6 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
+      auction_bids: {
+        Row: {
+          auction_id: string
+          bid_amount: number
+          bidder_id: string
+          created_at: string
+          id: string
+          is_winning: boolean | null
+        }
+        Insert: {
+          auction_id: string
+          bid_amount: number
+          bidder_id: string
+          created_at?: string
+          id?: string
+          is_winning?: boolean | null
+        }
+        Update: {
+          auction_id?: string
+          bid_amount?: number
+          bidder_id?: string
+          created_at?: string
+          id?: string
+          is_winning?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auction_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_listings: {
+        Row: {
+          bid_count: number | null
+          created_at: string
+          created_by: string
+          current_bid: number | null
+          current_bidder_id: string | null
+          dealer_confirmed: boolean | null
+          description: string | null
+          end_time: string
+          final_price: number | null
+          id: string
+          negotiation_notes: string | null
+          reserve_price: number | null
+          seller_confirmed: boolean | null
+          start_time: string
+          starting_price: number
+          status: string
+          title: string
+          updated_at: string
+          vehicle_id: string | null
+          winner_id: string | null
+        }
+        Insert: {
+          bid_count?: number | null
+          created_at?: string
+          created_by: string
+          current_bid?: number | null
+          current_bidder_id?: string | null
+          dealer_confirmed?: boolean | null
+          description?: string | null
+          end_time: string
+          final_price?: number | null
+          id?: string
+          negotiation_notes?: string | null
+          reserve_price?: number | null
+          seller_confirmed?: boolean | null
+          start_time: string
+          starting_price?: number
+          status?: string
+          title: string
+          updated_at?: string
+          vehicle_id?: string | null
+          winner_id?: string | null
+        }
+        Update: {
+          bid_count?: number | null
+          created_at?: string
+          created_by?: string
+          current_bid?: number | null
+          current_bidder_id?: string | null
+          dealer_confirmed?: boolean | null
+          description?: string | null
+          end_time?: string
+          final_price?: number | null
+          id?: string
+          negotiation_notes?: string | null
+          reserve_price?: number | null
+          seller_confirmed?: boolean | null
+          start_time?: string
+          starting_price?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          vehicle_id?: string | null
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_state_log: {
+        Row: {
+          auction_id: string
+          created_at: string
+          from_status: string | null
+          id: string
+          notes: string | null
+          performed_by: string | null
+          to_status: string
+        }
+        Insert: {
+          auction_id: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          to_status: string
+        }
+        Update: {
+          auction_id?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_state_log_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auction_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -438,6 +588,30 @@ export type Database = {
           reason?: string | null
           target_id?: string
           target_type?: string
+        }
+        Relationships: []
+      }
+      marketplace_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -990,6 +1164,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "vehicle_images_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_inspections: {
+        Row: {
+          checklist: Json | null
+          created_at: string
+          electrical_score: number | null
+          exterior_score: number | null
+          id: string
+          inspection_date: string | null
+          inspector_id: string | null
+          interior_score: number | null
+          is_certified: boolean | null
+          mechanical_score: number | null
+          notes: string | null
+          overall_score: number | null
+          photos: string[] | null
+          tyres_score: number | null
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          checklist?: Json | null
+          created_at?: string
+          electrical_score?: number | null
+          exterior_score?: number | null
+          id?: string
+          inspection_date?: string | null
+          inspector_id?: string | null
+          interior_score?: number | null
+          is_certified?: boolean | null
+          mechanical_score?: number | null
+          notes?: string | null
+          overall_score?: number | null
+          photos?: string[] | null
+          tyres_score?: number | null
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          checklist?: Json | null
+          created_at?: string
+          electrical_score?: number | null
+          exterior_score?: number | null
+          id?: string
+          inspection_date?: string | null
+          inspector_id?: string | null
+          interior_score?: number | null
+          is_certified?: boolean | null
+          mechanical_score?: number | null
+          notes?: string | null
+          overall_score?: number | null
+          photos?: string[] | null
+          tyres_score?: number | null
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_inspections_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
