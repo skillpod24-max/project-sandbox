@@ -33,9 +33,18 @@ import MarketplaceVehicle from "./pages/marketplace/MarketplaceVehicle";
 import MarketplaceDealer from "./pages/marketplace/MarketplaceDealer";
 import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
 import CompareVehicles from "./pages/marketplace/CompareVehicles";
+import AuctionDetail from "./pages/marketplace/AuctionDetail";
 import MarketplaceAnalytics from "./pages/MarketplaceAnalytics";
 import Bidding from "./pages/Bidding";
 import VehicleInspection from "./pages/VehicleInspection";
+
+// Footer Pages
+import AboutPage from "./pages/footer/AboutPage";
+import HowItWorksPage from "./pages/footer/HowItWorksPage";
+import ContactPage from "./pages/footer/ContactPage";
+import FAQPage from "./pages/footer/FAQPage";
+import TermsPage from "./pages/footer/TermsPage";
+import PrivacyPage from "./pages/footer/PrivacyPage";
 
 const queryClient = new QueryClient();
 
@@ -52,7 +61,16 @@ const App = () => (
           <Route path="/marketplace/vehicle/:vehicleId" element={<MarketplaceVehicle />} />
           <Route path="/marketplace/dealer/:dealerId" element={<MarketplaceDealer />} />
           <Route path="/marketplace/compare" element={<CompareVehicles />} />
+          <Route path="/marketplace/auction/:auctionId" element={<AuctionDetail />} />
           <Route path="/admin/marketplace" element={<MarketplaceAdmin />} />
+          
+          {/* Footer Pages */}
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           
           {/* ---------- Public Pages (Separate from Marketplace) ---------- */}
           <Route path="/auth" element={<Auth />} />

@@ -460,14 +460,14 @@ const MarketplaceVehicle = () => {
               </Card>
             )}
 
-            {/* Highlights */}
+            {/* Highlights - 2 per row */}
             {vehicle.public_highlights && vehicle.public_highlights.length > 0 && (
               <Card className="p-5 border-0 shadow-sm rounded-2xl">
                 <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
                   <Award className="h-5 w-5 text-amber-500" />
                   Key Highlights
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {vehicle.public_highlights.map((highlight: string, i: number) => (
                     <div key={i} className="flex items-center gap-3 bg-amber-50/50 rounded-xl p-3">
                       <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">

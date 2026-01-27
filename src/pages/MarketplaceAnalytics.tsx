@@ -43,21 +43,24 @@ const MarketplaceAnalytics = () => {
       const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
       const startDate = startOfDay(subDays(new Date(), days));
 
-      // Fetch events
+      // Fetch ONLY marketplace-specific events (from marketplace pages, not public dealer pages)
+      // Marketplace events have public_page_id = "marketplace" or come from vehicle_view in marketplace context
       const { data: events } = await supabase
         .from("public_page_events")
         .select("*")
         .eq("dealer_user_id", user.id)
+        .eq("public_page_id", "marketplace")
         .gte("created_at", startDate.toISOString());
 
-      // Fetch public vehicles count
+      // Fetch marketplace-enabled vehicles count
       const { count: publicVehiclesCount } = await supabase
         .from("vehicles")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("is_public", true);
+        .eq("is_public", true)
+        .eq("marketplace_status", "listed");
 
-      // Calculate stats
+      // Calculate stats - only marketplace events
       const views = (events || []).filter(e => 
         e.event_type === "vehicle_view" || e.event_type === "dealer_view"
       ).length;
@@ -84,7 +87,7 @@ const MarketplaceAnalytics = () => {
       (events || []).forEach(e => {
         const d = format(new Date(e.created_at), "MMM dd");
         if (dailyMap[d]) {
-          if (e.event_type.includes("view")) dailyMap[d].views++;
+          if (e.event_type === "vehicle_view" || e.event_type === "dealer_view") dailyMap[d].views++;
           if (e.event_type === "enquiry_submit") dailyMap[d].enquiries++;
         }
       });
