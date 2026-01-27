@@ -32,6 +32,8 @@ import Marketplace from "./pages/Marketplace";
 import MarketplaceVehicle from "./pages/marketplace/MarketplaceVehicle";
 import MarketplaceDealer from "./pages/marketplace/MarketplaceDealer";
 import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
+import CompareVehicles from "./pages/marketplace/CompareVehicles";
+import MarketplaceAnalytics from "./pages/MarketplaceAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,7 @@ const App = () => (
           <Route path="/" element={<Marketplace />} />
           <Route path="/marketplace/vehicle/:vehicleId" element={<MarketplaceVehicle />} />
           <Route path="/marketplace/dealer/:dealerId" element={<MarketplaceDealer />} />
+          <Route path="/marketplace/compare" element={<CompareVehicles />} />
           <Route path="/admin/marketplace" element={<MarketplaceAdmin />} />
           
           {/* ---------- Public Pages (Separate from Marketplace) ---------- */}
@@ -156,6 +159,14 @@ const App = () => (
             element={
               <Layout>
                 <Reports />
+              </Layout>
+            }
+          />
+          <Route
+            path="/analytics/marketplace"
+            element={
+              <Layout>
+                <MarketplaceAnalytics />
               </Layout>
             }
           />

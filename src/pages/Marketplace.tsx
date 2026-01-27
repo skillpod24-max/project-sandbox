@@ -9,13 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Search, MapPin, Car, Bike, Truck, Star, CheckCircle, Shield, 
   CreditCard, ChevronRight, Building2, ArrowRight, Heart, Sparkles,
-  Menu, X, Play, Award, Users, Clock, TrendingUp, Calculator
+  Menu, X, Play, Award, Users, Clock, TrendingUp, Calculator, GitCompare
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import CarLoader from "@/components/CarLoader";
 import MarketplaceVehicleCard from "@/components/marketplace/MarketplaceVehicleCard";
 import MarketplaceDealerCard from "@/components/marketplace/MarketplaceDealerCard";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import CompareBar from "@/components/marketplace/CompareBar";
+import useWishlist from "@/hooks/useWishlist";
+import useComparison from "@/hooks/useComparison";
 
 // Quick category pills
 const CategoryPill = memo(({ icon: Icon, label, active, onClick }: { icon: any; label: string; active: boolean; onClick: () => void }) => (
@@ -23,8 +26,8 @@ const CategoryPill = memo(({ icon: Icon, label, active, onClick }: { icon: any; 
     onClick={onClick}
     className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all whitespace-nowrap ${
       active 
-        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/25' 
-        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:border-orange-200'
+        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
+        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:border-blue-200'
     }`}
   >
     <Icon className="h-4 w-4" />
@@ -39,7 +42,7 @@ const BodyTypePill = memo(({ label, active, onClick }: { label: string; active: 
     onClick={onClick}
     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
       active 
-        ? 'bg-orange-100 text-orange-700 border-2 border-orange-300' 
+        ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' 
         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-2 border-transparent'
     }`}
   >
@@ -58,13 +61,17 @@ const Marketplace = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showAllVehicles, setShowAllVehicles] = useState(false);
 
+  // Wishlist and comparison hooks
+  const { isInWishlist, toggleWishlist, wishlistCount } = useWishlist();
+  const { compareList, isInCompare, toggleCompare, removeFromCompare, clearCompare } = useComparison();
+
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [vehicleType, setVehicleType] = useState<string>("car");
   const [bodyType, setBodyType] = useState<string>("all");
   const [fuelType, setFuelType] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
-  const [location, setLocation] = useState("");
+  const [cityFilter, setCityFilter] = useState<string>("all");
 
   // Banner slides
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -73,27 +80,38 @@ const Marketplace = () => {
       title: "Find Your Perfect Ride",
       subtitle: "10,000+ Verified Used Cars & Bikes",
       cta: "Start Exploring",
-      gradient: "from-orange-500 via-orange-600 to-red-600",
+      gradient: "from-blue-500 via-blue-600 to-blue-700",
       image: "🚗"
     },
     {
       title: "Sell Your Car in 3 Steps",
       subtitle: "Get Best Price. Instant Payment.",
       cta: "Get Free Valuation",
-      gradient: "from-blue-600 via-blue-700 to-indigo-700",
+      gradient: "from-emerald-500 via-emerald-600 to-teal-600",
       image: "💰"
     },
     {
       title: "Easy Finance Options",
       subtitle: "Low EMI starting from ₹4,999/month",
       cta: "Check EMI",
-      gradient: "from-emerald-500 via-emerald-600 to-teal-600",
+      gradient: "from-purple-500 via-purple-600 to-indigo-600",
       image: "📊"
     }
   ];
 
   // Body types for cars
   const carBodyTypes = ["All", "Sedan", "Hatchback", "SUV", "MUV", "Luxury", "Compact SUV"];
+
+  // Get unique cities from dealers
+  const availableCities = useMemo(() => {
+    const cities = dealers
+      .map(d => {
+        const parts = (d.dealer_address || "").split(",");
+        return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+      })
+      .filter(Boolean);
+    return [...new Set(cities)];
+  }, [dealers]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -127,18 +145,20 @@ const Marketplace = () => {
           .in("user_id", dealerIds)
           .eq("status", "in_stock");
 
-        // Fetch images for vehicles
+        // Fetch ALL images for vehicles (not just primary)
         const vehicleIds = (vehiclesData || []).map(v => v.id);
         const { data: imagesData } = await supabase
           .from("vehicle_images")
           .select("*")
-          .in("vehicle_id", vehicleIds)
-          .eq("is_primary", true);
+          .in("vehicle_id", vehicleIds);
 
-        const imageMap = (imagesData || []).reduce((acc: any, img) => {
-          acc[img.vehicle_id] = img.image_url;
-          return acc;
-        }, {});
+        // Create image map - prefer primary, otherwise use first available
+        const imageMap: Record<string, string> = {};
+        (imagesData || []).forEach(img => {
+          if (!imageMap[img.vehicle_id] || img.is_primary) {
+            imageMap[img.vehicle_id] = img.image_url;
+          }
+        });
 
         setVehicles((vehiclesData || []).map(v => ({
           ...v,
@@ -190,12 +210,22 @@ const Marketplace = () => {
     return vehicles.filter(v => v.user_id === userId).length;
   }, [vehicles]);
 
+  const getDealerCity = useCallback((userId: string) => {
+    const dealer = dealers.find(d => d.user_id === userId);
+    if (!dealer?.dealer_address) return null;
+    const parts = dealer.dealer_address.split(",");
+    return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+  }, [dealers]);
+
   const filteredVehicles = useMemo(() => {
     return vehicles.filter(v => {
       const matchesSearch = !searchTerm || 
         `${v.brand} ${v.model} ${v.variant || ""}`.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = vehicleType === "all" || v.vehicle_type === vehicleType;
       const matchesFuel = fuelType === "all" || v.fuel_type === fuelType;
+      
+      // City filter
+      const matchesCity = cityFilter === "all" || getDealerCity(v.user_id) === cityFilter;
       
       // Body type matching for cars
       let matchesBody = true;
@@ -232,9 +262,9 @@ const Marketplace = () => {
         matchesPrice = v.selling_price >= min && (!max || v.selling_price <= max);
       }
       
-      return matchesSearch && matchesType && matchesFuel && matchesPrice && matchesBody;
+      return matchesSearch && matchesType && matchesFuel && matchesPrice && matchesBody && matchesCity;
     });
-  }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, bodyType]);
+  }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, bodyType, cityFilter, getDealerCity]);
 
   const topDealers = useMemo(() => {
     return dealers
@@ -257,6 +287,11 @@ const Marketplace = () => {
       .slice(0, 8);
   }, [vehicles]);
 
+  // Get compare vehicles data
+  const compareVehicles = useMemo(() => {
+    return vehicles.filter(v => compareList.includes(v.id));
+  }, [vehicles, compareList]);
+
   // Limit vehicles shown initially
   const displayedVehicles = showAllVehicles ? filteredVehicles : filteredVehicles.slice(0, 12);
 
@@ -266,12 +301,12 @@ const Marketplace = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Top Navigation - Cars24 Style */}
+      {/* Top Navigation - Blue Theme */}
       <header className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="container mx-auto px-4">
           <div className="h-16 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Car className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -288,21 +323,27 @@ const Marketplace = () => {
                   placeholder="Search by brand, model..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 h-11 rounded-full bg-slate-100 border-0 focus-visible:ring-2 focus-visible:ring-orange-500"
+                  className="pl-12 pr-4 h-11 rounded-full bg-slate-100 border-0 focus-visible:ring-2 focus-visible:ring-blue-500"
                 />
               </div>
             </div>
 
             <nav className="hidden md:flex items-center gap-4">
-              <a href="#vehicles" className="text-sm font-medium text-slate-600 hover:text-orange-600 transition-colors">
+              <a href="#vehicles" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
                 Buy Vehicle
               </a>
-              <a href="#dealers" className="text-sm font-medium text-slate-600 hover:text-orange-600 transition-colors">
+              <a href="#dealers" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
                 Dealers
               </a>
+              {wishlistCount > 0 && (
+                <button className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-red-500">
+                  <Heart className="h-4 w-4" />
+                  <span>{wishlistCount}</span>
+                </button>
+              )}
               <Button 
                 variant="ghost"
-                className="text-slate-600 hover:text-orange-600"
+                className="text-slate-600 hover:text-blue-600"
                 onClick={() => navigate("/auth")}
               >
                 Login
@@ -331,16 +372,16 @@ const Marketplace = () => {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <a href="#vehicles" className="py-2 text-slate-600 hover:text-orange-600">Buy Vehicle</a>
-                <a href="#dealers" className="py-2 text-slate-600 hover:text-orange-600">Dealers</a>
-                <Link to="/auth" className="py-2 text-slate-600 hover:text-orange-600">Login</Link>
+                <a href="#vehicles" className="py-2 text-slate-600 hover:text-blue-600">Buy Vehicle</a>
+                <a href="#dealers" className="py-2 text-slate-600 hover:text-blue-600">Dealers</a>
+                <Link to="/auth" className="py-2 text-slate-600 hover:text-blue-600">Login</Link>
               </div>
             </div>
           )}
         </div>
       </header>
 
-      {/* Hero Section - Cars24 Style with Gradient */}
+      {/* Hero Section - Blue Gradient */}
       <section className="relative overflow-hidden">
         <div className={`bg-gradient-to-r ${banners[currentSlide].gradient} py-10 md:py-16 transition-all duration-700`}>
           <div className="container mx-auto px-4">
@@ -453,7 +494,7 @@ const Marketplace = () => {
             </h2>
             <p className="text-slate-500 text-sm mt-1">Verified & trusted dealers with best ratings</p>
           </div>
-          <Button variant="ghost" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 gap-1">
+          <Button variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1">
             View All <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -476,17 +517,17 @@ const Marketplace = () => {
       </section>
 
       {/* Vehicles in High Demand */}
-      <section className="bg-gradient-to-b from-orange-50 to-white py-10">
+      <section className="bg-gradient-to-b from-blue-50 to-white py-10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-orange-500" />
+                <TrendingUp className="h-6 w-6 text-blue-500" />
                 High Demand Vehicles
               </h2>
               <p className="text-slate-500 text-sm mt-1">Most viewed vehicles this week</p>
             </div>
-            <Button variant="ghost" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 gap-1">
+            <Button variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1">
               View All <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -498,6 +539,10 @@ const Marketplace = () => {
                 vehicle={vehicle}
                 dealer={getDealerForVehicle(vehicle.user_id)}
                 compact
+                isInWishlist={isInWishlist(vehicle.id)}
+                isInCompare={isInCompare(vehicle.id)}
+                onWishlistToggle={toggleWishlist}
+                onCompareToggle={toggleCompare}
               />
             ))}
           </div>
@@ -516,6 +561,19 @@ const Marketplace = () => {
           
           {/* Inline Filters */}
           <div className="hidden md:flex gap-2">
+            {/* City Filter */}
+            <Select value={cityFilter} onValueChange={setCityFilter}>
+              <SelectTrigger className="w-36 border-slate-200 rounded-lg">
+                <MapPin className="h-4 w-4 mr-1 text-slate-400" />
+                <SelectValue placeholder="City" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cities</SelectItem>
+                {availableCities.map((city) => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={fuelType} onValueChange={setFuelType}>
               <SelectTrigger className="w-32 border-slate-200 rounded-lg">
                 <SelectValue placeholder="Fuel" />
@@ -550,6 +608,10 @@ const Marketplace = () => {
               key={vehicle.id}
               vehicle={vehicle}
               dealer={getDealerForVehicle(vehicle.user_id)}
+              isInWishlist={isInWishlist(vehicle.id)}
+              isInCompare={isInCompare(vehicle.id)}
+              onWishlistToggle={toggleWishlist}
+              onCompareToggle={toggleCompare}
             />
           ))}
           {filteredVehicles.length === 0 && (
@@ -567,7 +629,7 @@ const Marketplace = () => {
             <Button 
               size="lg"
               variant="outline"
-              className="rounded-full px-8 border-orange-300 text-orange-600 hover:bg-orange-50"
+              className="rounded-full px-8 border-blue-300 text-blue-600 hover:bg-blue-50"
               onClick={() => setShowAllVehicles(true)}
             >
               View All {filteredVehicles.length} Vehicles
@@ -581,8 +643,8 @@ const Marketplace = () => {
       <section className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 py-16">
         <div className="container mx-auto px-4 text-center text-white">
           <div className="max-w-2xl mx-auto">
-            <div className="h-16 w-16 rounded-2xl bg-orange-500/20 backdrop-blur flex items-center justify-center mx-auto mb-6">
-              <Building2 className="h-8 w-8 text-orange-400" />
+            <div className="h-16 w-16 rounded-2xl bg-blue-500/20 backdrop-blur flex items-center justify-center mx-auto mb-6">
+              <Building2 className="h-8 w-8 text-blue-400" />
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Are You a Dealer?</h2>
             <p className="text-lg opacity-80 mb-8">
@@ -591,7 +653,7 @@ const Marketplace = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg rounded-full px-8"
+                className="bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-full px-8"
                 onClick={() => navigate("/auth")}
               >
                 Start Free Trial
@@ -615,7 +677,7 @@ const Marketplace = () => {
             { icon: CheckCircle, label: "100% Verified", desc: "Every dealer verified", color: "text-emerald-600 bg-emerald-50" },
             { icon: Shield, label: "Safe Transactions", desc: "Secure payments", color: "text-blue-600 bg-blue-50" },
             { icon: CreditCard, label: "Easy EMI", desc: "Flexible finance", color: "text-purple-600 bg-purple-50" },
-            { icon: Award, label: "Best Price", desc: "Guaranteed savings", color: "text-orange-600 bg-orange-50" },
+            { icon: Award, label: "Best Price", desc: "Guaranteed savings", color: "text-amber-600 bg-amber-50" },
           ].map((item, i) => (
             <Card key={i} className="text-center p-6 border-0 shadow-sm rounded-2xl bg-white hover:shadow-lg transition-shadow group">
               <div className={`h-14 w-14 rounded-xl ${item.color} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}>
@@ -627,6 +689,13 @@ const Marketplace = () => {
           ))}
         </div>
       </section>
+
+      {/* Compare Bar */}
+      <CompareBar
+        vehicles={compareVehicles}
+        onRemove={removeFromCompare}
+        onClear={clearCompare}
+      />
 
       {/* Footer */}
       <MarketplaceFooter />
