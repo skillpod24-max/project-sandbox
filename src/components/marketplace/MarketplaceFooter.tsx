@@ -39,10 +39,9 @@ const MarketplaceFooter = () => {
             <h4 className="font-semibold mb-4 text-white">For Buyers</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><Link to="/" className="hover:text-white transition-colors">Browse Vehicles</Link></li>
-              <li><Link to="/#dealers" className="hover:text-white transition-colors">Find Dealers</Link></li>
               <li><Link to="/marketplace/compare" className="hover:text-white transition-colors">Compare Cars</Link></li>
-              <li><a href="#" className="hover:text-white transition-colors">EMI Calculator</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Used Car Valuation</a></li>
+              <li><Link to="/how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
+              <li><Link to="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
             </ul>
           </div>
 
@@ -51,35 +50,28 @@ const MarketplaceFooter = () => {
             <h4 className="font-semibold mb-4 text-white">For Dealers</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><Link to="/auth" className="hover:text-white transition-colors">Dealer Login</Link></li>
-              <li><Link to="/auth" className="hover:text-white transition-colors">List Your Dealership</Link></li>
-              <li><Link to="/auth" className="hover:text-white transition-colors">List Your Vehicles</Link></li>
-              <li><a href="#" className="hover:text-white transition-colors">Pricing Plans</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Dealer Benefits</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Success Stories</a></li>
+              <li><Link to="/auth" className="hover:text-white transition-colors">Register as Dealer</Link></li>
+              <li><Link to="/bidding" className="hover:text-white transition-colors">Vehicle Auctions</Link></li>
             </ul>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold mb-4 text-white">Quick Links</h4>
+            <h4 className="font-semibold mb-4 text-white">Company</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
-              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Press</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Partner With Us</a></li>
+              <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link to="/how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
             </ul>
           </div>
 
-          {/* Contact & Support */}
+          {/* Support */}
           <div>
             <h4 className="font-semibold mb-4 text-white">Support</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
-              <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">FAQs</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Report an Issue</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Feedback</a></li>
+              <li><Link to="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition-colors">Help Center</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition-colors">Report an Issue</Link></li>
             </ul>
           </div>
         </div>
@@ -93,10 +85,9 @@ const MarketplaceFooter = () => {
               © {new Date().getFullYear()} VahanHub. All rights reserved.
             </div>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-slate-400">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Sitemap</a>
+              <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+              <Link to="/contact" className="hover:text-white transition-colors">Contact</Link>
             </div>
           </div>
         </div>
