@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   Shield, Users, Car, Star, CheckCircle, XCircle, AlertTriangle,
   Sparkles, Building2, Search, Filter, MoreVertical, Eye, Ban,
-  Award, TrendingUp, Calendar
+  Award, TrendingUp, Calendar, Image, Upload, Settings
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,6 +20,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import CarLoader from "@/components/CarLoader";
 
 const MarketplaceAdmin = () => {
@@ -31,6 +40,10 @@ const MarketplaceAdmin = () => {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  
+  // Banner customization
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
 
   const [stats, setStats] = useState({
     totalDealers: 0,
@@ -155,6 +168,13 @@ const MarketplaceAdmin = () => {
     }
   };
 
+  const handleSaveBanner = () => {
+    // In a real implementation, this would save to database or storage
+    localStorage.setItem('marketplace_banner_url', bannerUrl);
+    toast({ title: "Banner updated successfully" });
+    setBannerDialogOpen(false);
+  };
+
   const filteredDealers = dealers.filter(d => {
     const matchesSearch = !searchTerm || 
       d.dealer_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -184,9 +204,42 @@ const MarketplaceAdmin = () => {
               <p className="text-xs text-slate-500">Moderation Dashboard</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => navigate("/")}>
-            Back to Marketplace
-          </Button>
+          <div className="flex items-center gap-2">
+            <Dialog open={bannerDialogOpen} onOpenChange={setBannerDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Image className="h-4 w-4" />
+                  Edit Banner
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Customize Banner Image</DialogTitle>
+                  <DialogDescription>
+                    Set the top banner image URL for the marketplace landing page
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <Input
+                    placeholder="Enter banner image URL..."
+                    value={bannerUrl}
+                    onChange={(e) => setBannerUrl(e.target.value)}
+                  />
+                  {bannerUrl && (
+                    <div className="rounded-lg overflow-hidden border">
+                      <img src={bannerUrl} alt="Banner preview" className="w-full h-32 object-cover" />
+                    </div>
+                  )}
+                  <Button onClick={handleSaveBanner} className="w-full">
+                    Save Banner
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={() => navigate("/")}>
+              Back to Marketplace
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -221,6 +274,9 @@ const MarketplaceAdmin = () => {
             </TabsTrigger>
             <TabsTrigger value="vehicles" className="gap-2">
               <Car className="h-4 w-4" /> Vehicles
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="h-4 w-4" /> Settings
             </TabsTrigger>
           </TabsList>
 
@@ -364,6 +420,34 @@ const MarketplaceAdmin = () => {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle>Marketplace Settings</CardTitle>
+                <CardDescription>Configure marketplace appearance and behavior</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="font-medium">Banner Image</h3>
+                  <div className="flex gap-4">
+                    <Input
+                      placeholder="Enter banner image URL..."
+                      value={bannerUrl}
+                      onChange={(e) => setBannerUrl(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSaveBanner}>Save</Button>
+                  </div>
+                  {bannerUrl && (
+                    <div className="rounded-lg overflow-hidden border">
+                      <img src={bannerUrl} alt="Banner preview" className="w-full h-40 object-cover" />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

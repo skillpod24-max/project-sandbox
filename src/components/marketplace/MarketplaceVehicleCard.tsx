@@ -2,8 +2,8 @@ import { memo } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Car, Heart, Fuel, Gauge, Building2, CheckCircle, MapPin, GitCompare } from "lucide-react";
-import { formatCurrency } from "@/lib/formatters";
+import { Car, Heart, Fuel, Gauge, Building2, CheckCircle, MapPin, GitCompare, Shield, Calendar } from "lucide-react";
+import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 
 interface Props {
   vehicle: any;
@@ -24,18 +24,21 @@ const MarketplaceVehicleCard = memo(({
   onWishlistToggle,
   onCompareToggle
 }: Props) => {
-  // Get badge background color - use dealer's selected color or default
+  // Get badge background color - use dealer's selected color or default blue
   const getBadgeStyle = () => {
     if (vehicle.image_badge_color) {
       return { backgroundColor: vehicle.image_badge_color };
     }
-    return {};
+    return { backgroundColor: '#3B82F6' }; // Default blue
   };
+
+  const monthlyEmi = Math.round(vehicle.selling_price / 48);
 
   return (
     <Link to={`/marketplace/vehicle/${vehicle.id}`} className="group block">
-      <Card className={`overflow-hidden border-0 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white ${compact ? 'rounded-xl' : 'rounded-2xl'}`}>
-        <div className={`relative ${compact ? 'aspect-[4/3]' : 'aspect-[16/10]'} bg-gradient-to-br from-slate-100 to-slate-50 overflow-hidden`}>
+      <Card className={`overflow-hidden border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all duration-300 bg-white ${compact ? 'rounded-xl' : 'rounded-2xl'}`}>
+        {/* Image Container */}
+        <div className={`relative ${compact ? 'aspect-[4/3]' : 'aspect-[4/3]'} bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden`}>
           {vehicle.image_url ? (
             <img
               src={vehicle.image_url}
@@ -49,93 +52,112 @@ const MarketplaceVehicleCard = memo(({
             </div>
           )}
           
-          {/* Badges */}
+          {/* Wishlist Button */}
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onWishlistToggle?.(vehicle.id);
+            }}
+            className={`absolute top-3 right-3 h-9 w-9 rounded-full backdrop-blur flex items-center justify-center hover:scale-110 transition-all shadow-lg ${
+              isInWishlist ? 'bg-red-500 text-white' : 'bg-white/95 hover:bg-white'
+            }`}
+          >
+            <Heart className={`h-4 w-4 ${isInWishlist ? 'fill-current' : 'text-slate-400'}`} />
+          </button>
+
+          {/* Top Left Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {vehicle.image_badge_text && (
               <Badge 
-                className="text-white border-0 shadow-lg text-xs px-2 py-1"
+                className="text-white border-0 shadow-lg text-xs px-2.5 py-1 font-medium"
                 style={getBadgeStyle()}
               >
                 {vehicle.image_badge_text}
               </Badge>
             )}
-            {vehicle.condition === "new" && (
-              <Badge className="bg-emerald-500 text-white border-0 shadow text-xs px-2 py-1">New</Badge>
-            )}
-          </div>
-          
-          {/* Action Buttons */}
-          <div className="absolute top-3 right-3 flex flex-col gap-2">
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onWishlistToggle?.(vehicle.id);
-              }}
-              className={`h-9 w-9 rounded-full backdrop-blur flex items-center justify-center hover:scale-110 transition-all shadow-lg ${
-                isInWishlist ? 'bg-red-500 text-white' : 'bg-white/95 hover:bg-white'
-              }`}
-            >
-              <Heart className={`h-4 w-4 ${isInWishlist ? 'fill-current' : 'text-slate-400'}`} />
-            </button>
-            {!compact && (
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onCompareToggle?.(vehicle.id);
-                }}
-                className={`h-9 w-9 rounded-full backdrop-blur flex items-center justify-center hover:scale-110 transition-all shadow-lg ${
-                  isInCompare ? 'bg-blue-600 text-white' : 'bg-white/95 hover:bg-white'
-                }`}
-              >
-                <GitCompare className={`h-4 w-4 ${isInCompare ? '' : 'text-slate-400'}`} />
-              </button>
-            )}
-          </div>
-
-          {/* Price Overlay */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 pt-12">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white">
-                {formatCurrency(vehicle.selling_price)}
-              </span>
-              {vehicle.strikeout_price && vehicle.strikeout_price > vehicle.selling_price && (
-                <span className="text-sm text-white/70 line-through">
-                  {formatCurrency(vehicle.strikeout_price)}
-                </span>
-              )}
-            </div>
           </div>
         </div>
         
         <CardContent className={`${compact ? 'p-3' : 'p-4'} space-y-3`}>
-          {/* Title */}
-          <div>
-            <h3 className={`font-semibold text-slate-900 line-clamp-1 ${compact ? 'text-sm' : 'text-base'}`}>
-              {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
-            </h3>
-            <p className="text-sm text-slate-500 line-clamp-1">{vehicle.variant}</p>
+          {/* Category Tag */}
+          {!compact && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs text-slate-500 border-slate-200 font-normal">
+                {vehicle.vehicle_type === 'car' ? 'Car' : vehicle.vehicle_type === 'bike' ? 'Bike' : 'Commercial'}
+              </Badge>
+              {vehicle.condition === "new" && (
+                <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">New</Badge>
+              )}
+            </div>
+          )}
+
+          {/* Title & Price Row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className={`font-bold text-slate-900 line-clamp-1 ${compact ? 'text-sm' : 'text-base'}`}>
+                {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
+              </h3>
+              <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{vehicle.variant}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className={`font-bold text-blue-600 ${compact ? 'text-base' : 'text-lg'}`}>
+                {formatCurrency(vehicle.selling_price)}
+              </p>
+              {!compact && (
+                <p className="text-xs text-slate-400">+other charges</p>
+              )}
+            </div>
           </div>
           
-          {/* Specs */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
-            <span className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-full">
-              <Gauge className="h-3 w-3" />
-              {vehicle.odometer_reading ? `${(vehicle.odometer_reading / 1000).toFixed(0)}K` : 'N/A'}
+          {/* Specs Row */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+            <span className="flex items-center gap-1">
+              <Gauge className="h-3.5 w-3.5 text-slate-400" />
+              {vehicle.odometer_reading ? `${formatIndianNumber(vehicle.odometer_reading)} km` : 'N/A'}
             </span>
-            <span className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-full">
-              <Fuel className="h-3 w-3" />
+            <span className="flex items-center gap-1 capitalize">
               {vehicle.fuel_type}
             </span>
-            <span className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-full">
+            <span className="flex items-center gap-1 capitalize">
               {vehicle.transmission}
             </span>
+            {!compact && vehicle.registration_number && (
+              <span className="flex items-center gap-1 uppercase">
+                {vehicle.registration_number.slice(0, 4)}
+              </span>
+            )}
           </div>
+
+          {/* EMI Info */}
+          {!compact && (
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 text-xs">
+                <Shield className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-slate-500">EMI</span>
+                <span className="font-semibold text-slate-900">₹{formatIndianNumber(monthlyEmi)}/m*</span>
+              </div>
+              {!compact && onCompareToggle && (
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onCompareToggle?.(vehicle.id);
+                  }}
+                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${
+                    isInCompare ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-100'
+                  }`}
+                >
+                  <GitCompare className="h-3.5 w-3.5" />
+                  {isInCompare ? 'Added' : 'Compare'}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Dealer Info */}
           {dealer && !compact && (
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
               <div className="flex items-center gap-2">
                 {dealer.shop_logo_url ? (
                   <img 
@@ -148,7 +170,7 @@ const MarketplaceVehicleCard = memo(({
                     <Building2 className="h-3 w-3 text-blue-600" />
                   </div>
                 )}
-                <span className="text-xs text-slate-600 font-medium line-clamp-1 max-w-[120px]">
+                <span className="text-xs text-slate-600 font-medium line-clamp-1 max-w-[100px]">
                   {dealer.dealer_name}
                 </span>
                 <CheckCircle className="h-3 w-3 text-blue-500 shrink-0" />
@@ -157,6 +179,18 @@ const MarketplaceVehicleCard = memo(({
                 <MapPin className="h-3 w-3" />
                 {dealer.dealer_address?.split(",").slice(-2, -1).join("").trim() || "India"}
               </span>
+            </div>
+          )}
+
+          {/* Action Buttons - Cars24 Style */}
+          {!compact && (
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button className="flex items-center justify-center gap-1 py-2.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors">
+                Free Test Drive
+              </button>
+              <button className="flex items-center justify-center gap-1 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">
+                View Details
+              </button>
             </div>
           )}
         </CardContent>

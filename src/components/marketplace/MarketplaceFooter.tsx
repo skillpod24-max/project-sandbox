@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Car, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Youtube } from "lucide-react";
+import { Car, Facebook, Twitter, Instagram, Youtube } from "lucide-react";
 
 const MarketplaceFooter = () => {
   return (
@@ -38,10 +38,10 @@ const MarketplaceFooter = () => {
           <div>
             <h4 className="font-semibold mb-4 text-white">For Buyers</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
-              <li><a href="#vehicles" className="hover:text-white transition-colors">Browse Vehicles</a></li>
-              <li><a href="#dealers" className="hover:text-white transition-colors">Find Dealers</a></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Browse Vehicles</Link></li>
+              <li><Link to="/#dealers" className="hover:text-white transition-colors">Find Dealers</Link></li>
+              <li><Link to="/marketplace/compare" className="hover:text-white transition-colors">Compare Cars</Link></li>
               <li><a href="#" className="hover:text-white transition-colors">EMI Calculator</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Compare Cars</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Used Car Valuation</a></li>
             </ul>
           </div>
@@ -52,6 +52,7 @@ const MarketplaceFooter = () => {
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><Link to="/auth" className="hover:text-white transition-colors">Dealer Login</Link></li>
               <li><Link to="/auth" className="hover:text-white transition-colors">List Your Dealership</Link></li>
+              <li><Link to="/auth" className="hover:text-white transition-colors">List Your Vehicles</Link></li>
               <li><a href="#" className="hover:text-white transition-colors">Pricing Plans</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Dealer Benefits</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Success Stories</a></li>
