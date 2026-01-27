@@ -384,6 +384,63 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_admins: {
+        Row: {
+          created_at: string
+          id: string
+          permission: Database["public"]["Enums"]["admin_permission"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["admin_permission"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["admin_permission"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      marketplace_moderation: {
+        Row: {
+          action: string
+          badge_value: string | null
+          created_at: string
+          id: string
+          performed_by: string
+          reason: string | null
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action: string
+          badge_value?: string | null
+          created_at?: string
+          id?: string
+          performed_by: string
+          reason?: string | null
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action?: string
+          badge_value?: string | null
+          created_at?: string
+          id?: string
+          performed_by?: string
+          reason?: string | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -746,6 +803,8 @@ export type Database = {
           marketplace_description: string | null
           marketplace_enabled: boolean | null
           marketplace_featured: boolean | null
+          marketplace_status: string | null
+          marketplace_suspended_reason: string | null
           marketplace_working_hours: string | null
           public_page_enabled: boolean | null
           public_page_id: string | null
@@ -783,6 +842,8 @@ export type Database = {
           marketplace_description?: string | null
           marketplace_enabled?: boolean | null
           marketplace_featured?: boolean | null
+          marketplace_status?: string | null
+          marketplace_suspended_reason?: string | null
           marketplace_working_hours?: string | null
           public_page_enabled?: boolean | null
           public_page_id?: string | null
@@ -820,6 +881,8 @@ export type Database = {
           marketplace_description?: string | null
           marketplace_enabled?: boolean | null
           marketplace_featured?: boolean | null
+          marketplace_status?: string | null
+          marketplace_suspended_reason?: string | null
           marketplace_working_hours?: string | null
           public_page_enabled?: boolean | null
           public_page_id?: string | null
@@ -1018,6 +1081,7 @@ export type Database = {
           is_public: boolean | null
           last_service_date: string | null
           manufacturing_year: number
+          marketplace_status: string | null
           mileage: number | null
           model: string
           next_service_due: string | null
@@ -1070,6 +1134,7 @@ export type Database = {
           is_public?: boolean | null
           last_service_date?: string | null
           manufacturing_year: number
+          marketplace_status?: string | null
           mileage?: number | null
           model: string
           next_service_due?: string | null
@@ -1122,6 +1187,7 @@ export type Database = {
           is_public?: boolean | null
           last_service_date?: string | null
           manufacturing_year?: number
+          marketplace_status?: string | null
           mileage?: number | null
           model?: string
           next_service_due?: string | null
@@ -1250,6 +1316,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_marketplace_admin: { Args: { _user_id: string }; Returns: boolean }
       submit_public_lead: {
         Args: {
           p_customer_name: string
@@ -1263,6 +1330,7 @@ export type Database = {
       }
     }
     Enums: {
+      admin_permission: "marketplace_admin" | "super_admin"
       document_status: "pending" | "completed" | "expired"
       document_type:
         | "rc"
@@ -1414,6 +1482,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_permission: ["marketplace_admin", "super_admin"],
       document_status: ["pending", "completed", "expired"],
       document_type: [
         "rc",
