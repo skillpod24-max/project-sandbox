@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ const statusColors: Record<string, string> = {
 };
 
 const Bidding = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [auctions, setAuctions] = useState<Auction[]>([]);
@@ -522,12 +524,9 @@ const Bidding = () => {
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => {
-                        setSelectedAuction(auction);
-                        fetchBids(auction.id);
-                      }}
+                      onClick={() => navigate(`/marketplace/auction/${auction.id}`)}
                     >
-                      View All Bids
+                      View Details & Bid
                     </Button>
                   </CardContent>
                 </Card>
