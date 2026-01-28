@@ -67,13 +67,14 @@ const MarketplaceVehicleCard = memo(({
           </button>
 
           {/* Top Left Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
+          <div className="absolute top-3 left-3 flex flex-col gap-2 max-w-[70%]">
             {vehicle.image_badge_text && (
               <Badge 
-                className="text-white border-0 shadow-lg text-xs px-2.5 py-1 font-medium"
+                className="text-white border-0 shadow-lg text-xs px-2.5 py-1 font-medium truncate max-w-full"
                 style={getBadgeStyle()}
+                title={vehicle.image_badge_text}
               >
-                {vehicle.image_badge_text}
+                {vehicle.image_badge_text.length > 15 ? `${vehicle.image_badge_text.slice(0, 15)}...` : vehicle.image_badge_text}
               </Badge>
             )}
           </div>
@@ -95,17 +96,17 @@ const MarketplaceVehicleCard = memo(({
           {/* Title & Price Row */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h3 className={`font-bold text-slate-900 line-clamp-1 ${compact ? 'text-sm' : 'text-base'}`}>
+              <h3 className={`font-bold text-slate-900 ${compact ? 'text-sm line-clamp-1' : 'text-base line-clamp-2'}`} title={`${vehicle.manufacturing_year} ${vehicle.brand} ${vehicle.model}`}>
                 {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
               </h3>
-              <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{vehicle.variant}</p>
+              <p className="text-xs text-slate-500 line-clamp-1 mt-0.5" title={vehicle.variant}>{vehicle.variant}</p>
             </div>
-            <div className="text-right shrink-0">
+            <div className="text-right shrink-0 min-w-[90px]">
               <p className={`font-bold text-blue-600 ${compact ? 'text-base' : 'text-lg'}`}>
                 {formatCurrency(vehicle.selling_price)}
               </p>
               {!compact && (
-                <p className="text-xs text-slate-400">+other charges</p>
+                <p className="text-xs text-slate-400 whitespace-nowrap">+other charges</p>
               )}
             </div>
           </div>

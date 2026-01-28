@@ -12,7 +12,7 @@ import {
   Menu, X, Play, Award, Users, Clock, TrendingUp, Calculator, GitCompare
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import CarLoader from "@/components/CarLoader";
+import MarketplaceLoader from "@/components/marketplace/MarketplaceLoader";
 import MarketplaceVehicleCard from "@/components/marketplace/MarketplaceVehicleCard";
 import MarketplaceDealerCard from "@/components/marketplace/MarketplaceDealerCard";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
@@ -297,7 +297,7 @@ const Marketplace = () => {
   const displayedVehicles = showAllVehicles ? filteredVehicles : filteredVehicles.slice(0, vehiclesPerPage);
 
   if (loading) {
-    return <CarLoader />;
+    return <MarketplaceLoader text="Loading marketplace..." />;
   }
 
   return (
@@ -517,7 +517,7 @@ const Marketplace = () => {
         </div>
       </section>
 
-      {/* Vehicles in High Demand */}
+      {/* Vehicles in High Demand - 1 per row on mobile, 4 on desktop */}
       <section className="bg-gradient-to-b from-blue-50 to-white py-10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
@@ -533,13 +533,14 @@ const Marketplace = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {highDemandVehicles.map((vehicle) => (
+          {/* 1 column on mobile, 2 on tablet, 4 on desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {highDemandVehicles.slice(0, 6).map((vehicle) => (
               <MarketplaceVehicleCard
                 key={vehicle.id}
                 vehicle={vehicle}
                 dealer={getDealerForVehicle(vehicle.user_id)}
-                compact
+                compact={false}
                 isInWishlist={isInWishlist(vehicle.id)}
                 isInCompare={isInCompare(vehicle.id)}
                 onWishlistToggle={toggleWishlist}
@@ -548,6 +549,27 @@ const Marketplace = () => {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* EMI & Finance Banner */}
+      <section className="container mx-auto px-4 py-6">
+        <Card className="bg-gradient-to-r from-emerald-600 to-teal-600 border-0 rounded-2xl overflow-hidden">
+          <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-white">
+              <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <Calculator className="h-7 w-7" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Get Easy Finance</h3>
+                <p className="text-emerald-100 text-sm">EMI starting from ₹4,999/month • Instant approval</p>
+              </div>
+            </div>
+            <Button className="bg-white text-emerald-700 hover:bg-emerald-50 rounded-full px-6">
+              Calculate EMI
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </CardContent>
+        </Card>
       </section>
 
       {/* All Vehicles Section - No Sidebar Filter */}
@@ -603,7 +625,7 @@ const Marketplace = () => {
         </div>
 
         {/* Vehicle Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {displayedVehicles.map((vehicle) => (
             <MarketplaceVehicleCard
               key={vehicle.id}

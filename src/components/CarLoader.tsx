@@ -78,27 +78,31 @@ const CarLoader = ({
           <path d="M135 65 Q135 55 145 55 Q155 55 155 65" fill="#1F2937" />
         </g>
         
-        {/* Front wheel with spokes */}
-        <g className="front-wheel" style={{ transformOrigin: '55px 70px' }}>
+        {/* Front wheel with spokes - separate rotating group */}
+        <g>
           <circle cx="55" cy="70" r="12" fill="#1F2937" />
-          <circle cx="55" cy="70" r="9" fill="#374151" />
-          {/* Spokes */}
-          <line x1="55" y1="62" x2="55" y2="78" stroke="#9CA3AF" strokeWidth="2" />
-          <line x1="47" y1="70" x2="63" y2="70" stroke="#9CA3AF" strokeWidth="2" />
-          <line x1="49" y1="64" x2="61" y2="76" stroke="#9CA3AF" strokeWidth="2" />
-          <line x1="49" y1="76" x2="61" y2="64" stroke="#9CA3AF" strokeWidth="2" />
+          <g className="front-wheel-inner">
+            <circle cx="55" cy="70" r="9" fill="#374151" />
+            {/* Spokes */}
+            <line x1="55" y1="62" x2="55" y2="78" stroke="#9CA3AF" strokeWidth="2" />
+            <line x1="47" y1="70" x2="63" y2="70" stroke="#9CA3AF" strokeWidth="2" />
+            <line x1="49" y1="64" x2="61" y2="76" stroke="#9CA3AF" strokeWidth="2" />
+            <line x1="49" y1="76" x2="61" y2="64" stroke="#9CA3AF" strokeWidth="2" />
+          </g>
           <circle cx="55" cy="70" r="3" fill="#6B7280" />
         </g>
         
-        {/* Rear wheel with spokes */}
-        <g className="rear-wheel" style={{ transformOrigin: '145px 70px' }}>
+        {/* Rear wheel with spokes - separate rotating group */}
+        <g>
           <circle cx="145" cy="70" r="12" fill="#1F2937" />
-          <circle cx="145" cy="70" r="9" fill="#374151" />
-          {/* Spokes */}
-          <line x1="145" y1="62" x2="145" y2="78" stroke="#9CA3AF" strokeWidth="2" />
-          <line x1="137" y1="70" x2="153" y2="70" stroke="#9CA3AF" strokeWidth="2" />
-          <line x1="139" y1="64" x2="151" y2="76" stroke="#9CA3AF" strokeWidth="2" />
-          <line x1="139" y1="76" x2="151" y2="64" stroke="#9CA3AF" strokeWidth="2" />
+          <g className="rear-wheel-inner">
+            <circle cx="145" cy="70" r="9" fill="#374151" />
+            {/* Spokes */}
+            <line x1="145" y1="62" x2="145" y2="78" stroke="#9CA3AF" strokeWidth="2" />
+            <line x1="137" y1="70" x2="153" y2="70" stroke="#9CA3AF" strokeWidth="2" />
+            <line x1="139" y1="64" x2="151" y2="76" stroke="#9CA3AF" strokeWidth="2" />
+            <line x1="139" y1="76" x2="151" y2="64" stroke="#9CA3AF" strokeWidth="2" />
+          </g>
           <circle cx="145" cy="70" r="3" fill="#6B7280" />
         </g>
 
@@ -134,11 +138,24 @@ const CarLoader = ({
             50% { transform: scaleX(0.85); opacity: 0.3; }
           }
 
-          .front-wheel, .rear-wheel {
-            animation: wheel-spin 0.3s linear infinite;
+          .front-wheel-inner {
+            animation: wheel-spin-front 0.3s linear infinite;
+            transform-origin: 55px 70px;
+            transform-box: fill-box;
+          }
+          
+          .rear-wheel-inner {
+            animation: wheel-spin-rear 0.3s linear infinite;
+            transform-origin: 145px 70px;
+            transform-box: fill-box;
           }
 
-          @keyframes wheel-spin {
+          @keyframes wheel-spin-front {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          
+          @keyframes wheel-spin-rear {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
