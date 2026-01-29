@@ -231,8 +231,8 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Scrollable Menu */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable Menu - Invisible scrollbar */}
+        <div className="flex-1 overflow-y-auto scrollbar-invisible">
           <MemoizedMenuGroup label="Main" items={mainMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Transactions" items={transactionMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Management" items={managementMenuItems} isCollapsed={isCollapsed} />
