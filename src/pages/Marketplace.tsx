@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Search, MapPin, Car, Bike, Truck, Star, CheckCircle, Shield, 
   CreditCard, ChevronRight, Building2, ArrowRight, Heart, Sparkles,
-  Menu, X, Play, Award, Users, Clock, TrendingUp, Calculator, GitCompare
+  Menu, X, Play, Award, Users, Clock, TrendingUp, Calculator, GitCompare,
+  DollarSign, Tag, Phone
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import MarketplaceLoader from "@/components/marketplace/MarketplaceLoader";
@@ -17,8 +18,23 @@ import MarketplaceVehicleCard from "@/components/marketplace/MarketplaceVehicleC
 import MarketplaceDealerCard from "@/components/marketplace/MarketplaceDealerCard";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
 import CompareBar from "@/components/marketplace/CompareBar";
+import LiveSearchSuggestions from "@/components/marketplace/LiveSearchSuggestions";
+import SellVehicleForm from "@/components/marketplace/SellVehicleForm";
 import useWishlist from "@/hooks/useWishlist";
 import useComparison from "@/hooks/useComparison";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 // Quick category pills
 const CategoryPill = memo(({ icon: Icon, label, active, onClick }: { icon: any; label: string; active: boolean; onClick: () => void }) => (
@@ -60,6 +76,8 @@ const Marketplace = () => {
   const [salesCount, setSalesCount] = useState<Record<string, number>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showAllVehicles, setShowAllVehicles] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [sellDialogOpen, setSellDialogOpen] = useState(false);
 
   // Wishlist and comparison hooks
   const { isInWishlist, toggleWishlist, wishlistCount } = useWishlist();
@@ -316,35 +334,50 @@ const Marketplace = () => {
               </div>
             </Link>
 
-            {/* Desktop Search */}
+            {/* Desktop Search with Live Suggestions */}
             <div className="hidden md:flex flex-1 max-w-xl mx-8">
               <div className="relative w-full">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   placeholder="Search by brand, model..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 h-11 rounded-full bg-slate-100 border-0 focus-visible:ring-2 focus-visible:ring-blue-500"
+                  onFocus={() => setSearchFocused(true)}
+                  className="pl-12 pr-4 h-11 rounded-full bg-muted border-0 focus-visible:ring-2 focus-visible:ring-primary"
+                />
+                <LiveSearchSuggestions 
+                  vehicles={vehicles}
+                  searchTerm={searchTerm}
+                  onSelect={(term) => { setSearchTerm(term); setSearchFocused(false); }}
+                  onClose={() => setSearchFocused(false)}
+                  visible={searchFocused}
                 />
               </div>
             </div>
 
             <nav className="hidden md:flex items-center gap-4">
-              <a href="#vehicles" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
+              <a href="#vehicles" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Buy Vehicle
               </a>
-              <a href="#dealers" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">
+              <button 
+                onClick={() => setSellDialogOpen(true)}
+                className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
+              >
+                <DollarSign className="h-4 w-4" />
+                Sell Vehicle
+              </button>
+              <a href="#dealers" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Dealers
               </a>
               {wishlistCount > 0 && (
-                <button className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-red-500">
+                <button className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-red-500">
                   <Heart className="h-4 w-4" />
                   <span>{wishlistCount}</span>
                 </button>
               )}
               <Button 
                 variant="ghost"
-                className="text-slate-600 hover:text-blue-600"
+                className="text-muted-foreground hover:text-primary"
                 onClick={() => navigate("/auth")}
               >
                 Login
@@ -719,6 +752,56 @@ const Marketplace = () => {
         onRemove={removeFromCompare}
         onClear={clearCompare}
       />
+
+      {/* Sell Vehicle Dialog */}
+      <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-600" />
+              Sell Your Vehicle
+            </DialogTitle>
+          </DialogHeader>
+          <SellVehicleForm 
+            onSuccess={() => setSellDialogOpen(false)}
+            onClose={() => setSellDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-inset-bottom">
+        <div className="grid grid-cols-4 gap-1 p-2">
+          <button 
+            onClick={() => document.getElementById('vehicles')?.scrollIntoView({ behavior: 'smooth' })}
+            className="flex flex-col items-center py-2 text-muted-foreground hover:text-primary"
+          >
+            <Car className="h-5 w-5" />
+            <span className="text-xs mt-1">Buy</span>
+          </button>
+          <button 
+            onClick={() => setSellDialogOpen(true)}
+            className="flex flex-col items-center py-2 text-emerald-600"
+          >
+            <Tag className="h-5 w-5" />
+            <span className="text-xs mt-1">Sell</span>
+          </button>
+          <button 
+            onClick={() => document.getElementById('dealers')?.scrollIntoView({ behavior: 'smooth' })}
+            className="flex flex-col items-center py-2 text-muted-foreground hover:text-primary"
+          >
+            <Building2 className="h-5 w-5" />
+            <span className="text-xs mt-1">Dealers</span>
+          </button>
+          <button 
+            onClick={() => navigate("/auth")}
+            className="flex flex-col items-center py-2 text-muted-foreground hover:text-primary"
+          >
+            <Users className="h-5 w-5" />
+            <span className="text-xs mt-1">Login</span>
+          </button>
+        </div>
+      </div>
 
       {/* Footer */}
       <MarketplaceFooter />

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import ScrollToTop from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -35,7 +36,7 @@ import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
 import CompareVehicles from "./pages/marketplace/CompareVehicles";
 import AuctionDetail from "./pages/marketplace/AuctionDetail";
 import MarketplaceAnalytics from "./pages/MarketplaceAnalytics";
-import Bidding from "./pages/Bidding";
+import VehiclesForSale from "./pages/VehiclesForSale";
 import VehicleInspection from "./pages/VehicleInspection";
 
 // Footer Pages
@@ -55,6 +56,7 @@ const App = () => (
       <Sonner />
 
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           {/* ---------- Public Marketplace ---------- */}
           <Route path="/" element={<Marketplace />} />
@@ -214,7 +216,7 @@ const App = () => (
               </Layout>
             }
           />
-          <Route path="/bidding" element={<Bidding />} />
+          <Route path="/vehicles-for-sale" element={<VehiclesForSale />} />
           <Route path="/inspection/:vehicleId" element={<VehicleInspection />} />
 
           {/* ---------- 404 ---------- */}
