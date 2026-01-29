@@ -13,7 +13,7 @@ import {
   DollarSign, Tag, Phone
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import MarketplaceLoader from "@/components/marketplace/MarketplaceLoader";
+import { MarketplaceSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceVehicleCard from "@/components/marketplace/MarketplaceVehicleCard";
 import MarketplaceDealerCard from "@/components/marketplace/MarketplaceDealerCard";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
@@ -315,7 +315,7 @@ const Marketplace = () => {
   const displayedVehicles = showAllVehicles ? filteredVehicles : filteredVehicles.slice(0, vehiclesPerPage);
 
   if (loading) {
-    return <MarketplaceLoader text="Loading marketplace..." />;
+    return <MarketplaceSkeleton />;
   }
 
   return (

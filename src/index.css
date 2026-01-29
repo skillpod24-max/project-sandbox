@@ -210,12 +210,24 @@
         background-color: hsl(var(--muted-foreground) / 0.5);
     }
     
-    /* Hide scrollbar */
+    /* Hide scrollbar - cross-browser */
     .scrollbar-hide {
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
     .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Invisible scrollbar - for sidebar */
+    .scrollbar-invisible {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        overflow-y: auto;
+    }
+    .scrollbar-invisible::-webkit-scrollbar {
+        width: 0;
+        height: 0;
         display: none;
     }
     
@@ -225,6 +237,26 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+    }
+    
+    /* Shimmer animation for skeleton loading */
+    .shimmer-effect {
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.5) 50%,
+            transparent 100%
+        );
+        animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(100%);
+        }
     }
 }
 
