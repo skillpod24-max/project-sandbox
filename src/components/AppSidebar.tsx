@@ -15,7 +15,7 @@ import {
   LogOut,
   Bell,
   CalendarClock,
-  Gavel,
+  Tag,
   Wrench,
 } from "lucide-react";
 
@@ -118,7 +118,7 @@ const transactionMenuItems = [
   { title: "Payments", icon: CreditCard, url: "/payments" },
   { title: "Expenses", icon: ReceiptText, url: "/expenses" },
   { title: "EMI", icon: CalendarClock, url: "/emi" },
-  { title: "Bidding", icon: Gavel, url: "/bidding" },
+  { title: "Vehicles for Sale", icon: Tag, url: "/vehicles-for-sale" },
 ];
 
 const managementMenuItems = [
