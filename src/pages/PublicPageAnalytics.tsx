@@ -450,7 +450,7 @@ const PublicPageAnalytics = () => {
           <CardHeader>
             <AlertTriangle className="mx-auto h-6 w-6 text-amber-600" />
             <CardTitle className="text-center">Analytics Unavailable</CardTitle>
-            <CardDescription className="text-center">Public page is disabled</CardDescription>
+            <CardDescription className="text-center">Catalogue is disabled</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button onClick={() => (window.location.href = "/settings")}>Enable in Settings</Button>
@@ -467,10 +467,10 @@ const PublicPageAnalytics = () => {
         <div className="space-y-3">
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-            Performance Overview
+            Catalogue Analytics
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Real-time insights into your inventory's public performance.
+            Real-time insights into your catalogue's performance.
           </p>
 
           <div className="inline-flex items-center gap-1 bg-card p-1 rounded-lg border border-border shadow-sm">

@@ -660,18 +660,18 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* Public Page Tab */}
+        {/* Catalogue Tab */}
         <TabsContent value="publicpage" className="space-y-6">
           <Card className="border border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" /> Public Dealer Page</CardTitle>
-              <CardDescription>Create a shareable page for your dealership</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" /> Vehicle Catalogue</CardTitle>
+              <CardDescription>Create a shareable catalogue for your dealership</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                 <div className="space-y-0.5">
-                  <Label>Enable Public Page</Label>
-                  <p className="text-sm text-muted-foreground">Create a shareable page with your vehicles and contact info</p>
+                  <Label>Enable Catalogue</Label>
+                  <p className="text-sm text-muted-foreground">Create a shareable catalogue with your vehicles and contact info</p>
                 </div>
                 <Switch 
                   checked={settings.public_page_enabled || false} 
@@ -741,7 +741,7 @@ const Settings = () => {
               )}
 
               <p className="text-xs text-muted-foreground">
-  Your public page URL is generated from your dealer name.
+  Your catalogue URL is generated from your dealer name.
   If the name already exists, a number is added automatically.
 </p>
 

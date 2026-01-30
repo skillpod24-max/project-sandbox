@@ -19,15 +19,9 @@ import MarketplaceDealerCard from "@/components/marketplace/MarketplaceDealerCar
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
 import CompareBar from "@/components/marketplace/CompareBar";
 import LiveSearchSuggestions from "@/components/marketplace/LiveSearchSuggestions";
-import SellVehicleForm from "@/components/marketplace/SellVehicleForm";
+import AutoShowroomHero from "@/components/marketplace/AutoShowroomHero";
 import useWishlist from "@/hooks/useWishlist";
 import useComparison from "@/hooks/useComparison";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -77,7 +71,6 @@ const Marketplace = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showAllVehicles, setShowAllVehicles] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  const [sellDialogOpen, setSellDialogOpen] = useState(false);
 
   // Wishlist and comparison hooks
   const { isInWishlist, toggleWishlist, wishlistCount } = useWishlist();
@@ -90,32 +83,6 @@ const Marketplace = () => {
   const [fuelType, setFuelType] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
-
-  // Banner slides
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const banners = [
-    {
-      title: "Find Your Perfect Ride",
-      subtitle: "10,000+ Verified Used Cars & Bikes",
-      cta: "Start Exploring",
-      gradient: "from-blue-500 via-blue-600 to-blue-700",
-      image: "🚗"
-    },
-    {
-      title: "Sell Your Car in 3 Steps",
-      subtitle: "Get Best Price. Instant Payment.",
-      cta: "Get Free Valuation",
-      gradient: "from-emerald-500 via-emerald-600 to-teal-600",
-      image: "💰"
-    },
-    {
-      title: "Easy Finance Options",
-      subtitle: "Low EMI starting from ₹4,999/month",
-      cta: "Check EMI",
-      gradient: "from-purple-500 via-purple-600 to-indigo-600",
-      image: "📊"
-    }
-  ];
 
   // Body types for cars
   const carBodyTypes = ["All", "Sedan", "Hatchback", "SUV", "MUV", "Luxury", "Compact SUV"];
@@ -130,13 +97,6 @@ const Marketplace = () => {
       .filter(Boolean);
     return [...new Set(cities)];
   }, [dealers]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % banners.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [banners.length]);
 
   useEffect(() => {
     fetchData();
@@ -359,13 +319,13 @@ const Marketplace = () => {
               <a href="#vehicles" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Buy Vehicle
               </a>
-              <button 
-                onClick={() => setSellDialogOpen(true)}
+              <Link 
+                to="/sell-vehicle"
                 className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
               >
                 <DollarSign className="h-4 w-4" />
                 Sell Vehicle
-              </button>
+              </Link>
               <a href="#dealers" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Dealers
               </a>
@@ -415,54 +375,9 @@ const Marketplace = () => {
         </div>
       </header>
 
-      {/* Hero Section - Blue Gradient */}
-      <section className="relative overflow-hidden">
-        <div className={`bg-gradient-to-r ${banners[currentSlide].gradient} py-10 md:py-16 transition-all duration-700`}>
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="text-center md:text-left text-white max-w-xl">
-                <div className="text-5xl md:text-7xl mb-4">{banners[currentSlide].image}</div>
-                <h1 className="text-3xl md:text-5xl font-bold mb-3 leading-tight">
-                  {banners[currentSlide].title}
-                </h1>
-                <p className="text-lg md:text-xl opacity-90 mb-6">
-                  {banners[currentSlide].subtitle}
-                </p>
-                <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100 shadow-xl gap-2 rounded-full px-8">
-                  {banners[currentSlide].cta}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* Stats on Desktop */}
-              <div className="hidden lg:grid grid-cols-3 gap-6">
-                {[
-                  { value: "10K+", label: "Verified Cars" },
-                  { value: "500+", label: "Trusted Dealers" },
-                  { value: "50K+", label: "Happy Customers" },
-                ].map((stat, i) => (
-                  <div key={i} className="text-center text-white">
-                    <div className="text-3xl font-bold">{stat.value}</div>
-                    <div className="text-sm opacity-80">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Banner Indicators */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-          {banners.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentSlide(i)}
-              className={`h-2 rounded-full transition-all ${
-                i === currentSlide ? "w-8 bg-white" : "w-2 bg-white/50"
-              }`}
-            />
-          ))}
-        </div>
+      {/* Hero Section - Automotive Showroom SVG */}
+      <section className="relative h-[280px] md:h-[400px] overflow-hidden">
+        <AutoShowroomHero />
       </section>
 
       {/* Category Pills - Horizontal Scroll */}
@@ -753,21 +668,6 @@ const Marketplace = () => {
         onClear={clearCompare}
       />
 
-      {/* Sell Vehicle Dialog */}
-      <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-emerald-600" />
-              Sell Your Vehicle
-            </DialogTitle>
-          </DialogHeader>
-          <SellVehicleForm 
-            onSuccess={() => setSellDialogOpen(false)}
-            onClose={() => setSellDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-inset-bottom">
@@ -779,13 +679,13 @@ const Marketplace = () => {
             <Car className="h-5 w-5" />
             <span className="text-xs mt-1">Buy</span>
           </button>
-          <button 
-            onClick={() => setSellDialogOpen(true)}
+          <Link
+            to="/sell-vehicle"
             className="flex flex-col items-center py-2 text-emerald-600"
           >
             <Tag className="h-5 w-5" />
             <span className="text-xs mt-1">Sell</span>
-          </button>
+          </Link>
           <button 
             onClick={() => document.getElementById('dealers')?.scrollIntoView({ behavior: 'smooth' })}
             className="flex flex-col items-center py-2 text-muted-foreground hover:text-primary"
