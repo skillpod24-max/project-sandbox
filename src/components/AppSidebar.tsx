@@ -17,6 +17,7 @@ import {
   CalendarClock,
   Tag,
   Wrench,
+  Calendar,
 } from "lucide-react";
 
 import { useSidebar } from "@/components/ui/sidebar";
@@ -119,6 +120,7 @@ const transactionMenuItems = [
   { title: "Expenses", icon: ReceiptText, url: "/expenses" },
   { title: "EMI", icon: CalendarClock, url: "/emi" },
   { title: "Vehicles for Sale", icon: Tag, url: "/vehicles-for-sale" },
+  { title: "Test Drive Requests", icon: Calendar, url: "/test-drive-requests" },
 ];
 
 const managementMenuItems = [
