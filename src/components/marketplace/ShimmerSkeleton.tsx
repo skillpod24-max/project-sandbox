@@ -223,4 +223,101 @@ export const MarketplaceSkeleton = () => (
   </div>
 );
 
+// Dealer Page Skeleton
+export const DealerPageSkeleton = () => (
+  <div className="min-h-screen bg-slate-50">
+    {/* Header */}
+    <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
+      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+        <ShimmerSkeleton width={80} height={32} />
+        <ShimmerSkeleton width={100} height={32} />
+        <ShimmerSkeleton width={40} height={32} />
+      </div>
+    </header>
+
+    {/* Hero */}
+    <div className="bg-gradient-to-r from-slate-200 to-slate-300 py-8">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <ShimmerSkeleton className="h-24 w-24 rounded-2xl" />
+          <div className="flex-1 text-center md:text-left">
+            <ShimmerSkeleton variant="text" className="h-8 w-64 mb-2 mx-auto md:mx-0" />
+            <ShimmerSkeleton variant="text" className="h-4 w-48 mb-3 mx-auto md:mx-0" />
+            <div className="flex gap-4 justify-center md:justify-start">
+              <ShimmerSkeleton variant="text" className="h-4 w-20" />
+              <ShimmerSkeleton variant="text" className="h-4 w-20" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <ShimmerSkeleton className="h-10 w-24 rounded-lg" />
+            <ShimmerSkeleton className="h-10 w-28 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="container mx-auto px-4 py-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          {/* Info Cards */}
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <ShimmerSkeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+
+          {/* Vehicles */}
+          <ShimmerSkeleton variant="text" className="h-6 w-40 mb-4" />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <ShimmerSkeleton key={i} className="h-56 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <ShimmerSkeleton className="h-64 rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Sell Vehicle Page Skeleton
+export const SellVehicleSkeleton = () => (
+  <div className="min-h-screen bg-slate-50">
+    {/* Header */}
+    <header className="sticky top-0 z-50 bg-white shadow-sm">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <ShimmerSkeleton width={120} height={40} />
+        <ShimmerSkeleton className="h-10 w-40 rounded-lg" />
+      </div>
+    </header>
+
+    {/* Hero */}
+    <div className="bg-gradient-to-r from-slate-200 to-slate-300 py-16 md:py-24">
+      <div className="container mx-auto px-4 text-center">
+        <ShimmerSkeleton className="h-8 w-48 mx-auto rounded-full mb-6" />
+        <ShimmerSkeleton variant="text" className="h-12 w-2/3 mx-auto mb-4" />
+        <ShimmerSkeleton variant="text" className="h-6 w-1/2 mx-auto mb-8" />
+        <ShimmerSkeleton className="h-14 w-48 mx-auto rounded-full" />
+      </div>
+    </div>
+
+    {/* Steps */}
+    <div className="container mx-auto px-4 py-16">
+      <ShimmerSkeleton variant="text" className="h-10 w-48 mx-auto mb-8" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="text-center">
+            <ShimmerSkeleton className="h-20 w-20 rounded-2xl mx-auto mb-4" />
+            <ShimmerSkeleton variant="text" className="h-5 w-3/4 mx-auto mb-2" />
+            <ShimmerSkeleton variant="text" className="h-4 w-full mx-auto" />
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 export default ShimmerSkeleton;

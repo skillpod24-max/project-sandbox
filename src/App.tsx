@@ -40,6 +40,8 @@ import VehiclesForSale from "./pages/VehiclesForSale";
 import VehicleInspection from "./pages/VehicleInspection";
 import SellVehicle from "./pages/marketplace/SellVehicle";
 import SellVehicleFormPage from "./pages/marketplace/SellVehicleFormPage";
+import Wishlist from "./pages/marketplace/Wishlist";
+import TestDriveRequests from "./pages/TestDriveRequests";
 
 // Footer Pages
 import AboutPage from "./pages/footer/AboutPage";
@@ -66,6 +68,7 @@ const App = () => (
           <Route path="/marketplace/dealer/:dealerId" element={<MarketplaceDealer />} />
           <Route path="/marketplace/compare" element={<CompareVehicles />} />
           <Route path="/marketplace/auction/:auctionId" element={<AuctionDetail />} />
+          <Route path="/marketplace/wishlist" element={<Wishlist />} />
           <Route path="/sell-vehicle" element={<SellVehicle />} />
           <Route path="/sell-vehicle/form" element={<SellVehicleFormPage />} />
           <Route path="/admin/marketplace" element={<MarketplaceAdmin />} />
@@ -220,7 +223,8 @@ const App = () => (
               </Layout>
             }
           />
-          <Route path="/vehicles-for-sale" element={<VehiclesForSale />} />
+          <Route path="/vehicles-for-sale" element={<Layout><VehiclesForSale /></Layout>} />
+          <Route path="/test-drive-requests" element={<TestDriveRequests />} />
           <Route path="/inspection/:vehicleId" element={<VehicleInspection />} />
 
           {/* ---------- 404 ---------- */}
