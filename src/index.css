@@ -312,3 +312,17 @@
 [data-sidebar-trigger] {
     transform: translateZ(0);
 }
+
+/* Safe area for iOS devices with notch/home bar */
+.safe-area-bottom {
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}

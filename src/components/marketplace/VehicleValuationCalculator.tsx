@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,14 @@ import {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  vehicleData?: {
+    vehicleType?: string;
+    sellingPrice?: number;
+    manufacturingYear?: number;
+    odometerReading?: number;
+    condition?: string;
+    variant?: string;
+  };
 }
 
 // Base prices by vehicle type and category (in lakhs)
@@ -63,13 +71,44 @@ const conditionMultipliers: Record<string, number> = {
 const mileageImpact = 0.02;
 const averageMileagePerYear = 12000; // km
 
-const VehicleValuationCalculator = ({ open, onOpenChange }: Props) => {
-  const [vehicleType, setVehicleType] = useState<string>("car");
+const VehicleValuationCalculator = ({ open, onOpenChange, vehicleData }: Props) => {
+  // Calculate age from manufacturing year
+  const currentYear = new Date().getFullYear();
+  const defaultAge = vehicleData?.manufacturingYear 
+    ? currentYear - vehicleData.manufacturingYear 
+    : 3;
+
+  const [vehicleType, setVehicleType] = useState<string>(vehicleData?.vehicleType || "car");
   const [category, setCategory] = useState<string>("sedan");
-  const [age, setAge] = useState<number>(3);
-  const [mileage, setMileage] = useState<number>(35000);
-  const [condition, setCondition] = useState<string>("good");
-  const [originalPrice, setOriginalPrice] = useState<string>("1000000");
+  const [age, setAge] = useState<number>(defaultAge);
+  const [mileage, setMileage] = useState<number>(vehicleData?.odometerReading || 35000);
+  const [condition, setCondition] = useState<string>(vehicleData?.condition === "new" ? "excellent" : "good");
+  const [originalPrice, setOriginalPrice] = useState<string>(
+    vehicleData?.sellingPrice ? String(Math.round(vehicleData.sellingPrice * 1.2)) : "1000000"
+  );
+
+  // Update state when vehicleData changes
+  useEffect(() => {
+    if (vehicleData) {
+      if (vehicleData.vehicleType) setVehicleType(vehicleData.vehicleType);
+      if (vehicleData.manufacturingYear) setAge(currentYear - vehicleData.manufacturingYear);
+      if (vehicleData.odometerReading) setMileage(vehicleData.odometerReading);
+      if (vehicleData.condition) setCondition(vehicleData.condition === "new" ? "excellent" : "good");
+      if (vehicleData.sellingPrice) setOriginalPrice(String(Math.round(vehicleData.sellingPrice * 1.2)));
+      
+      // Guess category from variant
+      if (vehicleData.variant) {
+        const variant = vehicleData.variant.toLowerCase();
+        if (variant.includes("suv") || ["creta", "seltos", "xuv"].some(m => variant.includes(m))) {
+          setCategory("suv");
+        } else if (variant.includes("hatchback") || ["i20", "swift", "polo"].some(m => variant.includes(m))) {
+          setCategory("hatchback");
+        } else if (variant.includes("luxury")) {
+          setCategory("luxury");
+        }
+      }
+    }
+  }, [vehicleData, currentYear]);
 
   const categories = useMemo(() => {
     if (vehicleType === "car") {

@@ -20,6 +20,8 @@ import { trackPublicEvent } from "@/lib/publicAnalytics";
 import { VehiclePageSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceEMICalculator from "@/components/marketplace/MarketplaceEMICalculator";
 import VehicleValuationCalculator from "@/components/marketplace/VehicleValuationCalculator";
+import ShareDialog from "@/components/marketplace/ShareDialog";
+import useWishlist from "@/hooks/useWishlist";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
 import {
   Sheet,
@@ -48,9 +50,13 @@ const MarketplaceVehicle = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [emiOpen, setEmiOpen] = useState(false);
   const [valuationOpen, setValuationOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [enquirySheetOpen, setEnquirySheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  
+  // Wishlist hook
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const isWishlisted = vehicle ? isInWishlist(vehicle.id) : false;
   
   // Form state
   const [form, setForm] = useState({ name: "", phone: "", email: "", message: "" });
@@ -197,21 +203,18 @@ const MarketplaceVehicle = () => {
     }
   };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${vehicle.manufacturing_year} ${vehicle.brand} ${vehicle.model}`,
-          text: `Check out this ${vehicle.brand} ${vehicle.model} on VahanHub`,
-          url: window.location.href,
-        });
-      } catch (err) {
-        console.log("Share cancelled");
-      }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast({ title: "Link copied to clipboard!" });
-    }
+  const handleShare = () => {
+    setShareOpen(true);
+  };
+
+  // Generate SEO-friendly URL
+  const getShareUrl = () => {
+    const baseUrl = window.location.origin;
+    const slug = `${vehicle.manufacturing_year}-${vehicle.brand}-${vehicle.model}`
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    return `${baseUrl}/marketplace/vehicle/${vehicleId}`;
   };
 
   const getBadgeStyle = () => {
@@ -306,7 +309,7 @@ const MarketplaceVehicle = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 lg:pb-0">
+    <div className="min-h-screen bg-slate-50 pb-20 lg:pb-0">
       {/* Header - Cars24 Style */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-100 shadow-sm">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
@@ -328,7 +331,7 @@ const MarketplaceVehicle = () => {
               <Share2 className="h-5 w-5 text-slate-500" />
             </button>
             <button 
-              onClick={() => setIsWishlisted(!isWishlisted)}
+              onClick={() => vehicle && toggleWishlist(vehicle.id)}
               className="p-2 hover:bg-slate-100 rounded-full transition-colors"
             >
               <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-slate-500'}`} />
@@ -438,13 +441,22 @@ const MarketplaceVehicle = () => {
                 )}
               </div>
               
-              <button 
-                onClick={() => setEmiOpen(true)}
-                className="mt-3 text-sm text-blue-600 font-medium flex items-center gap-1"
-              >
-                <Calculator className="h-4 w-4" />
-                EMI starts at ₹{formatIndianNumber(monthlyEmi)}/mo
-              </button>
+              <div className="flex gap-3 mt-4">
+                <button 
+                  onClick={() => setEmiOpen(true)}
+                  className="flex-1 text-sm text-blue-600 font-medium flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <Calculator className="h-4 w-4" />
+                  <span>EMI Calculator</span>
+                </button>
+                <button 
+                  onClick={() => setValuationOpen(true)}
+                  className="flex-1 text-sm text-emerald-600 font-medium flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                  <Zap className="h-4 w-4" />
+                  <span>Check Value</span>
+                </button>
+              </div>
             </Card>
 
             {/* Quick Specs Pills - Cars24 Style */}
@@ -744,12 +756,12 @@ const MarketplaceVehicle = () => {
         </div>
       </div>
 
-      {/* Mobile Sticky CTA - Cars24 Style */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 lg:hidden z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-        <div className="container mx-auto flex gap-2">
+      {/* Mobile Sticky CTA - Cars24 Style - Fixed properly */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 lg:hidden z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] safe-area-bottom">
+        <div className="flex gap-2 max-w-full overflow-hidden">
           {dealer?.dealer_phone && (
-            <a href={`tel:${dealer.dealer_phone}`} onClick={handleCall}>
-              <Button variant="outline" size="default" className="gap-2 rounded-xl h-12 px-4 border-slate-300">
+            <a href={`tel:${dealer.dealer_phone}`} onClick={handleCall} className="shrink-0">
+              <Button variant="outline" size="default" className="gap-2 rounded-xl h-12 w-12 p-0 border-slate-300">
                 <Phone className="h-5 w-5" />
               </Button>
             </a>
@@ -757,21 +769,21 @@ const MarketplaceVehicle = () => {
           {dealer?.whatsapp_number && (
             <Button
               size="default"
-              className="flex-1 gap-2 bg-emerald-500 hover:bg-emerald-600 rounded-xl h-12"
+              className="flex-1 min-w-0 gap-1.5 bg-emerald-500 hover:bg-emerald-600 rounded-xl h-12 px-3"
               onClick={handleWhatsApp}
             >
-              <MessageCircle className="h-5 w-5" />
-              <span>WhatsApp</span>
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              <span className="truncate text-sm">WhatsApp</span>
             </Button>
           )}
           <Sheet open={enquirySheetOpen} onOpenChange={setEnquirySheetOpen}>
             <SheetTrigger asChild>
               <Button
                 size="default"
-                className="flex-1 gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl h-12"
+                className="flex-1 min-w-0 gap-1.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl h-12 px-3"
               >
-                <Send className="h-5 w-5" />
-                <span>Get Best Price</span>
+                <Send className="h-4 w-4 shrink-0" />
+                <span className="truncate text-sm">Get Price</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-3xl">
@@ -799,10 +811,27 @@ const MarketplaceVehicle = () => {
         vehicleName={`${vehicle.manufacturing_year} ${vehicle.brand} ${vehicle.model}`}
       />
 
-      {/* Valuation Calculator */}
+      {/* Valuation Calculator with vehicle data */}
       <VehicleValuationCalculator
         open={valuationOpen}
         onOpenChange={setValuationOpen}
+        vehicleData={{
+          vehicleType: vehicle.vehicle_type,
+          sellingPrice: vehicle.selling_price,
+          manufacturingYear: vehicle.manufacturing_year,
+          odometerReading: vehicle.odometer_reading,
+          condition: vehicle.condition,
+          variant: vehicle.variant,
+        }}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        title={`${vehicle.manufacturing_year} ${vehicle.brand} ${vehicle.model}`}
+        url={getShareUrl()}
+        description={`Check out this ${vehicle.brand} ${vehicle.model} on VahanHub Marketplace. Price: ${formatCurrency(vehicle.selling_price)}`}
       />
 
       {/* Footer */}
