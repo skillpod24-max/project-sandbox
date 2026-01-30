@@ -17,9 +17,12 @@ import { MarketplaceSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceVehicleCard from "@/components/marketplace/MarketplaceVehicleCard";
 import MarketplaceDealerCard from "@/components/marketplace/MarketplaceDealerCard";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import MarketplaceFilters from "@/components/marketplace/MarketplaceFilters";
 import CompareBar from "@/components/marketplace/CompareBar";
 import LiveSearchSuggestions from "@/components/marketplace/LiveSearchSuggestions";
 import AutoShowroomHero from "@/components/marketplace/AutoShowroomHero";
+import HeroCarousel from "@/components/marketplace/HeroCarousel";
+import LocationSelector from "@/components/marketplace/LocationSelector";
 import useWishlist from "@/hooks/useWishlist";
 import useComparison from "@/hooks/useComparison";
 import {
@@ -290,9 +293,15 @@ const Marketplace = () => {
               </div>
               <div>
                 <span className="text-xl font-bold text-slate-900">VahanHub</span>
-                <span className="hidden md:inline text-xs text-slate-500 ml-1">Marketplace</span>
               </div>
             </Link>
+
+            {/* Location Selector */}
+            <LocationSelector
+              selectedCity={cityFilter}
+              onCityChange={setCityFilter}
+              availableCities={availableCities}
+            />
 
             {/* Desktop Search with Live Suggestions */}
             <div className="hidden md:flex flex-1 max-w-xl mx-8">
@@ -330,18 +339,14 @@ const Marketplace = () => {
                 Dealers
               </a>
               {wishlistCount > 0 && (
-                <button className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-red-500">
+                <Link 
+                  to="/marketplace/wishlist" 
+                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-red-500"
+                >
                   <Heart className="h-4 w-4" />
                   <span>{wishlistCount}</span>
-                </button>
+                </Link>
               )}
-              <Button 
-                variant="ghost"
-                className="text-muted-foreground hover:text-primary"
-                onClick={() => navigate("/auth")}
-              >
-                Login
-              </Button>
             </nav>
 
             {/* Mobile menu toggle */}
@@ -375,9 +380,9 @@ const Marketplace = () => {
         </div>
       </header>
 
-      {/* Hero Section - Automotive Showroom SVG */}
+      {/* Hero Section - Animated Carousel with Multiple Banners */}
       <section className="relative h-[280px] md:h-[400px] overflow-hidden">
-        <AutoShowroomHero />
+        <HeroCarousel />
       </section>
 
       {/* Category Pills - Horizontal Scroll */}

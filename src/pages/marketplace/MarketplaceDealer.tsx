@@ -15,7 +15,7 @@ import {
 import { formatCurrency } from "@/lib/formatters";
 import { createPublicLead } from "@/lib/leads";
 import { trackPublicEvent } from "@/lib/publicAnalytics";
-import CarLoader from "@/components/CarLoader";
+import { DealerPageSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 
 const MarketplaceDealer = () => {
   const { dealerId } = useParams();
@@ -73,18 +73,20 @@ const MarketplaceDealer = () => {
 
       setVehicles(vehiclesData || []);
 
-      // Fetch vehicle images
+      // Fetch vehicle images - get ALL images, not just primary
       if (vehiclesData && vehiclesData.length > 0) {
         const vehicleIds = vehiclesData.map(v => v.id);
         const { data: imagesData } = await supabase
           .from("vehicle_images")
           .select("*")
-          .in("vehicle_id", vehicleIds)
-          .eq("is_primary", true);
+          .in("vehicle_id", vehicleIds);
 
+        // Create image map - prefer primary, otherwise use first available
         const imageMap: Record<string, string> = {};
         (imagesData || []).forEach(img => {
-          imageMap[img.vehicle_id] = img.image_url;
+          if (!imageMap[img.vehicle_id] || img.is_primary) {
+            imageMap[img.vehicle_id] = img.image_url;
+          }
         });
         setVehicleImages(imageMap);
       }
@@ -207,7 +209,7 @@ const MarketplaceDealer = () => {
   };
 
   if (loading) {
-    return <CarLoader />;
+    return <DealerPageSkeleton />;
   }
 
   if (!dealer) {
