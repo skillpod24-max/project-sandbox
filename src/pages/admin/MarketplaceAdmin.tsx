@@ -486,6 +486,9 @@ const MarketplaceAdmin = () => {
             <TabsTrigger value="vehicles" className="gap-2">
               <Car className="h-4 w-4" /> Vehicles
             </TabsTrigger>
+            <TabsTrigger value="featured" className="gap-2">
+              <Sparkles className="h-4 w-4" /> Featured
+            </TabsTrigger>
             <TabsTrigger value="bidding" className="gap-2">
               <Gavel className="h-4 w-4" /> Bidding
             </TabsTrigger>
@@ -684,6 +687,123 @@ const MarketplaceAdmin = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Featured Vehicles Tab - NEW */}
+          <TabsContent value="featured">
+            <div className="space-y-6">
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-amber-500" />
+                    Featured Vehicles Management
+                  </CardTitle>
+                  <CardDescription>Control which vehicles appear in "High Demand" section (max 4)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-sm text-amber-800">
+                      <strong>Note:</strong> Featured vehicles will appear in the "High Demand" section on the marketplace homepage. 
+                      Only 4 vehicles will be shown at a time.
+                    </p>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead>Dealer</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Featured</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {vehicles.slice(0, 30).map((vehicle) => {
+                        const dealer = dealers.find(d => d.user_id === vehicle.user_id);
+                        const isFeatured = vehicle.marketplace_status === 'featured';
+                        return (
+                          <TableRow key={vehicle.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="h-12 w-16 bg-slate-100 rounded-lg flex items-center justify-center">
+                                  <Car className="h-6 w-6 text-slate-400" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-slate-900">
+                                    {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
+                                  </p>
+                                  <p className="text-xs text-slate-500">{vehicle.variant}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{dealer?.dealer_name || 'Unknown'}</TableCell>
+                            <TableCell className="font-semibold">{formatCurrency(vehicle.selling_price)}</TableCell>
+                            <TableCell>
+                              {isFeatured ? (
+                                <Badge className="bg-amber-100 text-amber-700 border-0">
+                                  <Sparkles className="h-3 w-3 mr-1" /> Featured
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">Not Featured</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant={isFeatured ? "outline" : "default"}
+                                onClick={async () => {
+                                  await supabase
+                                    .from("vehicles")
+                                    .update({ marketplace_status: isFeatured ? 'listed' : 'featured' })
+                                    .eq("id", vehicle.id);
+                                  toast({ title: isFeatured ? "Removed from featured" : "Added to featured" });
+                                  fetchData();
+                                }}
+                              >
+                                {isFeatured ? 'Remove Featured' : 'Make Featured'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Currently Featured</CardTitle>
+                  <CardDescription>These vehicles appear in "High Demand Vehicles" section</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {vehicles.filter(v => v.marketplace_status === 'featured').slice(0, 4).map((vehicle) => {
+                      const dealer = dealers.find(d => d.user_id === vehicle.user_id);
+                      return (
+                        <Card key={vehicle.id} className="overflow-hidden">
+                          <div className="aspect-video bg-slate-100 flex items-center justify-center">
+                            <Car className="h-10 w-10 text-slate-400" />
+                          </div>
+                          <CardContent className="p-3">
+                            <p className="font-semibold text-sm truncate">
+                              {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
+                            </p>
+                            <p className="text-xs text-slate-500">{dealer?.dealer_name}</p>
+                            <p className="text-sm font-bold text-blue-600 mt-1">{formatCurrency(vehicle.selling_price)}</p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    {vehicles.filter(v => v.marketplace_status === 'featured').length === 0 && (
+                      <div className="col-span-4 text-center py-8 text-slate-500">
+                        No featured vehicles yet. Add some from the table above.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Bidding Tab */}

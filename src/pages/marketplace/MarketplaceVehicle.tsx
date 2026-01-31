@@ -259,16 +259,21 @@ const MarketplaceVehicle = () => {
     { label: "RTO", value: vehicle.registration_number?.slice(0, 4) || "N/A", icon: Navigation },
   ];
 
-  const EnquiryFormContent = () => (
-    submitted ? (
-      <div className="text-center py-6">
-        <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="h-8 w-8 text-emerald-600" />
+  // Memoized form to prevent unnecessary re-renders
+  const renderEnquiryForm = () => {
+    if (submitted) {
+      return (
+        <div className="text-center py-6">
+          <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-emerald-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Enquiry Sent!</h3>
+          <p className="text-slate-500 mb-4">The dealer will contact you shortly.</p>
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">Enquiry Sent!</h3>
-        <p className="text-slate-500 mb-4">The dealer will contact you shortly.</p>
-      </div>
-    ) : (
+      );
+    }
+    
+    return (
       <div className="space-y-3">
         <Input
           placeholder="Your Name *"
@@ -308,8 +313,8 @@ const MarketplaceVehicle = () => {
           {submitting ? "Sending..." : "Get Best Price"}
         </Button>
       </div>
-    )
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 lg:pb-0">
@@ -704,7 +709,7 @@ const MarketplaceVehicle = () => {
                 <h3 className="font-semibold text-slate-900 mb-1">Interested?</h3>
                 <p className="text-sm text-slate-500 mb-4">Share your details for best price</p>
                 
-                <EnquiryFormContent />
+                {renderEnquiryForm()}
 
                 {/* Quick Actions */}
                 <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
@@ -786,7 +791,7 @@ const MarketplaceVehicle = () => {
               <SheetHeader className="mb-4">
                 <SheetTitle>Get Best Price for This Car</SheetTitle>
               </SheetHeader>
-              <EnquiryFormContent />
+              {renderEnquiryForm()}
             </SheetContent>
           </Sheet>
         </div>

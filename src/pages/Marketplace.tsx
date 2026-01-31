@@ -318,7 +318,7 @@ const Marketplace = () => {
               <div className="relative w-full">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Search by brand, model..."
+                  placeholder="Search vehicles, dealers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
@@ -326,6 +326,7 @@ const Marketplace = () => {
                 />
                 <LiveSearchSuggestions 
                   vehicles={vehicles}
+                  dealers={dealers}
                   searchTerm={searchTerm}
                   onSelect={(term) => { setSearchTerm(term); setSearchFocused(false); }}
                   onClose={() => setSearchFocused(false)}
@@ -395,53 +396,61 @@ const Marketplace = () => {
         <HeroCarousel />
       </section>
 
-      {/* Category Pills - Horizontal Scroll */}
+      {/* Category Pills - Compact on Mobile */}
       <section className="sticky top-16 z-40 bg-white border-b border-slate-100 shadow-sm">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            <CategoryPill 
-              icon={Car} 
-              label="Cars" 
-              active={vehicleType === "car"} 
-              onClick={() => { setVehicleType("car"); setBodyType("all"); }} 
-            />
-            <CategoryPill 
-              icon={Bike} 
-              label="Bikes" 
-              active={vehicleType === "bike"} 
-              onClick={() => { setVehicleType("bike"); setBodyType("all"); }} 
-            />
-            <CategoryPill 
-              icon={Truck} 
-              label="Commercial" 
-              active={vehicleType === "commercial"} 
-              onClick={() => { setVehicleType("commercial"); setBodyType("all"); }} 
-            />
-            <div className="h-8 w-px bg-slate-200 mx-2 shrink-0" />
-            <CategoryPill 
-              icon={CreditCard} 
-              label="EMI Options" 
-              active={false} 
-              onClick={() => {}} 
-            />
-            <CategoryPill 
-              icon={Calculator} 
-              label="EMI Calculator" 
-              active={false} 
-              onClick={() => {}} 
-            />
+        <div className="container mx-auto px-4 py-2 md:py-3">
+          {/* Main category pills - smaller on mobile */}
+          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            <button
+              onClick={() => { setVehicleType("car"); setBodyType("all"); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm ${
+                vehicleType === "car" 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              <Car className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="font-medium">Cars</span>
+            </button>
+            <button
+              onClick={() => { setVehicleType("bike"); setBodyType("all"); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm ${
+                vehicleType === "bike" 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              <Bike className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="font-medium">Bikes</span>
+            </button>
+            <button
+              onClick={() => { setVehicleType("commercial"); setBodyType("all"); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm ${
+                vehicleType === "commercial" 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              <Truck className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="font-medium">Commercial</span>
+            </button>
           </div>
 
-          {/* Body Type Filter for Cars */}
+          {/* Body Type Filter for Cars - Compact on mobile */}
           {vehicleType === "car" && (
-            <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex gap-1.5 md:gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
               {carBodyTypes.map((type) => (
-                <BodyTypePill
+                <button
                   key={type}
-                  label={type}
-                  active={bodyType === type.toLowerCase()}
                   onClick={() => setBodyType(type.toLowerCase())}
-                />
+                  className={`px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
+                    bodyType === type.toLowerCase() 
+                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-2 border-transparent'
+                  }`}
+                >
+                  {type}
+                </button>
               ))}
             </div>
           )}
