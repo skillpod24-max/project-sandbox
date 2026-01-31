@@ -1115,6 +1115,7 @@ setVehicleImages(prev => ({
                 <p className="text-sm text-muted-foreground">Additional automotive details based on vehicle type</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Common Fields */}
                   <div className="space-y-2">
                     <Label>Tyre Condition</Label>
                     <Select value={(formData as any).tyre_condition || ""} onValueChange={(v) => setFormData({ ...formData, tyre_condition: v } as any)}>
@@ -1145,22 +1146,12 @@ setVehicleImages(prev => ({
                     <Label>Fitness Expiry</Label>
                     <Input type="date" value={(formData as any).fitness_expiry || ""} onChange={(e) => setFormData({ ...formData, fitness_expiry: e.target.value } as any)} />
                   </div>
-                  {formData.vehicle_type === "commercial" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Permit Expiry</Label>
-                        <Input type="date" value={(formData as any).permit_expiry || ""} onChange={(e) => setFormData({ ...formData, permit_expiry: e.target.value } as any)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Road Tax Expiry</Label>
-                        <Input type="date" value={(formData as any).road_tax_expiry || ""} onChange={(e) => setFormData({ ...formData, road_tax_expiry: e.target.value } as any)} />
-                      </div>
-                    </>
-                  )}
                   <div className="space-y-2">
                     <Label>Mileage (km/l)</Label>
                     <Input type="number" step="0.1" value={(formData as any).mileage || ""} onChange={(e) => setFormData({ ...formData, mileage: parseFloat(e.target.value) } as any)} />
                   </div>
+
+                  {/* Car Specific Fields */}
                   {formData.vehicle_type === "car" && (
                     <>
                       <div className="space-y-2">
@@ -1171,8 +1162,173 @@ setVehicleImages(prev => ({
                         <Label>Boot Space</Label>
                         <Input value={(formData as any).boot_space || ""} onChange={(e) => setFormData({ ...formData, boot_space: e.target.value } as any)} placeholder="e.g., 350 liters" />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Ground Clearance (mm)</Label>
+                        <Input type="number" placeholder="e.g., 180" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Ground Clearance: ${e.target.value}mm]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Engine Displacement (cc)</Label>
+                        <Input type="number" placeholder="e.g., 1498" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Engine: ${e.target.value}cc]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max Power (bhp)</Label>
+                        <Input type="number" placeholder="e.g., 115" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Power: ${e.target.value}bhp]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max Torque (Nm)</Label>
+                        <Input type="number" placeholder="e.g., 250" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Torque: ${e.target.value}Nm]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Airbags</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Airbags: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="None">None</SelectItem>
+                            <SelectItem value="2 Airbags">2 Airbags</SelectItem>
+                            <SelectItem value="4 Airbags">4 Airbags</SelectItem>
+                            <SelectItem value="6 Airbags">6 Airbags</SelectItem>
+                            <SelectItem value="7+ Airbags">7+ Airbags</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Sunroof</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Sunroof: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="No">No Sunroof</SelectItem>
+                            <SelectItem value="Single Pane">Single Pane</SelectItem>
+                            <SelectItem value="Panoramic">Panoramic</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Infotainment</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Infotainment: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Basic Audio">Basic Audio</SelectItem>
+                            <SelectItem value="Touchscreen">Touchscreen</SelectItem>
+                            <SelectItem value="Android Auto/CarPlay">Android Auto/CarPlay</SelectItem>
+                            <SelectItem value="Connected Car">Connected Car Tech</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </>
                   )}
+
+                  {/* Bike Specific Fields */}
+                  {formData.vehicle_type === "bike" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Engine Displacement (cc)</Label>
+                        <Input type="number" placeholder="e.g., 150, 350, 650" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Engine: ${e.target.value}cc]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max Power (PS)</Label>
+                        <Input type="number" placeholder="e.g., 13.5" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Power: ${e.target.value}PS]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Kerb Weight (kg)</Label>
+                        <Input type="number" placeholder="e.g., 165" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Weight: ${e.target.value}kg]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Seat Height (mm)</Label>
+                        <Input type="number" placeholder="e.g., 800" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Seat Height: ${e.target.value}mm]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fuel Tank Capacity (L)</Label>
+                        <Input type="number" step="0.1" placeholder="e.g., 12.5" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Tank: ${e.target.value}L]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Top Speed (km/h)</Label>
+                        <Input type="number" placeholder="e.g., 130" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Top Speed: ${e.target.value}km/h]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Brake Type</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Brake: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Drum/Drum">Drum/Drum</SelectItem>
+                            <SelectItem value="Disc/Drum">Disc/Drum</SelectItem>
+                            <SelectItem value="Disc/Disc">Disc/Disc</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>ABS Type</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [ABS: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="No ABS">No ABS</SelectItem>
+                            <SelectItem value="Single Channel">Single Channel ABS</SelectItem>
+                            <SelectItem value="Dual Channel">Dual Channel ABS</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Bike Type</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Type: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Sport">Sport</SelectItem>
+                            <SelectItem value="Cruiser">Cruiser</SelectItem>
+                            <SelectItem value="Naked/Street">Naked/Street</SelectItem>
+                            <SelectItem value="Adventure/Touring">Adventure/Touring</SelectItem>
+                            <SelectItem value="Commuter">Commuter</SelectItem>
+                            <SelectItem value="Scooter">Scooter</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Commercial Vehicle Specific Fields */}
+                  {formData.vehicle_type === "commercial" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Permit Expiry</Label>
+                        <Input type="date" value={(formData as any).permit_expiry || ""} onChange={(e) => setFormData({ ...formData, permit_expiry: e.target.value } as any)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Road Tax Expiry</Label>
+                        <Input type="date" value={(formData as any).road_tax_expiry || ""} onChange={(e) => setFormData({ ...formData, road_tax_expiry: e.target.value } as any)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>GVW (Gross Vehicle Weight in kg)</Label>
+                        <Input type="number" placeholder="e.g., 7500" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [GVW: ${e.target.value}kg]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Payload Capacity (kg)</Label>
+                        <Input type="number" placeholder="e.g., 3500" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Payload: ${e.target.value}kg]` })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Body Type</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Body: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Open Body">Open Body</SelectItem>
+                            <SelectItem value="Closed Container">Closed Container</SelectItem>
+                            <SelectItem value="Tipper">Tipper</SelectItem>
+                            <SelectItem value="Tanker">Tanker</SelectItem>
+                            <SelectItem value="Bus/Passenger">Bus/Passenger</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Permit Type</Label>
+                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Permit: ${v}]` })}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="National">National Permit</SelectItem>
+                            <SelectItem value="State">State Permit</SelectItem>
+                            <SelectItem value="Tourist">Tourist Permit</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+
                   <div className="space-y-2">
                     <Label>Last Service Date</Label>
                     <Input type="date" value={(formData as any).last_service_date || ""} onChange={(e) => setFormData({ ...formData, last_service_date: e.target.value } as any)} />
