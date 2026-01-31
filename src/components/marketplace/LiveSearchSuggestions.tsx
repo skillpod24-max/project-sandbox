@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Car, Clock, TrendingUp } from "lucide-react";
+import { Search, Car, Clock, TrendingUp, Building2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 
 interface Vehicle {
@@ -13,8 +13,17 @@ interface Vehicle {
   image_url?: string;
 }
 
+interface Dealer {
+  id: string;
+  user_id: string;
+  dealer_name: string;
+  dealer_address?: string;
+  shop_logo_url?: string;
+}
+
 interface LiveSearchSuggestionsProps {
   vehicles: Vehicle[];
+  dealers?: Dealer[];
   searchTerm: string;
   onSelect: (term: string) => void;
   onClose: () => void;
@@ -23,6 +32,7 @@ interface LiveSearchSuggestionsProps {
 
 const LiveSearchSuggestions = ({ 
   vehicles, 
+  dealers = [],
   searchTerm, 
   onSelect, 
   onClose,
@@ -44,7 +54,7 @@ const LiveSearchSuggestions = ({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [visible, onClose]);
 
-  const suggestions = useMemo((): { matchingVehicles: Vehicle[]; brandModelSuggestions: string[] } | null => {
+  const suggestions = useMemo((): { matchingVehicles: Vehicle[]; brandModelSuggestions: string[]; matchingDealers: Dealer[] } | null => {
     if (!searchTerm || searchTerm.length < 2) return null;
     
     const term = searchTerm.toLowerCase();
@@ -63,8 +73,16 @@ const LiveSearchSuggestions = ({
         .map(v => `${v.brand} ${v.model}`)
     )].slice(0, 3);
 
-    return { matchingVehicles, brandModelSuggestions };
-  }, [vehicles, searchTerm]);
+    // Get matching dealers
+    const matchingDealers = dealers
+      .filter(d => 
+        d.dealer_name?.toLowerCase().includes(term) ||
+        d.dealer_address?.toLowerCase().includes(term)
+      )
+      .slice(0, 3);
+
+    return { matchingVehicles, brandModelSuggestions, matchingDealers };
+  }, [vehicles, dealers, searchTerm]);
 
   // Recent searches from localStorage
   const recentSearches = useMemo(() => {
@@ -80,13 +98,17 @@ const LiveSearchSuggestions = ({
   const popularSearches = ["Maruti Swift", "Honda City", "Hyundai Creta", "Toyota Fortuner"];
 
   const handleVehicleClick = (vehicleId: string) => {
-    // Save to recent searches
     const term = searchTerm;
     if (term) {
       const recent = [...new Set([term, ...recentSearches])].slice(0, 5);
       localStorage.setItem("recent_vehicle_searches", JSON.stringify(recent));
     }
     navigate(`/marketplace/vehicle/${vehicleId}`);
+    onClose();
+  };
+
+  const handleDealerClick = (dealerId: string) => {
+    navigate(`/marketplace/dealer/${dealerId}`);
     onClose();
   };
 
@@ -151,6 +173,37 @@ const LiveSearchSuggestions = ({
         </div>
       ) : hasResults ? (
         <div>
+          {/* Matching Dealers */}
+          {suggestions.matchingDealers?.length > 0 && (
+            <div className="p-3 border-b border-slate-100">
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Building2 className="h-3 w-3" />
+                Dealers
+              </h4>
+              {suggestions.matchingDealers.map((dealer) => (
+                <button
+                  key={dealer.id}
+                  onClick={() => handleDealerClick(dealer.user_id)}
+                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 text-left transition-colors"
+                >
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center overflow-hidden shrink-0">
+                    {dealer.shop_logo_url ? (
+                      <img src={dealer.shop_logo_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <Building2 className="h-5 w-5 text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-900 truncate">{dealer.dealer_name}</p>
+                    {dealer.dealer_address && (
+                      <p className="text-xs text-slate-500 truncate">{dealer.dealer_address}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Brand/Model Suggestions */}
           {suggestions.brandModelSuggestions?.length > 0 && (
             <div className="p-3 border-b border-slate-100">
@@ -205,7 +258,7 @@ const LiveSearchSuggestions = ({
       ) : (
         <div className="p-8 text-center">
           <Car className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">No vehicles found for "{searchTerm}"</p>
+          <p className="text-slate-500">No results found for "{searchTerm}"</p>
           <p className="text-sm text-slate-400 mt-1">Try a different search term</p>
         </div>
       )}

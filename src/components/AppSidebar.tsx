@@ -119,6 +119,10 @@ const transactionMenuItems = [
   { title: "Payments", icon: CreditCard, url: "/payments" },
   { title: "Expenses", icon: ReceiptText, url: "/expenses" },
   { title: "EMI", icon: CalendarClock, url: "/emi" },
+];
+
+const marketplaceMenuItems = [
+  { title: "Marketplace Hub", icon: BarChart3, url: "/marketplace-hub" },
   { title: "Vehicles for Sale", icon: Tag, url: "/vehicles-for-sale" },
   { title: "Test Drive Requests", icon: Calendar, url: "/test-drive-requests" },
 ];
@@ -127,7 +131,6 @@ const managementMenuItems = [
   { title: "Documents", icon: FileText, url: "/documents" },
   { title: "Reports", icon: BarChart3, url: "/reports" },
   { title: "Catalogue Analytics", icon: BarChart3, url: "/analytics/public-page" },
-  { title: "Marketplace Analytics", icon: BarChart3, url: "/analytics/marketplace" },
   { title: "Vehicle Inspection", icon: Wrench, url: "/vehicles" },
   { title: "Alerts", icon: Bell, url: "/alerts" },
 ];
@@ -237,6 +240,7 @@ export function AppSidebar() {
         <div className="flex-1 overflow-y-auto scrollbar-invisible">
           <MemoizedMenuGroup label="Main" items={mainMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Transactions" items={transactionMenuItems} isCollapsed={isCollapsed} />
+          <MemoizedMenuGroup label="Marketplace" items={marketplaceMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Management" items={managementMenuItems} isCollapsed={isCollapsed} />
         </div>
 

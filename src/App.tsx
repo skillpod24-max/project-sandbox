@@ -42,6 +42,7 @@ import SellVehicle from "./pages/marketplace/SellVehicle";
 import SellVehicleFormPage from "./pages/marketplace/SellVehicleFormPage";
 import Wishlist from "./pages/marketplace/Wishlist";
 import TestDriveRequests from "./pages/TestDriveRequests";
+import DealerMarketplaceHub from "./pages/DealerMarketplaceHub";
 
 // Footer Pages
 import AboutPage from "./pages/footer/AboutPage";
@@ -192,6 +193,10 @@ const App = () => (
             }
           />
           <Route
+            path="/marketplace-hub"
+            element={<DealerMarketplaceHub />}
+          />
+          <Route
             path="/analytics/marketplace"
             element={
               <Layout>
@@ -224,7 +229,7 @@ const App = () => (
             }
           />
           <Route path="/vehicles-for-sale" element={<Layout><VehiclesForSale /></Layout>} />
-          <Route path="/test-drive-requests" element={<TestDriveRequests />} />
+          <Route path="/test-drive-requests" element={<Layout><TestDriveRequests /></Layout>} />
           <Route path="/inspection/:vehicleId" element={<VehicleInspection />} />
 
           {/* ---------- 404 ---------- */}
