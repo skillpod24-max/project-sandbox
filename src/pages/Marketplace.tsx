@@ -25,6 +25,8 @@ import HeroCarousel from "@/components/marketplace/HeroCarousel";
 import LocationSelector from "@/components/marketplace/LocationSelector";
 import useWishlist from "@/hooks/useWishlist";
 import useComparison from "@/hooks/useComparison";
+import MarketplacePopup from "@/components/marketplace/MarketplacePopup";
+import FloatingCTA from "@/components/marketplace/FloatingCTA";
 import {
   Sheet,
   SheetContent,
@@ -247,6 +249,7 @@ const Marketplace = () => {
     });
   }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, bodyType, cityFilter, getDealerCity]);
 
+  // Featured dealers (admin controlled - show only 4-5)
   const topDealers = useMemo(() => {
     return dealers
       .map(d => ({
@@ -255,17 +258,24 @@ const Marketplace = () => {
         vehicleCount: getDealerVehicleCount(d.user_id)
       }))
       .sort((a, b) => {
+        // Featured first
         if (a.marketplace_featured && !b.marketplace_featured) return -1;
         if (!a.marketplace_featured && b.marketplace_featured) return 1;
         return b.rating - a.rating;
       })
-      .slice(0, 10);
+      .slice(0, 5); // Show only 4-5 dealers
   }, [dealers, getDealerRating, getDealerVehicleCount]);
 
+  // High demand vehicles (show only 4)
   const highDemandVehicles = useMemo(() => {
+    // Sort by featured/marketplace_status first, then by price
     return [...vehicles]
-      .sort((a, b) => (b.selling_price || 0) - (a.selling_price || 0))
-      .slice(0, 8);
+      .sort((a, b) => {
+        if (a.marketplace_status === 'featured' && b.marketplace_status !== 'featured') return -1;
+        if (a.marketplace_status !== 'featured' && b.marketplace_status === 'featured') return 1;
+        return (b.selling_price || 0) - (a.selling_price || 0);
+      })
+      .slice(0, 4); // Show only 3-4 vehicles
   }, [vehicles]);
 
   // Get compare vehicles data
@@ -488,7 +498,7 @@ const Marketplace = () => {
 
           {/* 1 column on mobile, 2 on tablet, 4 on desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {highDemandVehicles.slice(0, 6).map((vehicle) => (
+            {highDemandVehicles.map((vehicle) => (
               <MarketplaceVehicleCard
                 key={vehicle.id}
                 vehicle={vehicle}
@@ -707,6 +717,12 @@ const Marketplace = () => {
           </button>
         </div>
       </div>
+
+      {/* Marketing Popup */}
+      <MarketplacePopup />
+      
+      {/* Floating CTA */}
+      <FloatingCTA />
 
       {/* Footer */}
       <MarketplaceFooter />

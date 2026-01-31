@@ -116,15 +116,7 @@ export type Database = {
           vehicle_id?: string | null
           winner_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "auction_listings_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       auction_state_log: {
         Row: {
@@ -449,15 +441,7 @@ export type Database = {
           user_id?: string
           vehicle_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "expenses_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       leads: {
         Row: {
@@ -687,13 +671,6 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "payments_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
         ]
       }
       profiles: {
@@ -832,13 +809,6 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -1161,15 +1131,7 @@ export type Database = {
           user_id?: string
           vehicle_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "vehicle_images_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       vehicle_inspections: {
         Row: {
@@ -1226,15 +1188,7 @@ export type Database = {
           updated_at?: string
           vehicle_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "vehicle_inspections_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       vehicle_purchases: {
         Row: {
@@ -1282,22 +1236,7 @@ export type Database = {
           vehicle_id?: string
           vendor_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "vehicle_purchases_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vehicle_purchases_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       vehicles: {
         Row: {
@@ -1459,15 +1398,7 @@ export type Database = {
           vehicle_type?: Database["public"]["Enums"]["vehicle_type"]
           vendor_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "vehicles_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       vendors: {
         Row: {

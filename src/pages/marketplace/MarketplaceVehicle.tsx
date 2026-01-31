@@ -58,8 +58,11 @@ const MarketplaceVehicle = () => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isWishlisted = vehicle ? isInWishlist(vehicle.id) : false;
   
-  // Form state
-  const [form, setForm] = useState({ name: "", phone: "", email: "", message: "" });
+  // Form state - Using individual states to avoid re-render issues
+  const [formName, setFormName] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formOpened, setFormOpened] = useState(false);
@@ -142,7 +145,7 @@ const MarketplaceVehicle = () => {
   }, [formOpened, submitted, vehicle, dealer]);
 
   const handleSubmit = async () => {
-    if (!form.name || !form.phone) {
+    if (!formName || !formPhone) {
       toast({ title: "Name & phone required", variant: "destructive" });
       return;
     }
@@ -151,11 +154,11 @@ const MarketplaceVehicle = () => {
     try {
       await createPublicLead({
         dealerUserId: vehicle.user_id,
-        customerName: form.name,
-        phone: form.phone,
-        email: form.email || undefined,
+        customerName: formName,
+        phone: formPhone,
+        email: formEmail || undefined,
         vehicleInterest: `${vehicle.brand} ${vehicle.model}`,
-        notes: `[MARKETPLACE] ${form.message || ""}`,
+        notes: `[MARKETPLACE] ${formMessage || ""}`,
         source: "marketplace",
       });
 
@@ -256,7 +259,7 @@ const MarketplaceVehicle = () => {
     { label: "RTO", value: vehicle.registration_number?.slice(0, 4) || "N/A", icon: Navigation },
   ];
 
-  const EnquiryForm = ({ onSubmit, form, setForm, submitting, submitted, onFocus }: any) => (
+  const EnquiryFormContent = () => (
     submitted ? (
       <div className="text-center py-6">
         <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
@@ -269,35 +272,35 @@ const MarketplaceVehicle = () => {
       <div className="space-y-3">
         <Input
           placeholder="Your Name *"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          onFocus={onFocus}
+          value={formName}
+          onChange={(e) => setFormName(e.target.value)}
+          onFocus={handleFormFocus}
           className="border-slate-200 rounded-xl h-12"
         />
         <Input
           placeholder="Phone Number *"
-          value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          onFocus={onFocus}
+          value={formPhone}
+          onChange={(e) => setFormPhone(e.target.value)}
+          onFocus={handleFormFocus}
           className="border-slate-200 rounded-xl h-12"
         />
         <Input
           placeholder="Email (optional)"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          onFocus={onFocus}
+          value={formEmail}
+          onChange={(e) => setFormEmail(e.target.value)}
+          onFocus={handleFormFocus}
           className="border-slate-200 rounded-xl h-12"
         />
         <Textarea
           placeholder="Message (optional)"
-          value={form.message}
-          onChange={(e) => setForm({ ...form, message: e.target.value })}
-          onFocus={onFocus}
+          value={formMessage}
+          onChange={(e) => setFormMessage(e.target.value)}
+          onFocus={handleFormFocus}
           className="border-slate-200 rounded-xl"
           rows={3}
         />
         <Button 
-          onClick={onSubmit} 
+          onClick={handleSubmit} 
           disabled={submitting} 
           className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl h-12 text-base font-semibold"
         >
@@ -701,14 +704,7 @@ const MarketplaceVehicle = () => {
                 <h3 className="font-semibold text-slate-900 mb-1">Interested?</h3>
                 <p className="text-sm text-slate-500 mb-4">Share your details for best price</p>
                 
-                <EnquiryForm 
-                  onSubmit={handleSubmit}
-                  form={form}
-                  setForm={setForm}
-                  submitting={submitting}
-                  submitted={submitted}
-                  onFocus={handleFormFocus}
-                />
+                <EnquiryFormContent />
 
                 {/* Quick Actions */}
                 <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
@@ -790,14 +786,7 @@ const MarketplaceVehicle = () => {
               <SheetHeader className="mb-4">
                 <SheetTitle>Get Best Price for This Car</SheetTitle>
               </SheetHeader>
-              <EnquiryForm 
-                onSubmit={handleSubmit}
-                form={form}
-                setForm={setForm}
-                submitting={submitting}
-                submitted={submitted}
-                onFocus={handleFormFocus}
-              />
+              <EnquiryFormContent />
             </SheetContent>
           </Sheet>
         </div>
