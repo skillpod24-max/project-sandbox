@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -63,6 +65,9 @@ const MarketplaceVehicle = () => {
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formMessage, setFormMessage] = useState("");
+  const [wantTestDrive, setWantTestDrive] = useState(false);
+  const [testDriveDate, setTestDriveDate] = useState("");
+  const [testDriveTime, setTestDriveTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formOpened, setFormOpened] = useState(false);
@@ -150,15 +155,27 @@ const MarketplaceVehicle = () => {
       return;
     }
 
+    if (wantTestDrive && (!testDriveDate || !testDriveTime)) {
+      toast({ title: "Please select test drive date and time", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
     try {
+      let notes = "[MARKETPLACE]";
+      if (formMessage) notes += ` ${formMessage}`;
+      
+      if (wantTestDrive) {
+        notes += ` [TEST DRIVE REQUESTED: ${testDriveDate} at ${testDriveTime}]`;
+      }
+
       await createPublicLead({
         dealerUserId: vehicle.user_id,
         customerName: formName,
         phone: formPhone,
         email: formEmail || undefined,
         vehicleInterest: `${vehicle.brand} ${vehicle.model}`,
-        notes: `[MARKETPLACE] ${formMessage || ""}`,
+        notes,
         source: "marketplace",
       });
 
@@ -171,7 +188,7 @@ const MarketplaceVehicle = () => {
 
       setSubmitted(true);
       setEnquirySheetOpen(false);
-      toast({ title: "Enquiry sent successfully!" });
+      toast({ title: wantTestDrive ? "Test drive request sent!" : "Enquiry sent successfully!" });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
@@ -259,16 +276,27 @@ const MarketplaceVehicle = () => {
     { label: "RTO", value: vehicle.registration_number?.slice(0, 4) || "N/A", icon: Navigation },
   ];
 
+  // Time slots for test drive
+  const timeSlots = [
+    "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+    "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM"
+  ];
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split('T')[0];
+
   // Memoized form to prevent unnecessary re-renders
   const renderEnquiryForm = () => {
     if (submitted) {
       return (
         <div className="text-center py-6">
-          <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-emerald-600" />
+          <div className="h-16 w-16 rounded-full bg-green-100/80 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-green-700" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Enquiry Sent!</h3>
-          <p className="text-slate-500 mb-4">The dealer will contact you shortly.</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            {wantTestDrive ? "Test Drive Scheduled!" : "Enquiry Sent!"}
+          </h3>
+          <p className="text-muted-foreground mb-4">The dealer will contact you shortly.</p>
         </div>
       );
     }
@@ -280,37 +308,81 @@ const MarketplaceVehicle = () => {
           value={formName}
           onChange={(e) => setFormName(e.target.value)}
           onFocus={handleFormFocus}
-          className="border-slate-200 rounded-xl h-12"
+          className="border-border rounded-xl h-12"
         />
         <Input
           placeholder="Phone Number *"
           value={formPhone}
           onChange={(e) => setFormPhone(e.target.value)}
           onFocus={handleFormFocus}
-          className="border-slate-200 rounded-xl h-12"
+          className="border-border rounded-xl h-12"
         />
         <Input
           placeholder="Email (optional)"
           value={formEmail}
           onChange={(e) => setFormEmail(e.target.value)}
           onFocus={handleFormFocus}
-          className="border-slate-200 rounded-xl h-12"
+          className="border-border rounded-xl h-12"
         />
         <Textarea
           placeholder="Message (optional)"
           value={formMessage}
           onChange={(e) => setFormMessage(e.target.value)}
           onFocus={handleFormFocus}
-          className="border-slate-200 rounded-xl"
+          className="border-border rounded-xl"
           rows={3}
         />
+        
+        {/* Test Drive Option */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="testDrive"
+              checked={wantTestDrive}
+              onCheckedChange={(checked) => setWantTestDrive(checked as boolean)}
+            />
+            <Label htmlFor="testDrive" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              I want a free test drive
+            </Label>
+          </div>
+
+          {wantTestDrive && (
+            <div className="grid grid-cols-2 gap-2 p-3 bg-muted rounded-xl">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Preferred Date</Label>
+                <Input
+                  type="date"
+                  min={minDate}
+                  value={testDriveDate}
+                  onChange={(e) => setTestDriveDate(e.target.value)}
+                  className="h-10 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Preferred Time</Label>
+                <select
+                  value={testDriveTime}
+                  onChange={(e) => setTestDriveTime(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  <option value="">Select time</option>
+                  {timeSlots.map((time) => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+        
         <Button 
           onClick={handleSubmit} 
           disabled={submitting} 
-          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl h-12 text-base font-semibold"
+          className="w-full bg-primary hover:bg-primary/90 rounded-xl h-12 text-base font-semibold"
         >
           <Send className="h-4 w-4 mr-2" />
-          {submitting ? "Sending..." : "Get Best Price"}
+          {submitting ? "Sending..." : wantTestDrive ? "Request Test Drive" : "Get Best Price"}
         </Button>
       </div>
     );
