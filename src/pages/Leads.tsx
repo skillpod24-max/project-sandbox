@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { formatCurrency } from "@/lib/formatters";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 // Indian number formatting
 const formatIndian = (value: string) => {
@@ -393,8 +393,8 @@ setBudgetMaxInput(
 
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
 const convertLead = async (lead: Lead) => {
   if (isConverting) return; // 🔒 hard lock

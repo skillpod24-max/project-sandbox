@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, FileWarning, Calendar, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addDays, isBefore } from "date-fns";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 const Alerts = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -250,8 +250,8 @@ if (expenses) {
   };
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

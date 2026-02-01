@@ -14,7 +14,7 @@ import { Plus, Pencil, Trash2, Search, Eye, Package, Wrench, FileText, Car } fro
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatters";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 interface ServicePackage {
   id: string;
@@ -362,8 +362,8 @@ const Services = () => {
   };
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { formatCurrency, formatIndianNumber, calculateProfit } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
-import CarLoader from "@/components/CarLoader";
+import { DashboardSkeleton } from "@/components/ui/page-skeleton";
 
 const COLORS = ['hsl(221, 83%, 53%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(262, 83%, 58%)', 'hsl(339, 90%, 51%)'];
 
@@ -404,8 +404,8 @@ setSalesFunnelData(funnelData);
   ];
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, Download, ExternalLink, FileText } from "lucide-react";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 
 
@@ -117,8 +117,8 @@ const Documents = () => {
     : documents.filter(d => d.reference_id === selectedVehicle);
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

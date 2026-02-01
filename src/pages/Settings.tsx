@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Palette, Building, FileText, Globe, Check, Bell, Smartphone, Store, Copy, ExternalLink, Upload, Star, Plus, Pencil, Trash2, Award } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { FormSkeleton } from "@/components/ui/page-skeleton";
 
 type Settings = Database["public"]["Tables"]["settings"]["Row"];
 type Testimonial = Database["public"]["Tables"]["dealer_testimonials"]["Row"];
@@ -402,8 +402,8 @@ const Settings = () => {
   };
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <FormSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl">

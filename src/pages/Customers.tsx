@@ -13,7 +13,7 @@ import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, MapPin } from "lucide-r
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
@@ -216,8 +216,8 @@ const Customers = () => {
   );
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

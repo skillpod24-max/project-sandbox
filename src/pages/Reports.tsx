@@ -10,7 +10,7 @@ import { format, subMonths, subDays } from "date-fns";
 import { formatIndianNumber } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import CarLoader from "@/components/CarLoader";
+import { AnalyticsSkeleton } from "@/components/ui/page-skeleton";
 import {
   ROUNDING_TOLERANCE,
   getEffectiveBalance,
@@ -1213,7 +1213,7 @@ setVehicleConversionData(
 
 
 if (loading) {
-return <CarLoader />;
+  return <AnalyticsSkeleton />;
 }
 return (
 <div className="space-y-6 animate-fade-in">

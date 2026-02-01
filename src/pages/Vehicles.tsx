@@ -20,7 +20,7 @@ import { getBrandsForType, getModelsForBrand, getVariantsForModel, vehicleColors
 import { generateVehicleBrochurePDF } from "@/lib/vehiclePdfGenerator";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 // 🇮🇳 Indian number formatting while typing
 const formatIndianNumber = (value: string) => {
@@ -747,8 +747,8 @@ setVehicleImages(prev => ({
   const existingDocs = selectedVehicle ? vehicleDocs[selectedVehicle.id] || [] : [];
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

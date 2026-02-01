@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 const MarketplaceAdmin = () => {
   const navigate = useNavigate();
@@ -327,7 +327,7 @@ const MarketplaceAdmin = () => {
   };
 
   if (loading) {
-    return <CarLoader />;
+    return <PageSkeleton />;
   }
 
   if (!isAdmin) {

@@ -82,6 +82,9 @@ export default function DealerEnquiryForm({
         .filter(Boolean)
         .join(" | ");
 
+      // Use pageId to determine source: if marketplace, use "marketplace", otherwise "website"
+      const source = pageId === "marketplace" ? "marketplace" : "website";
+
       await createPublicLead({
         dealerUserId: dealerInfo.user_id,
         customerName: form.name,
@@ -89,7 +92,7 @@ export default function DealerEnquiryForm({
         email: form.email || undefined,
         city: form.city || undefined,
         notes: notes || undefined,
-        source: "website",
+        source: source,
         lead_type: form.leadType,
       });
 
