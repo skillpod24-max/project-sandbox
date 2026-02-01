@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,13 +67,79 @@ const BodyTypePill = memo(({ label, active, onClick }: { label: string; active: 
 ));
 BodyTypePill.displayName = "BodyTypePill";
 
+// Fetch marketplace data function
+const fetchMarketplaceData = async () => {
+  // Fetch dealers with marketplace enabled
+  const { data: dealersData } = await supabase
+    .from("settings")
+    .select("*")
+    .eq("public_page_enabled", true)
+    .eq("marketplace_enabled", true);
+
+  const dealers = dealersData || [];
+  const dealerIds = dealers.map(d => d.user_id);
+
+  let vehicles: any[] = [];
+  let testimonials: any[] = [];
+  let salesCount: Record<string, number> = {};
+
+  if (dealerIds.length > 0) {
+    // Fetch vehicles from marketplace-enabled dealers
+    const { data: vehiclesData } = await supabase
+      .from("vehicles")
+      .select("*")
+      .eq("is_public", true)
+      .in("user_id", dealerIds)
+      .eq("status", "in_stock");
+
+    // Fetch ALL images for vehicles (not just primary)
+    const vehicleIds = (vehiclesData || []).map(v => v.id);
+    const { data: imagesData } = await supabase
+      .from("vehicle_images")
+      .select("*")
+      .in("vehicle_id", vehicleIds);
+
+    // Create image map - prefer primary, otherwise use first available
+    const imageMap: Record<string, string> = {};
+    (imagesData || []).forEach(img => {
+      if (!imageMap[img.vehicle_id] || img.is_primary) {
+        imageMap[img.vehicle_id] = img.image_url;
+      }
+    });
+
+    vehicles = (vehiclesData || []).map(v => ({
+      ...v,
+      image_url: imageMap[v.id]
+    }));
+
+    // Fetch testimonials
+    const { data: testimonialsData } = await supabase
+      .from("dealer_testimonials")
+      .select("*")
+      .in("user_id", dealerIds)
+      .eq("is_verified", true)
+      .order("rating", { ascending: false })
+      .limit(10);
+
+    testimonials = testimonialsData || [];
+
+    // Fetch sales count per dealer
+    const { data: salesData } = await supabase
+      .from("sales")
+      .select("user_id")
+      .in("user_id", dealerIds)
+      .eq("status", "completed");
+
+    (salesData || []).forEach(s => {
+      salesCount[s.user_id] = (salesCount[s.user_id] || 0) + 1;
+    });
+  }
+
+  return { dealers, vehicles, testimonials, salesCount };
+};
+
 const Marketplace = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [dealers, setDealers] = useState<any[]>([]);
-  const [testimonials, setTestimonials] = useState<any[]>([]);
-  const [salesCount, setSalesCount] = useState<Record<string, number>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showAllVehicles, setShowAllVehicles] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -92,6 +159,19 @@ const Marketplace = () => {
   // Body types for cars
   const carBodyTypes = ["All", "Sedan", "Hatchback", "SUV", "MUV", "Luxury", "Compact SUV"];
 
+  // Use React Query for data fetching with caching
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['marketplace-data'],
+    queryFn: fetchMarketplaceData,
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
+  });
+
+  const vehicles = data?.vehicles || [];
+  const dealers = data?.dealers || [];
+  const testimonials = data?.testimonials || [];
+  const salesCount = data?.salesCount || {};
+
   // Get unique cities from dealers
   const availableCities = useMemo(() => {
     const cities = dealers
@@ -102,82 +182,6 @@ const Marketplace = () => {
       .filter(Boolean);
     return [...new Set(cities)];
   }, [dealers]);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      // Fetch dealers with marketplace enabled
-      const { data: dealersData } = await supabase
-        .from("settings")
-        .select("*")
-        .eq("public_page_enabled", true)
-        .eq("marketplace_enabled", true);
-
-      setDealers(dealersData || []);
-      const dealerIds = (dealersData || []).map(d => d.user_id);
-
-      if (dealerIds.length > 0) {
-        // Fetch vehicles from marketplace-enabled dealers
-        const { data: vehiclesData } = await supabase
-          .from("vehicles")
-          .select("*")
-          .eq("is_public", true)
-          .in("user_id", dealerIds)
-          .eq("status", "in_stock");
-
-        // Fetch ALL images for vehicles (not just primary)
-        const vehicleIds = (vehiclesData || []).map(v => v.id);
-        const { data: imagesData } = await supabase
-          .from("vehicle_images")
-          .select("*")
-          .in("vehicle_id", vehicleIds);
-
-        // Create image map - prefer primary, otherwise use first available
-        const imageMap: Record<string, string> = {};
-        (imagesData || []).forEach(img => {
-          if (!imageMap[img.vehicle_id] || img.is_primary) {
-            imageMap[img.vehicle_id] = img.image_url;
-          }
-        });
-
-        setVehicles((vehiclesData || []).map(v => ({
-          ...v,
-          image_url: imageMap[v.id]
-        })));
-
-        // Fetch testimonials
-        const { data: testimonialsData } = await supabase
-          .from("dealer_testimonials")
-          .select("*")
-          .in("user_id", dealerIds)
-          .eq("is_verified", true)
-          .order("rating", { ascending: false })
-          .limit(10);
-
-        setTestimonials(testimonialsData || []);
-
-        // Fetch sales count per dealer
-        const { data: salesData } = await supabase
-          .from("sales")
-          .select("user_id")
-          .in("user_id", dealerIds)
-          .eq("status", "completed");
-
-        const counts: Record<string, number> = {};
-        (salesData || []).forEach(s => {
-          counts[s.user_id] = (counts[s.user_id] || 0) + 1;
-        });
-        setSalesCount(counts);
-      }
-    } catch (error) {
-      console.error("Error fetching marketplace data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getDealerForVehicle = useCallback((userId: string) => {
     return dealers.find(d => d.user_id === userId);
