@@ -16,7 +16,7 @@ interface Vehicle {
 interface Dealer {
   id: string;
   user_id: string;
-  dealer_name: string;
+  dealer_name?: string;
   dealer_address?: string;
   shop_logo_url?: string;
 }
@@ -73,12 +73,13 @@ const LiveSearchSuggestions = ({
         .map(v => `${v.brand} ${v.model}`)
     )].slice(0, 3);
 
-    // Get matching dealers
+    // Get matching dealers - filter out dealers without names
     const matchingDealers = dealers
-      .filter(d => 
-        d.dealer_name?.toLowerCase().includes(term) ||
-        d.dealer_address?.toLowerCase().includes(term)
-      )
+      .filter(d => {
+        if (!d.dealer_name) return false;
+        return d.dealer_name.toLowerCase().includes(term) ||
+          (d.dealer_address?.toLowerCase().includes(term) ?? false);
+      })
       .slice(0, 3);
 
     return { matchingVehicles, brandModelSuggestions, matchingDealers };
