@@ -1,19 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
   BarChart3, Eye, MessageSquare, Phone, TrendingUp, Car, Users,
-  Globe, ArrowUpRight, ArrowDownRight, Calendar
+  Globe, Calendar, Zap
 } from "lucide-react";
-import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { formatCurrency } from "@/lib/formatters";
+import { format, subDays, startOfDay } from "date-fns";
 import { AnalyticsSkeleton } from "@/components/ui/page-skeleton";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell
+  AreaChart, Area, PieChart, Pie, Cell
 } from "recharts";
+import {
+  MetricCard, EngagementRing, ReachGraph, AudienceInsight,
+  TopContent, ActivityHeatmap, QuickInsights
+} from "@/components/analytics/SocialStyleMetrics";
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
@@ -27,8 +30,15 @@ const MarketplaceAnalytics = () => {
     publicVehicles: 0,
     conversionRate: 0,
   });
+  const [prevStats, setPrevStats] = useState({
+    totalViews: 0,
+    totalEnquiries: 0,
+    totalCalls: 0,
+    totalWhatsapp: 0,
+  });
   const [dailyData, setDailyData] = useState<any[]>([]);
   const [vehicleStats, setVehicleStats] = useState<any[]>([]);
+  const [hourStats, setHourStats] = useState<any[]>([]);
   const [period, setPeriod] = useState("7d");
 
   useEffect(() => {
@@ -42,15 +52,24 @@ const MarketplaceAnalytics = () => {
     try {
       const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
       const startDate = startOfDay(subDays(new Date(), days));
+      const prevStartDate = startOfDay(subDays(new Date(), days * 2));
 
-      // Fetch ONLY marketplace-specific events (from marketplace pages, not public dealer pages)
-      // Marketplace events have public_page_id = "marketplace" or come from vehicle_view in marketplace context
+      // Fetch marketplace-specific events
       const { data: events } = await supabase
         .from("public_page_events")
         .select("*")
         .eq("dealer_user_id", user.id)
         .eq("public_page_id", "marketplace")
         .gte("created_at", startDate.toISOString());
+
+      // Fetch previous period for comparison
+      const { data: prevEvents } = await supabase
+        .from("public_page_events")
+        .select("event_type")
+        .eq("dealer_user_id", user.id)
+        .eq("public_page_id", "marketplace")
+        .gte("created_at", prevStartDate.toISOString())
+        .lt("created_at", startDate.toISOString());
 
       // Fetch marketplace-enabled vehicles count
       const { count: publicVehiclesCount } = await supabase
@@ -60,13 +79,21 @@ const MarketplaceAnalytics = () => {
         .eq("is_public", true)
         .eq("marketplace_status", "listed");
 
-      // Calculate stats - only marketplace events
+      // Calculate stats
       const views = (events || []).filter(e => 
         e.event_type === "vehicle_view" || e.event_type === "dealer_view"
       ).length;
       const enquiries = (events || []).filter(e => e.event_type === "enquiry_submit").length;
       const calls = (events || []).filter(e => e.event_type === "cta_call").length;
       const whatsapp = (events || []).filter(e => e.event_type === "cta_whatsapp").length;
+
+      // Previous period stats
+      const prevViews = (prevEvents || []).filter(e => 
+        e.event_type === "vehicle_view" || e.event_type === "dealer_view"
+      ).length;
+      const prevEnquiries = (prevEvents || []).filter(e => e.event_type === "enquiry_submit").length;
+      const prevCalls = (prevEvents || []).filter(e => e.event_type === "cta_call").length;
+      const prevWhatsapp = (prevEvents || []).filter(e => e.event_type === "cta_whatsapp").length;
 
       setStats({
         totalViews: views,
@@ -77,22 +104,43 @@ const MarketplaceAnalytics = () => {
         conversionRate: views > 0 ? ((enquiries + calls + whatsapp) / views) * 100 : 0,
       });
 
-      // Daily breakdown
-      const dailyMap: Record<string, { date: string; views: number; enquiries: number }> = {};
+      setPrevStats({
+        totalViews: prevViews,
+        totalEnquiries: prevEnquiries,
+        totalCalls: prevCalls,
+        totalWhatsapp: prevWhatsapp,
+      });
+
+      // Daily breakdown for reach graph
+      const dailyMap: Record<string, { date: string; reach: number; impressions: number }> = {};
       for (let i = 0; i < days; i++) {
         const d = format(subDays(new Date(), i), "MMM dd");
-        dailyMap[d] = { date: d, views: 0, enquiries: 0 };
+        dailyMap[d] = { date: d, reach: 0, impressions: 0 };
       }
 
+      const sessionsByDate: Record<string, Set<string>> = {};
       (events || []).forEach(e => {
         const d = format(new Date(e.created_at), "MMM dd");
         if (dailyMap[d]) {
-          if (e.event_type === "vehicle_view" || e.event_type === "dealer_view") dailyMap[d].views++;
-          if (e.event_type === "enquiry_submit") dailyMap[d].enquiries++;
+          dailyMap[d].impressions++;
+          if (!sessionsByDate[d]) sessionsByDate[d] = new Set();
+          sessionsByDate[d].add(e.session_id);
         }
       });
 
+      Object.keys(dailyMap).forEach(d => {
+        dailyMap[d].reach = sessionsByDate[d]?.size || 0;
+      });
+
       setDailyData(Object.values(dailyMap).reverse());
+
+      // Hour stats for heatmap
+      const hourMap: Record<number, number> = {};
+      (events || []).forEach(e => {
+        const hour = new Date(e.created_at).getHours();
+        hourMap[hour] = (hourMap[hour] || 0) + 1;
+      });
+      setHourStats(Array.from({ length: 24 }, (_, i) => ({ hour: i, count: hourMap[i] || 0 })));
 
       // Vehicle-wise stats
       const vehicleMap: Record<string, { id: string; views: number; enquiries: number }> = {};
@@ -127,123 +175,159 @@ const MarketplaceAnalytics = () => {
     }
   };
 
+  const calculateChange = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+
+  const engagementData = useMemo(() => [
+    { name: "Views", value: stats.totalViews, color: COLORS[0] },
+    { name: "Enquiries", value: stats.totalEnquiries, color: COLORS[1] },
+    { name: "Calls", value: stats.totalCalls, color: COLORS[2] },
+    { name: "WhatsApp", value: stats.totalWhatsapp, color: COLORS[4] },
+  ], [stats]);
+
+  const topVehicles = useMemo(() => vehicleStats.slice(0, 5).map(v => ({
+    title: v.name,
+    views: v.views,
+    engagement: v.views > 0 ? Math.round((v.enquiries / v.views) * 100) : 0,
+    trend: v.enquiries > 0 ? "up" as const : v.views > 5 ? "stable" as const : "down" as const,
+  })), [vehicleStats]);
+
+  const insights = useMemo(() => {
+    const list: string[] = [];
+    
+    if (stats.totalViews > 0) {
+      list.push(`📊 Your marketplace listings received ${stats.totalViews} views in the last ${period === "7d" ? "7 days" : period === "30d" ? "30 days" : "90 days"}.`);
+    }
+    
+    if (stats.conversionRate > 5) {
+      list.push(`🎯 Great conversion rate of ${stats.conversionRate.toFixed(1)}% - your listings are compelling!`);
+    } else if (stats.totalViews > 20 && stats.conversionRate < 2) {
+      list.push(`⚠️ Low conversion rate (${stats.conversionRate.toFixed(1)}%) - consider improving photos or pricing.`);
+    }
+
+    if (stats.totalWhatsapp > stats.totalCalls) {
+      list.push(`💬 Customers prefer WhatsApp (${stats.totalWhatsapp}) over calls (${stats.totalCalls}) - ensure quick WhatsApp responses.`);
+    }
+
+    const peakHour = hourStats.reduce((a, b) => b.count > a.count ? b : a, { hour: 0, count: 0 });
+    if (peakHour.count > 0) {
+      list.push(`⏰ Peak activity at ${peakHour.hour}:00 - best time to update listings or respond to enquiries.`);
+    }
+
+    if (topVehicles.length > 0 && topVehicles[0].views > 10) {
+      list.push(`🏆 "${topVehicles[0].title}" is your top performer with ${topVehicles[0].views} views.`);
+    }
+
+    return list;
+  }, [stats, hourStats, topVehicles, period]);
+
   if (loading) {
     return <AnalyticsSkeleton />;
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-blue-600" />
             Marketplace Analytics
           </h1>
-          <p className="text-muted-foreground">Track your marketplace performance</p>
+          <p className="text-muted-foreground">Instagram-style insights for your marketplace presence</p>
         </div>
-        <div className="flex gap-2">
-          {["7d", "30d", "90d"].map((p) => (
+        <div className="flex gap-2 p-1 bg-muted/50 rounded-xl">
+          {[
+            { key: "7d", label: "7 Days" },
+            { key: "30d", label: "30 Days" },
+            { key: "90d", label: "90 Days" },
+          ].map((p) => (
             <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                period === p
-                  ? "bg-blue-600 text-white"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                period === p.key
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {p === "7d" ? "7 Days" : p === "30d" ? "30 Days" : "90 Days"}
+              {p.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Metric Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[
-          { label: "Total Views", value: stats.totalViews, icon: Eye, color: "text-blue-600 bg-blue-50" },
-          { label: "Enquiries", value: stats.totalEnquiries, icon: MessageSquare, color: "text-green-600 bg-green-50" },
-          { label: "Calls", value: stats.totalCalls, icon: Phone, color: "text-purple-600 bg-purple-50" },
-          { label: "WhatsApp", value: stats.totalWhatsapp, icon: MessageSquare, color: "text-emerald-600 bg-emerald-50" },
-          { label: "Public Vehicles", value: stats.publicVehicles, icon: Car, color: "text-amber-600 bg-amber-50" },
-          { label: "Conversion Rate", value: `${stats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: "text-rose-600 bg-rose-50" },
-        ].map((stat, i) => (
-          <Card key={i} className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <MetricCard
+          title="Total Reach"
+          value={stats.totalViews}
+          change={calculateChange(stats.totalViews, prevStats.totalViews)}
+          icon={Eye}
+          color="blue"
+          subtitle="Unique impressions"
+        />
+        <MetricCard
+          title="Enquiries"
+          value={stats.totalEnquiries}
+          change={calculateChange(stats.totalEnquiries, prevStats.totalEnquiries)}
+          icon={MessageSquare}
+          color="emerald"
+          subtitle="Form submissions"
+        />
+        <MetricCard
+          title="Phone Calls"
+          value={stats.totalCalls}
+          change={calculateChange(stats.totalCalls, prevStats.totalCalls)}
+          icon={Phone}
+          color="violet"
+        />
+        <MetricCard
+          title="WhatsApp"
+          value={stats.totalWhatsapp}
+          change={calculateChange(stats.totalWhatsapp, prevStats.totalWhatsapp)}
+          icon={MessageSquare}
+          color="emerald"
+        />
+        <MetricCard
+          title="Active Listings"
+          value={stats.publicVehicles}
+          change={0}
+          icon={Car}
+          color="amber"
+        />
+        <MetricCard
+          title="Conversion"
+          value={`${stats.conversionRate.toFixed(1)}%`}
+          change={0}
+          icon={TrendingUp}
+          color="rose"
+          subtitle="Lead rate"
+        />
       </div>
 
-      {/* Charts */}
+      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Views Over Time */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Views & Enquiries Trend</CardTitle>
-            <CardDescription>Daily performance over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" fontSize={12} stroke="#9CA3AF" />
-                  <YAxis fontSize={12} stroke="#9CA3AF" />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="views" stroke="#3B82F6" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="enquiries" stroke="#10B981" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top Vehicles */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
-            <CardDescription>Most viewed vehicles</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {vehicleStats.map((v, i) => (
-                <div key={v.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-muted-foreground w-6">#{i + 1}</span>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{v.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatCurrency(v.selling_price)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="flex items-center gap-1 text-blue-600">
-                      <Eye className="h-3 w-3" /> {v.views}
-                    </span>
-                    <span className="flex items-center gap-1 text-green-600">
-                      <MessageSquare className="h-3 w-3" /> {v.enquiries}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {vehicleStats.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  No vehicle data available for this period
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ReachGraph data={dailyData} />
+        <EngagementRing 
+          data={engagementData}
+          centerLabel="Total Interactions"
+          centerValue={(stats.totalViews + stats.totalEnquiries + stats.totalCalls + stats.totalWhatsapp).toString()}
+        />
       </div>
+
+      {/* Insights & Activity Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <QuickInsights insights={insights} />
+        <ActivityHeatmap data={hourStats} />
+      </div>
+
+      {/* Top Content */}
+      {topVehicles.length > 0 && (
+        <TopContent items={topVehicles} />
+      )}
     </div>
   );
 };

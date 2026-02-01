@@ -12,10 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Palette, Building, FileText, Globe, Check, Bell, Smartphone, Store, Copy, ExternalLink, Upload, Star, Plus, Pencil, Trash2, Award } from "lucide-react";
+import { Palette, Building, FileText, Globe, Check, Bell, Smartphone, Store, Copy, ExternalLink, Upload, Star, Plus, Pencil, Trash2, Award, ShoppingBag } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { FormSkeleton } from "@/components/ui/page-skeleton";
+import CatalogueSettings from "@/components/settings/CatalogueSettings";
+import MarketplaceSettings from "@/components/settings/MarketplaceSettings";
 
 type Settings = Database["public"]["Tables"]["settings"]["Row"];
 type Testimonial = Database["public"]["Tables"]["dealer_testimonials"]["Row"];
@@ -414,41 +416,61 @@ const Settings = () => {
 
       <Tabs defaultValue="appearance" className="space-y-6">
         <TabsList
-  className="
-    flex gap-2 overflow-x-auto 
-    sm:grid sm:grid-cols-7 
-    w-full max-w-4xl
-    scrollbar-hide
-  "
->
+          className="
+            flex gap-1 overflow-x-auto 
+            sm:grid sm:grid-cols-8 
+            w-full max-w-4xl
+            scrollbar-hide p-1 bg-muted/50 rounded-xl
+          "
+        >
           <TabsTrigger
-  value="appearance"
-  className="gap-2 min-w-[48px] sm:min-w-0 px-3"
-><Palette className="h-4 w-4" /> <span className="hidden sm:inline">Theme</span></TabsTrigger>
+            value="appearance"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Palette className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Theme</span>
+          </TabsTrigger>
           <TabsTrigger
-  value="dealer"
-  className="gap-2 min-w-[48px] sm:min-w-0 px-3"
-><Building className="h-4 w-4" /> <span className="hidden sm:inline">Dealer</span></TabsTrigger>
+            value="dealer"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Building className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Dealer</span>
+          </TabsTrigger>
           <TabsTrigger
-  value="invoice"
-  className="gap-2 min-w-[48px] sm:min-w-0 px-3"
-><FileText className="h-4 w-4" /> <span className="hidden sm:inline">Invoice</span></TabsTrigger>
+            value="invoice"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <FileText className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Invoice</span>
+          </TabsTrigger>
           <TabsTrigger
-  value="notifications"
-  className="gap-2 min-w-[48px] sm:min-w-0 px-3"
-><Bell className="h-4 w-4" /> <span className="hidden sm:inline">Alerts</span></TabsTrigger>
+            value="notifications"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Bell className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Alerts</span>
+          </TabsTrigger>
           <TabsTrigger
-  value="publicpage"
-  className="gap-2 min-w-[48px] sm:min-w-0 px-3"
-><Store className="h-4 w-4" /> <span className="hidden sm:inline">Public</span></TabsTrigger>
+            value="catalogue"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Store className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Catalogue</span>
+          </TabsTrigger>
           <TabsTrigger
-  value="testimonials"
-  className="gap-2 min-w-[48px] sm:min-w-0 px-3"
-><Award className="h-4 w-4" /> <span className="hidden sm:inline">Reviews</span></TabsTrigger>
+            value="marketplace"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <ShoppingBag className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Marketplace</span>
+          </TabsTrigger>
           <TabsTrigger
-  value="regional"
-  className="gap-2 min-w-[48px] sm:min-w-0 px-3"
-><Globe className="h-4 w-4" /> <span className="hidden sm:inline">Regional</span></TabsTrigger>
+            value="testimonials"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Award className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Reviews</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="regional"
+            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <Globe className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Regional</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Appearance Tab */}
@@ -661,279 +683,23 @@ const Settings = () => {
         </TabsContent>
 
         {/* Catalogue Tab */}
-        <TabsContent value="publicpage" className="space-y-6">
-          <Card className="border border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" /> Vehicle Catalogue</CardTitle>
-              <CardDescription>Create a shareable catalogue for your dealership</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="space-y-0.5">
-                  <Label>Enable Catalogue</Label>
-                  <p className="text-sm text-muted-foreground">Create a shareable catalogue with your vehicles and contact info</p>
-                </div>
-                <Switch 
-                  checked={settings.public_page_enabled || false} 
-                  onCheckedChange={(v) => setSettings({ ...settings, public_page_enabled: v })} 
-                />
-              </div>
-
-              {/* Marketplace Settings */}
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-                <div className="space-y-0.5">
-                  <Label className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-blue-600" />
-                    List on VahanHub Marketplace
-                  </Label>
-                  <p className="text-sm text-muted-foreground">Show your dealership and vehicles on the public VahanHub marketplace</p>
-                </div>
-                <Switch 
-                  checked={(settings as any).marketplace_enabled || false} 
-                  onCheckedChange={(v) => setSettings({ ...settings, marketplace_enabled: v } as any)} 
-                  disabled={!settings.public_page_enabled}
-                />
-              </div>
-
-              {(settings as any).marketplace_enabled && (
-                <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
-                  <p className="text-sm font-medium text-muted-foreground">Marketplace Settings</p>
-                  
-                  <div className="space-y-2">
-                    <Label>Marketplace Description</Label>
-                    <Textarea
-                      value={(settings as any).marketplace_description || ""}
-                      onChange={(e) => setSettings({ ...settings, marketplace_description: e.target.value } as any)}
-                      placeholder="Tell buyers why they should choose your dealership..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Marketplace Badge</Label>
-                    <Input
-                      value={(settings as any).marketplace_badge || ""}
-                      onChange={(e) => setSettings({ ...settings, marketplace_badge: e.target.value } as any)}
-                      placeholder="e.g., Top Rated, Fast Response, EMI Available"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Working Hours</Label>
-                    <Input
-                      value={(settings as any).marketplace_working_hours || ""}
-                      onChange={(e) => setSettings({ ...settings, marketplace_working_hours: e.target.value } as any)}
-                      placeholder="e.g., Mon-Sat 9AM-8PM"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-                    <div className="space-y-0.5">
-                      <Label>Featured Dealer</Label>
-                      <p className="text-xs text-muted-foreground">Show in top dealers section (premium)</p>
-                    </div>
-                    <Switch 
-                      checked={(settings as any).marketplace_featured || false} 
-                      onCheckedChange={(v) => setSettings({ ...settings, marketplace_featured: v } as any)} 
-                    />
-                  </div>
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">
-  Your catalogue URL is generated from your dealer name.
-  If the name already exists, a number is added automatically.
-</p>
-
-
-              {settings.public_page_enabled && (
-                <>
-                  {settings.public_page_id && (
-                    <div className="flex flex-col sm:flex-row gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Globe className="h-5 w-5 text-green-600 shrink-0" />
-                        <code className="text-sm truncate">{window.location.origin}/d/{settings.public_page_id}</code>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={copyPublicLink} className="gap-1">
-                          <Copy className="h-4 w-4" /> Copy
-                        </Button>
-                        <a href={`/d/${settings.public_page_id}`} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="outline" className="gap-1">
-                            <ExternalLink className="h-4 w-4" /> Preview
-                          </Button>
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label>Shop Logo</Label>
-                    <div className="flex items-center gap-4">
-                      {settings.shop_logo_url ? (
-                        <img src={settings.shop_logo_url} alt="Shop logo" className="h-16 w-16 object-contain rounded-lg border" />
-                      ) : (
-                        <div className="h-16 w-16 bg-muted rounded-lg flex items-center justify-center">
-                          <Store className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div>
-                        <Input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" id="logo-upload" />
-                        <label htmlFor="logo-upload">
-                          <Button variant="outline" size="sm" className="gap-2 cursor-pointer" asChild disabled={uploadingLogo}>
-                            <span><Upload className="h-4 w-4" /> {uploadingLogo ? "Uploading..." : "Upload Logo"}</span>
-                          </Button>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Shop Tagline</Label>
-                    <Input 
-                      value={settings.shop_tagline || ""} 
-                      onChange={(e) => setSettings({ ...settings, shop_tagline: e.target.value })} 
-                      placeholder="Your trusted partner for quality vehicles"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-  <Label>Dealer Trust Tag</Label>
-  <Input
-    value={settings.dealer_tag || ""}
-    onChange={(e) =>
-      setSettings({ ...settings, dealer_tag: e.target.value })
-    }
-    placeholder="Authorized Dealer / Trusted Seller / Premium Partner"
-  />
-  <p className="text-xs text-muted-foreground">
-    This badge will appear on your public page next to Verified
-  </p>
-</div>
-
-
-                  <div className="space-y-2">
-                    <Label>WhatsApp Number</Label>
-                    <Input 
-                      value={settings.whatsapp_number || ""} 
-                      onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })} 
-                      placeholder="+91 9876543210"
-                    />
-                    <p className="text-xs text-muted-foreground">Include country code for WhatsApp button</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Google Maps Link</Label>
-                    <Input 
-                      value={settings.gmap_link || ""} 
-                      onChange={(e) => setSettings({ ...settings, gmap_link: e.target.value })} 
-                      placeholder="https://maps.google.com/..."
-                    />
-                  </div>
-
-                  
-
-
-                  <Separator />
-                  <p className="text-sm font-medium">Display Options</p>
-
-                  <Separator />
-
-<p className="text-sm font-medium">Insights Visibility</p>
-
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-  {/* Dealer Page */}
-  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-    <Label className="text-sm">Show Dealer Page Views</Label>
-    <Switch
-      checked={Boolean(settings.show_dealer_page_views)}
-      onCheckedChange={(v) =>
-        setSettings({ ...settings, show_dealer_page_views: v })
-      }
-    />
-  </div>
-
-  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-    <Label className="text-sm">Show Dealer Page Enquiries</Label>
-<Switch
-  checked={Boolean(settings.show_dealer_page_inquiries)}
-  onCheckedChange={(v) =>
-    setSettings({ ...settings, show_dealer_page_inquiries: v })
-  }
-/>
-
-  </div>
-
-  {/* Vehicle Page */}
-  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-    <Label className="text-sm">Show Vehicle Page Enquiries</Label>
-<Switch
-  checked={Boolean(settings.show_vehicle_page_enquiries)}
-  onCheckedChange={(v) =>
-    setSettings({ ...settings, show_vehicle_page_enquiries: v })
-  }
-/>
-
-
-  </div>
-
-<div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-  <Label className="text-sm">Show Vehicle Page Views</Label>
-  <Switch
-    checked={Boolean(settings.show_vehicle_page_views)}
-    onCheckedChange={(v) =>
-      setSettings({ ...settings, show_vehicle_page_views: v })
-    }
-  />
-</div>
-
-  
-</div>
-
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <Label className="text-sm">Show Vehicles Sold</Label>
-                      <Switch 
-                        checked={settings.show_vehicles_sold !== false} 
-                        onCheckedChange={(v) => setSettings({ ...settings, show_vehicles_sold: v })} 
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <Label className="text-sm">Show Testimonials</Label>
-                      <Switch 
-                        checked={settings.show_testimonials !== false} 
-                        onCheckedChange={(v) => setSettings({ ...settings, show_testimonials: v })} 
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <Label className="text-sm">Show Ratings</Label>
-                      <Switch 
-                        checked={settings.show_ratings !== false} 
-                        onCheckedChange={(v) => setSettings({ ...settings, show_ratings: v })} 
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="catalogue" className="space-y-6">
+          <CatalogueSettings 
+            settings={settings}
+            setSettings={setSettings}
+            uploadingLogo={uploadingLogo}
+            setUploadingLogo={setUploadingLogo}
+          />
         </TabsContent>
 
-        <Separator />
-<p className="text-sm font-medium">Lead Capture</p>
-
-<div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-  <Label>Auto Enquiry Popup</Label>
-  <Switch
-    checked={Boolean(settings.enable_auto_lead_popup)}
-    onCheckedChange={(v) =>
-      setSettings({ ...settings, enable_auto_lead_popup: v })
-    }
-  />
-</div>
+        {/* Marketplace Tab */}
+        <TabsContent value="marketplace" className="space-y-6">
+          <MarketplaceSettings 
+            settings={settings as any}
+            setSettings={setSettings}
+            catalogueSettings={settings}
+          />
+        </TabsContent>
 
 
         {/* Testimonials Tab */}
