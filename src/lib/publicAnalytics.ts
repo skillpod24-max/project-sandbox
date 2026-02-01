@@ -17,6 +17,7 @@ const getSessionId = (): string => {
 
 export type PublicEventType =
   | "page_view"
+  | "dealer_view"
   | "vehicle_view"
   | "enquiry_submit"
   | "cta_whatsapp"

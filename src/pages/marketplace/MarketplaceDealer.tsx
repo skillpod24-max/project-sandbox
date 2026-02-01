@@ -1,26 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft, MapPin, Phone, MessageCircle, Star, Car, Heart,
-  Fuel, Calendar, Gauge, Send, CheckCircle, Building2, Clock,
-  ExternalLink, Sparkles, Shield, Award
+  ArrowLeft, MapPin, Phone, MessageCircle, Star, Car,
+  Building2, Clock, ExternalLink, Shield, CheckCircle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import { createPublicLead } from "@/lib/leads";
 import { trackPublicEvent } from "@/lib/publicAnalytics";
 import { DealerPageSkeleton } from "@/components/marketplace/ShimmerSkeleton";
+import MarketplaceDealerEnquiryForm from "@/components/public/MarketplaceDealerEnquiryForm";
 
 const MarketplaceDealer = () => {
   const { dealerId } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [dealer, setDealer] = useState<any>(null);
@@ -28,12 +23,6 @@ const MarketplaceDealer = () => {
   const [vehicleImages, setVehicleImages] = useState<Record<string, string>>({});
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [stats, setStats] = useState({ vehiclesSold: 0, avgRating: 0, totalReviews: 0 });
-  
-  // Form state
-  const [form, setForm] = useState({ name: "", phone: "", email: "", message: "", leadType: "buying" as "buying" | "selling" });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [formOpened, setFormOpened] = useState(false);
 
   useEffect(() => {
     if (dealerId) fetchDealer();
@@ -58,9 +47,9 @@ const MarketplaceDealer = () => {
 
       // Track page view
       await trackPublicEvent({
-        eventType: "page_view",
+        eventType: "dealer_view",
         dealerUserId: dealerId!,
-        publicPageId: dealerData.public_page_id || "marketplace"
+        publicPageId: "marketplace"
       });
 
       // Fetch vehicles
@@ -125,64 +114,6 @@ const MarketplaceDealer = () => {
     }
   };
 
-  // Track form opened
-  const handleFormFocus = useCallback(() => {
-    if (!formOpened && dealer) {
-      setFormOpened(true);
-      trackPublicEvent({
-        eventType: "form_opened",
-        dealerUserId: dealerId!,
-        publicPageId: dealer.public_page_id || "marketplace"
-      });
-    }
-  }, [formOpened, dealer, dealerId]);
-
-  // Track form abandoned
-  useEffect(() => {
-    return () => {
-      if (formOpened && !submitted && dealer) {
-        trackPublicEvent({
-          eventType: "form_abandoned",
-          dealerUserId: dealerId!,
-          publicPageId: dealer.public_page_id || "marketplace"
-        });
-      }
-    };
-  }, [formOpened, submitted, dealer, dealerId]);
-
-  const handleSubmit = async () => {
-    if (!form.name || !form.phone) {
-      toast({ title: "Name & phone required", variant: "destructive" });
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await createPublicLead({
-        dealerUserId: dealerId!,
-        customerName: form.name,
-        phone: form.phone,
-        email: form.email || undefined,
-        notes: `[MARKETPLACE] [${form.leadType.toUpperCase()}] ${form.message || ""}`,
-        source: "marketplace",
-        lead_type: form.leadType,
-      });
-
-      await trackPublicEvent({
-        eventType: "enquiry_submit",
-        dealerUserId: dealerId!,
-        publicPageId: dealer?.public_page_id || "marketplace"
-      });
-
-      setSubmitted(true);
-      toast({ title: "Enquiry sent successfully!" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleWhatsApp = () => {
     if (dealer?.whatsapp_number) {
       const message = encodeURIComponent(
@@ -193,7 +124,7 @@ const MarketplaceDealer = () => {
       trackPublicEvent({
         eventType: "cta_whatsapp",
         dealerUserId: dealerId!,
-        publicPageId: dealer.public_page_id || "marketplace"
+        publicPageId: "marketplace"
       });
     }
   };
@@ -203,7 +134,7 @@ const MarketplaceDealer = () => {
       trackPublicEvent({
         eventType: "cta_call",
         dealerUserId: dealerId!,
-        publicPageId: dealer.public_page_id || "marketplace"
+        publicPageId: "marketplace"
       });
     }
   };
@@ -461,80 +392,15 @@ const MarketplaceDealer = () => {
 
           {/* Right Column - Enquiry Form */}
           <div className="space-y-4">
-            <Card className="p-6 border-0 shadow-sm rounded-2xl sticky top-20">
-              {submitted ? (
-                <div className="text-center py-8">
-                  <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="h-8 w-8 text-emerald-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">Enquiry Sent!</h3>
-                  <p className="text-slate-500 mb-4">The dealer will contact you shortly.</p>
-                  <Button variant="outline" onClick={() => setSubmitted(false)}>
-                    Send Another
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-1">Contact Dealer</h3>
-                  <p className="text-sm text-slate-500 mb-4">Share your details for a quick response</p>
-                  
-                  <div className="space-y-3">
-                    {/* Lead Type Toggle */}
-                    <div className="flex gap-2">
-                      {(["buying", "selling"] as const).map((t) => (
-                        <Button
-                          key={t}
-                          size="sm"
-                          variant={form.leadType === t ? "default" : "outline"}
-                          onClick={() => setForm({ ...form, leadType: t })}
-                          className={form.leadType === t ? "bg-blue-600" : ""}
-                        >
-                          {t === "buying" ? "I want to buy" : "I want to sell"}
-                        </Button>
-                      ))}
-                    </div>
-
-                    <Input
-                      placeholder="Your Name *"
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      onFocus={handleFormFocus}
-                      className="border-slate-200"
-                    />
-                    <Input
-                      placeholder="Phone Number *"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      onFocus={handleFormFocus}
-                      className="border-slate-200"
-                    />
-                    <Input
-                      placeholder="Email (optional)"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      onFocus={handleFormFocus}
-                      className="border-slate-200"
-                    />
-                    <Textarea
-                      placeholder="Message (optional)"
-                      value={form.message}
-                      onChange={(e) => setForm({ ...form, message: e.target.value })}
-                      onFocus={handleFormFocus}
-                      className="border-slate-200"
-                      rows={3}
-                    />
-                    <Button 
-                      onClick={handleSubmit} 
-                      disabled={submitting} 
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      {submitting ? "Sending..." : "Send Enquiry"}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </Card>
+            <div className="sticky top-20">
+              <MarketplaceDealerEnquiryForm 
+                dealerInfo={{ 
+                  user_id: dealerId!, 
+                  public_page_id: dealer.public_page_id,
+                  dealer_name: dealer.dealer_name 
+                }} 
+              />
+            </div>
 
             {/* Public page link */}
             {dealer.public_page_id && (

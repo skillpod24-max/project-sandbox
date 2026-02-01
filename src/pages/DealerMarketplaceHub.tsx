@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,15 +16,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import Layout from "@/components/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, subDays, startOfDay } from "date-fns";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from "recharts";
 
-// Tab Types - Removed "enquiries" as it's now in Test Drives
-type HubTab = "analytics" | "test-drives" | "vehicles-for-sale" | "dealers" | "all-vehicles";
+// Tab Types - Only dealer-relevant tabs (removed all-vehicles and dealers)
+type HubTab = "analytics" | "test-drives" | "vehicles-for-sale";
 
 interface SellRequest {
   id: string;
@@ -68,11 +66,15 @@ interface TestDriveRequest {
   isTestDrive: boolean;
 }
 
+interface DealerMarketplaceHubProps {
+  // Optional props for when used as a component
+}
+
 const DealerMarketplaceHub = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<HubTab>("analytics");
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Analytics state
   const [analyticsStats, setAnalyticsStats] = useState({
@@ -97,39 +99,40 @@ const DealerMarketplaceHub = () => {
   const [selectedRequest, setSelectedRequest] = useState<SellRequest | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // All Vehicles state
-  const [allVehicles, setAllVehicles] = useState<any[]>([]);
-
-  // All Dealers state
-  const [allDealers, setAllDealers] = useState<any[]>([]);
-
+  // Initial auth check - only runs once
   useEffect(() => {
-    fetchAllData();
-  }, [period]);
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+      setLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  // Fetch data when userId changes or period changes
+  useEffect(() => {
+    if (userId) {
+      fetchAllData();
+    }
+  }, [userId, period]);
 
   const fetchAllData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    if (!userId) return;
 
     try {
       await Promise.all([
-        fetchAnalytics(user.id),
-        fetchMarketplaceLeads(user.id),
-        fetchSellRequests(user.id),
-        fetchAllVehicles(user.id),
-        fetchAllDealers()
+        fetchAnalytics(userId),
+        fetchMarketplaceLeads(userId),
+        fetchSellRequests(userId)
       ]);
     } catch (error) {
       console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const fetchAnalytics = async (userId: string) => {
+  const fetchAnalytics = async (uid: string) => {
     try {
       const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
       const startDate = startOfDay(subDays(new Date(), days));
@@ -138,14 +141,14 @@ const DealerMarketplaceHub = () => {
       const { data: events } = await supabase
         .from("public_page_events")
         .select("*")
-        .eq("dealer_user_id", userId)
+        .eq("dealer_user_id", uid)
         .eq("public_page_id", "marketplace")
         .gte("created_at", startDate.toISOString());
 
       const { count: publicVehiclesCount } = await supabase
         .from("vehicles")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .eq("is_public", true);
 
       // Separate dealer page views and vehicle page views
@@ -159,7 +162,7 @@ const DealerMarketplaceHub = () => {
       const { count: testDriveCount } = await supabase
         .from("leads")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .eq("source", "marketplace")
         .ilike("notes", "%TEST DRIVE REQUESTED%");
 
@@ -224,12 +227,12 @@ const DealerMarketplaceHub = () => {
     }
   };
 
-  const fetchMarketplaceLeads = async (userId: string) => {
+  const fetchMarketplaceLeads = async (uid: string) => {
     // Fetch all marketplace leads (both enquiries and test drives)
     const { data } = await supabase
       .from("leads")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", uid)
       .eq("source", "marketplace")
       .order("created_at", { ascending: false });
 
@@ -249,11 +252,11 @@ const DealerMarketplaceHub = () => {
     setMarketplaceLeads(parsed);
   };
 
-  const fetchSellRequests = async (userId: string) => {
+  const fetchSellRequests = async (uid: string) => {
     const { data } = await supabase
       .from("leads")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", uid)
       .eq("lead_type", "selling")
       .order("created_at", { ascending: false });
 
@@ -270,28 +273,6 @@ const DealerMarketplaceHub = () => {
     setSellRequests(parsedRequests);
   };
 
-  const fetchAllVehicles = async (userId: string) => {
-    const { data } = await supabase
-      .from("vehicles")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("is_public", true)
-      .order("created_at", { ascending: false });
-
-    setAllVehicles(data || []);
-  };
-
-  const fetchAllDealers = async () => {
-    const { data } = await supabase
-      .from("settings")
-      .select("*")
-      .eq("marketplace_enabled", true)
-      .eq("public_page_enabled", true)
-      .limit(50);
-
-    setAllDealers(data || []);
-  };
-
   const handleStatusUpdate = async (requestId: string, newStatus: string) => {
     try {
       await supabase
@@ -300,7 +281,7 @@ const DealerMarketplaceHub = () => {
         .eq("id", requestId);
 
       toast({ title: `Status updated to ${newStatus}` });
-      fetchAllData();
+      if (userId) fetchAllData();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -310,8 +291,6 @@ const DealerMarketplaceHub = () => {
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "test-drives", label: "Test Drives & Enquiries", icon: Calendar },
     { id: "vehicles-for-sale", label: "Vehicles for Sale", icon: Tag },
-    { id: "all-vehicles", label: "All Vehicles", icon: Car },
-    { id: "dealers", label: "All Dealers", icon: Store },
   ];
 
   const statusColors: Record<string, string> = {
@@ -331,541 +310,465 @@ const DealerMarketplaceHub = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="space-y-6">
-          <div className="flex gap-4">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-8 w-32" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <Skeleton key={i} className="h-24 rounded-lg" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Skeleton className="h-80 rounded-lg" />
-            <Skeleton className="h-80 rounded-lg" />
-          </div>
+      <div className="space-y-6 p-6">
+        <div className="flex gap-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-8 w-32" />
         </div>
-      </Layout>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-lg" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-80 rounded-lg" />
+          <Skeleton className="h-80 rounded-lg" />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-primary" />
-              Marketplace Hub
-            </h1>
-            <p className="text-muted-foreground">Manage your marketplace presence</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-primary" />
+            Marketplace Hub
+          </h1>
+          <p className="text-muted-foreground">Manage your marketplace presence</p>
+        </div>
+      </div>
+
+      {/* Tab Switcher - Zoho Style */}
+      <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit overflow-x-auto">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+              activeTab === tab.id
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            <span className="hidden sm:inline">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Analytics Tab */}
+      {activeTab === "analytics" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Period Selector */}
+          <div className="flex gap-2">
+            {["7d", "30d", "90d"].map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  period === p
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {p === "7d" ? "7 Days" : p === "30d" ? "30 Days" : "90 Days"}
+              </button>
+            ))}
           </div>
-        </div>
 
-        {/* Tab Switcher - Zoho Style */}
-        <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
-        </div>
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "Dealer Page Views", value: analyticsStats.dealerPageViews, icon: Store, color: "text-blue-600 bg-blue-50" },
+              { label: "Vehicle Page Views", value: analyticsStats.vehiclePageViews, icon: Eye, color: "text-indigo-600 bg-indigo-50" },
+              { label: "Total Enquiries", value: analyticsStats.totalEnquiries, icon: MessageSquare, color: "text-green-600 bg-green-50" },
+              { label: "Test Drive Requests", value: analyticsStats.testDriveRequests, icon: Calendar, color: "text-purple-600 bg-purple-50" },
+              { label: "Calls", value: analyticsStats.totalCalls, icon: Phone, color: "text-amber-600 bg-amber-50" },
+              { label: "WhatsApp", value: analyticsStats.totalWhatsapp, icon: MessageSquare, color: "text-emerald-600 bg-emerald-50" },
+              { label: "Public Vehicles", value: analyticsStats.publicVehicles, icon: Car, color: "text-slate-600 bg-slate-100" },
+              { label: "Conversion Rate", value: `${analyticsStats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: "text-rose-600 bg-rose-50" },
+            ].map((stat, i) => (
+              <Card key={i} className="border shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
+                      <stat.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-        {/* Analytics Tab */}
-        {activeTab === "analytics" && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Period Selector */}
-            <div className="flex gap-2">
-              {["7d", "30d", "90d"].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    period === p
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {p === "7d" ? "7 Days" : p === "30d" ? "30 Days" : "90 Days"}
-                </button>
-              ))}
-            </div>
+          {/* Dealer Page vs Vehicle Page Analytics */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Dealer Page Analytics */}
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Store className="h-4 w-4 text-blue-600" />
+                  Dealer Page Performance
+                </CardTitle>
+                <CardDescription>Views and engagement on your dealer page</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyData.slice(-7)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip />
+                      <Bar dataKey="dealerViews" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "Dealer Page Views", value: analyticsStats.dealerPageViews, icon: Store, color: "text-blue-600 bg-blue-50" },
-                { label: "Vehicle Page Views", value: analyticsStats.vehiclePageViews, icon: Eye, color: "text-indigo-600 bg-indigo-50" },
-                { label: "Total Enquiries", value: analyticsStats.totalEnquiries, icon: MessageSquare, color: "text-green-600 bg-green-50" },
-                { label: "Test Drive Requests", value: analyticsStats.testDriveRequests, icon: Calendar, color: "text-purple-600 bg-purple-50" },
-                { label: "Calls", value: analyticsStats.totalCalls, icon: Phone, color: "text-amber-600 bg-amber-50" },
-                { label: "WhatsApp", value: analyticsStats.totalWhatsapp, icon: MessageSquare, color: "text-emerald-600 bg-emerald-50" },
-                { label: "Public Vehicles", value: analyticsStats.publicVehicles, icon: Car, color: "text-slate-600 bg-slate-100" },
-                { label: "Conversion Rate", value: `${analyticsStats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: "text-rose-600 bg-rose-50" },
-              ].map((stat, i) => (
-                <Card key={i} className="border shadow-sm hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
+            {/* Vehicle Page Analytics */}
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Car className="h-4 w-4 text-indigo-600" />
+                  Vehicle Page Performance
+                </CardTitle>
+                <CardDescription>Views and enquiries per vehicle</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="vehicleViews" stroke="hsl(245 58% 58%)" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="enquiries" stroke="hsl(142 71% 45%)" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top Performing Vehicles */}
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
+              <CardDescription>Individual vehicle analytics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {vehicleStats.map((v, i) => (
+                  <div key={v.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-                        <stat.icon className="h-5 w-5" />
-                      </div>
+                      <span className="text-sm font-bold text-primary w-6">#{i + 1}</span>
                       <div>
-                        <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                        <p className="text-xs text-muted-foreground">{stat.label}</p>
+                        <p className="text-sm font-medium text-foreground">{v.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(v.selling_price)}</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="flex items-center gap-1 text-blue-600">
+                        <Eye className="h-3 w-3" /> {v.views}
+                      </span>
+                      <span className="flex items-center gap-1 text-green-600">
+                        <MessageSquare className="h-3 w-3" /> {v.enquiries}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {vehicleStats.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    No vehicle data available
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-            {/* Dealer Page vs Vehicle Page Analytics */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Dealer Page Analytics */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Store className="h-4 w-4 text-blue-600" />
-                    Dealer Page Performance
-                  </CardTitle>
-                  <CardDescription>Views and engagement on your dealer page</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={dailyData.slice(-7)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
-                        <YAxis fontSize={10} stroke="hsl(var(--muted-foreground))" />
-                        <Tooltip />
-                        <Bar dataKey="dealerViews" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+      {/* Test Drives & Enquiries Tab */}
+      {activeTab === "test-drives" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "Test Drives Pending", value: testDrives.filter(r => r.status === "new" || r.status === "pending").length, color: "text-amber-600 bg-amber-50" },
+              { label: "Test Drives Confirmed", value: testDrives.filter(r => r.status === "confirmed").length, color: "text-blue-600 bg-blue-50" },
+              { label: "Enquiries Pending", value: enquiries.filter(r => r.status === "new").length, color: "text-purple-600 bg-purple-50" },
+              { label: "Total Leads", value: marketplaceLeads.length, color: "text-slate-600 bg-slate-100" },
+            ].map((stat, i) => (
+              <Card key={i} className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Vehicle Page Analytics */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Car className="h-4 w-4 text-indigo-600" />
-                    Vehicle Page Performance
-                  </CardTitle>
-                  <CardDescription>Views and enquiries per vehicle</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={dailyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
-                        <YAxis fontSize={10} stroke="hsl(var(--muted-foreground))" />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="vehicleViews" stroke="hsl(245 58% 58%)" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="enquiries" stroke="hsl(142 71% 45%)" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Top Performing Vehicles */}
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
-                <CardDescription>Individual vehicle analytics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {vehicleStats.map((v, i) => (
-                    <div key={v.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-primary w-6">#{i + 1}</span>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{v.name}</p>
-                          <p className="text-xs text-muted-foreground">{formatCurrency(v.selling_price)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="flex items-center gap-1 text-blue-600">
-                          <Eye className="h-3 w-3" /> {v.views}
-                        </span>
-                        <span className="flex items-center gap-1 text-green-600">
-                          <MessageSquare className="h-3 w-3" /> {v.enquiries}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {vehicleStats.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">
-                      No vehicle data available
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            ))}
           </div>
-        )}
 
-        {/* Test Drives & Enquiries Tab */}
-        {activeTab === "test-drives" && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "Test Drives Pending", value: testDrives.filter(r => r.status === "new" || r.status === "pending").length, color: "text-amber-600 bg-amber-50" },
-                { label: "Test Drives Confirmed", value: testDrives.filter(r => r.status === "confirmed").length, color: "text-blue-600 bg-blue-50" },
-                { label: "Enquiries Pending", value: enquiries.filter(r => r.status === "new").length, color: "text-purple-600 bg-purple-50" },
-                { label: "Total Leads", value: marketplaceLeads.length, color: "text-slate-600 bg-slate-100" },
-              ].map((stat, i) => (
-                <Card key={i} className="border shadow-sm">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-                      <Calendar className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Test Drives Section */}
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-purple-600" />
-                  Test Drive Requests ({testDrives.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {testDrives.map((req) => (
-                    <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
-                      <div className="flex flex-col sm:flex-row justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{req.customer_name}</span>
-                            <Badge className={statusColors[req.status] || "bg-slate-100"}>
-                              {req.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" /> {req.phone}
-                            </span>
-                            {req.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" /> {req.email}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
-                          {req.testDriveDate && (
-                            <p className="text-sm text-purple-600 font-medium">
-                              <Calendar className="h-3 w-3 inline mr-1" />
-                              {req.testDriveDate} at {req.testDriveTime}
-                            </p>
-                          )}
+          {/* Test Drives Section */}
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-purple-600" />
+                Test Drive Requests ({testDrives.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {testDrives.map((req) => (
+                  <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                    <div className="flex flex-col sm:flex-row justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{req.customer_name}</span>
+                          <Badge className={statusColors[req.status] || "bg-slate-100"}>
+                            {req.status}
+                          </Badge>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusUpdate(req.id, "confirmed")}
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" /> Confirm
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusUpdate(req.id, "completed")}
-                          >
-                            Complete
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {testDrives.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">No test drive requests yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* General Enquiries Section */}
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-green-600" />
-                  General Enquiries ({enquiries.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {enquiries.slice(0, 20).map((req) => (
-                    <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
-                      <div className="flex flex-col sm:flex-row justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{req.customer_name}</span>
-                            <Badge className={statusColors[req.status] || "bg-slate-100"}>
-                              {req.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" /> {req.phone}
-                            </span>
-                          </div>
-                          {req.vehicle_interest && (
-                            <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(req.created_at), "MMM dd, yyyy 'at' hh:mm a")}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusUpdate(req.id, "contacted")}
-                          >
-                            Contacted
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {enquiries.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">No enquiries yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Vehicles for Sale Tab */}
-        {activeTab === "vehicles-for-sale" && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "New Requests", value: sellRequests.filter(r => r.status === "new").length, color: "text-blue-600 bg-blue-50" },
-                { label: "Contacted", value: sellRequests.filter(r => r.status === "contacted").length, color: "text-amber-600 bg-amber-50" },
-                { label: "Purchased", value: sellRequests.filter(r => r.status === "purchased").length, color: "text-emerald-600 bg-emerald-50" },
-                { label: "Total", value: sellRequests.length, color: "text-slate-600 bg-slate-100" },
-              ].map((stat, i) => (
-                <Card key={i} className="border shadow-sm">
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-                      <Tag className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <Card className="border shadow-sm">
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {sellRequests.map((req) => (
-                    <div
-                      key={req.id}
-                      className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => {
-                        setSelectedRequest(req);
-                        setDetailOpen(true);
-                      }}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{req.customer_name}</span>
-                            <Badge className={statusColors[req.status] || "bg-slate-100"}>
-                              {req.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{req.vehicle_interest}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
                             <Phone className="h-3 w-3" /> {req.phone}
-                          </p>
+                          </span>
+                          {req.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" /> {req.email}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(req.created_at), "MMM dd")}
-                        </span>
+                        <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
+                        {req.testDriveDate && (
+                          <p className="text-sm text-purple-600 font-medium">
+                            <Calendar className="h-3 w-3 inline mr-1" />
+                            {req.testDriveDate} at {req.testDriveTime}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStatusUpdate(req.id, "confirmed")}
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" /> Confirm
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStatusUpdate(req.id, "completed")}
+                        >
+                          Complete
+                        </Button>
                       </div>
                     </div>
-                  ))}
-                  {sellRequests.length === 0 && (
-                    <p className="text-center text-muted-foreground py-12">
-                      No vehicle selling requests yet
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                  </div>
+                ))}
+                {testDrives.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No test drive requests yet</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* All Vehicles Tab */}
-        {activeTab === "all-vehicles" && (
-          <div className="space-y-4 animate-fade-in">
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Your Public Vehicles ({allVehicles.length})</CardTitle>
-                <CardDescription>All vehicles visible on the marketplace</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {allVehicles.map((v) => (
-                    <div key={v.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Car className="h-5 w-5 text-primary" />
-                        <span className="font-medium">{v.brand} {v.model}</span>
+          {/* General Enquiries Section */}
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-green-600" />
+                General Enquiries ({enquiries.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {enquiries.slice(0, 20).map((req) => (
+                  <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                    <div className="flex flex-col sm:flex-row justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{req.customer_name}</span>
+                          <Badge className={statusColors[req.status] || "bg-slate-100"}>
+                            {req.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {req.phone}
+                          </span>
+                        </div>
+                        {req.vehicle_interest && (
+                          <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(req.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                        </p>
                       </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>{v.manufacturing_year} • {v.fuel_type} • {v.transmission}</p>
-                        <p className="font-semibold text-foreground">{formatCurrency(v.selling_price)}</p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleStatusUpdate(req.id, "contacted")}
+                        >
+                          Contacted
+                        </Button>
                       </div>
-                      <Badge className="mt-2" variant={v.status === "in_stock" ? "default" : "secondary"}>
-                        {v.status}
-                      </Badge>
                     </div>
-                  ))}
-                  {allVehicles.length === 0 && (
-                    <p className="col-span-full text-center text-muted-foreground py-12">
-                      No public vehicles. Enable "Show on Marketplace" for your vehicles.
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                  </div>
+                ))}
+                {enquiries.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No enquiries yet</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        {/* All Dealers Tab */}
-        {activeTab === "dealers" && (
-          <div className="space-y-4 animate-fade-in">
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Marketplace Dealers ({allDealers.length})</CardTitle>
-                <CardDescription>All dealers listed on the marketplace</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {allDealers.map((d) => (
-                    <div key={d.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Store className="h-5 w-5 text-primary" />
-                        <span className="font-medium">{d.dealer_name || "Unnamed Dealer"}</span>
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        {d.dealer_address && <p className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {d.dealer_address}</p>}
-                        {d.dealer_phone && <p className="flex items-center gap-1"><Phone className="h-3 w-3" /> {d.dealer_phone}</p>}
-                      </div>
-                      {d.marketplace_badge && (
-                        <Badge className="mt-2" variant="secondary">{d.marketplace_badge}</Badge>
-                      )}
-                    </div>
-                  ))}
-                  {allDealers.length === 0 && (
-                    <p className="col-span-full text-center text-muted-foreground py-12">
-                      No dealers on marketplace yet
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Detail Dialog for Sell Requests */}
-        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Vehicle Selling Request</DialogTitle>
-            </DialogHeader>
-            {selectedRequest && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Customer</p>
-                    <p className="font-medium">{selectedRequest.customer_name}</p>
+      {/* Vehicles for Sale Tab */}
+      {activeTab === "vehicles-for-sale" && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "New Requests", value: sellRequests.filter(r => r.status === "new").length, color: "text-blue-600 bg-blue-50" },
+              { label: "Contacted", value: sellRequests.filter(r => r.status === "contacted").length, color: "text-amber-600 bg-amber-50" },
+              { label: "Purchased", value: sellRequests.filter(r => r.status === "purchased").length, color: "text-emerald-600 bg-emerald-50" },
+              { label: "Total", value: sellRequests.length, color: "text-slate-600 bg-slate-100" },
+            ].map((stat, i) => (
+              <Card key={i} className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
+                    <Tag className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Phone</p>
-                    <p className="font-medium">{selectedRequest.phone}</p>
+                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
                   </div>
-                  {selectedRequest.email && (
-                    <div>
-                      <p className="text-muted-foreground">Email</p>
-                      <p className="font-medium">{selectedRequest.email}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-muted-foreground">Vehicle</p>
-                    <p className="font-medium">{selectedRequest.vehicle_interest}</p>
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-                {selectedRequest.parsedData && Object.keys(selectedRequest.parsedData).length > 0 && (
-                  <div className="pt-4 border-t">
-                    <p className="font-medium mb-2">Vehicle Details</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {selectedRequest.parsedData.brand && (
-                        <p><span className="text-muted-foreground">Brand:</span> {selectedRequest.parsedData.brand}</p>
-                      )}
-                      {selectedRequest.parsedData.model && (
-                        <p><span className="text-muted-foreground">Model:</span> {selectedRequest.parsedData.model}</p>
-                      )}
-                      {selectedRequest.parsedData.year && (
-                        <p><span className="text-muted-foreground">Year:</span> {selectedRequest.parsedData.year}</p>
-                      )}
-                      {selectedRequest.parsedData.expectedPrice && (
-                        <p><span className="text-muted-foreground">Expected:</span> {selectedRequest.parsedData.expectedPrice}</p>
-                      )}
+          <Card className="border shadow-sm">
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {sellRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      setSelectedRequest(req);
+                      setDetailOpen(true);
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{req.customer_name}</span>
+                          <Badge className={statusColors[req.status] || "bg-slate-100"}>
+                            {req.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{req.vehicle_interest}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" /> {req.phone}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(req.created_at), "MMM dd")}
+                      </span>
                     </div>
+                  </div>
+                ))}
+                {sellRequests.length === 0 && (
+                  <p className="text-center text-muted-foreground py-12">
+                    No vehicle selling requests yet
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Detail Dialog for Sell Requests */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Vehicle Selling Request</DialogTitle>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Customer</p>
+                  <p className="font-medium">{selectedRequest.customer_name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Phone</p>
+                  <p className="font-medium">{selectedRequest.phone}</p>
+                </div>
+                {selectedRequest.email && (
+                  <div>
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedRequest.email}</p>
                   </div>
                 )}
-
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={() => handleStatusUpdate(selectedRequest.id, "contacted")} variant="outline">
-                    Mark Contacted
-                  </Button>
-                  <Button onClick={() => handleStatusUpdate(selectedRequest.id, "purchased")}>
-                    Mark Purchased
-                  </Button>
+                <div>
+                  <p className="text-muted-foreground">Vehicle</p>
+                  <p className="font-medium">{selectedRequest.vehicle_interest}</p>
                 </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
-    </Layout>
+
+              {selectedRequest.parsedData && Object.keys(selectedRequest.parsedData).length > 0 && (
+                <div className="pt-4 border-t">
+                  <p className="font-medium mb-2">Vehicle Details</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {selectedRequest.parsedData.brand && (
+                      <p><span className="text-muted-foreground">Brand:</span> {selectedRequest.parsedData.brand}</p>
+                    )}
+                    {selectedRequest.parsedData.model && (
+                      <p><span className="text-muted-foreground">Model:</span> {selectedRequest.parsedData.model}</p>
+                    )}
+                    {selectedRequest.parsedData.year && (
+                      <p><span className="text-muted-foreground">Year:</span> {selectedRequest.parsedData.year}</p>
+                    )}
+                    {selectedRequest.parsedData.expectedPrice && (
+                      <p><span className="text-muted-foreground">Expected:</span> {selectedRequest.parsedData.expectedPrice}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={() => handleStatusUpdate(selectedRequest.id, "contacted")} variant="outline">
+                  Mark Contacted
+                </Button>
+                <Button onClick={() => handleStatusUpdate(selectedRequest.id, "purchased")}>
+                  Mark Purchased
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
