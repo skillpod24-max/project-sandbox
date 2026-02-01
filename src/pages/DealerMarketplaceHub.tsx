@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 import {
   Car, Clock, MapPin, Phone, User, Eye, CheckCircle, XCircle,
-  Calendar, Fuel, Gauge, Image as ImageIcon, Tag, MessageSquare,
-  BarChart3, TrendingUp, Timer, ArrowUpRight, ArrowDownRight, Mail
+  Calendar, Fuel, Gauge, Tag, MessageSquare,
+  BarChart3, TrendingUp, Mail, Store, Users, ArrowUpRight
 } from "lucide-react";
 import {
   Dialog,
@@ -21,11 +21,11 @@ import Layout from "@/components/Layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, subDays, startOfDay } from "date-fns";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from "recharts";
 
-// Tab Types
-type HubTab = "test-drives" | "analytics" | "vehicles-for-sale" | "enquiries";
+// Tab Types - Removed "enquiries" as it's now in Test Drives
+type HubTab = "analytics" | "test-drives" | "vehicles-for-sale" | "dealers" | "all-vehicles";
 
 interface SellRequest {
   id: string;
@@ -65,6 +65,7 @@ interface TestDriveRequest {
   created_at: string;
   testDriveDate?: string;
   testDriveTime?: string;
+  isTestDrive: boolean;
 }
 
 const DealerMarketplaceHub = () => {
@@ -75,8 +76,10 @@ const DealerMarketplaceHub = () => {
 
   // Analytics state
   const [analyticsStats, setAnalyticsStats] = useState({
-    totalViews: 0,
+    dealerPageViews: 0,
+    vehiclePageViews: 0,
     totalEnquiries: 0,
+    testDriveRequests: 0,
     totalCalls: 0,
     totalWhatsapp: 0,
     publicVehicles: 0,
@@ -86,16 +89,19 @@ const DealerMarketplaceHub = () => {
   const [vehicleStats, setVehicleStats] = useState<any[]>([]);
   const [period, setPeriod] = useState("7d");
 
-  // Test Drive state
-  const [testDriveRequests, setTestDriveRequests] = useState<TestDriveRequest[]>([]);
+  // Test Drive & Enquiries state (combined)
+  const [marketplaceLeads, setMarketplaceLeads] = useState<TestDriveRequest[]>([]);
 
   // Vehicles for Sale state
   const [sellRequests, setSellRequests] = useState<SellRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<SellRequest | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Enquiries state
-  const [enquiries, setEnquiries] = useState<any[]>([]);
+  // All Vehicles state
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
+
+  // All Dealers state
+  const [allDealers, setAllDealers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAllData();
@@ -111,9 +117,10 @@ const DealerMarketplaceHub = () => {
     try {
       await Promise.all([
         fetchAnalytics(user.id),
-        fetchTestDrives(user.id),
+        fetchMarketplaceLeads(user.id),
         fetchSellRequests(user.id),
-        fetchEnquiries(user.id)
+        fetchAllVehicles(user.id),
+        fetchAllDealers()
       ]);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -139,35 +146,48 @@ const DealerMarketplaceHub = () => {
         .from("vehicles")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId)
-        .eq("is_public", true)
-        .eq("marketplace_status", "listed");
+        .eq("is_public", true);
 
-      const views = (events || []).filter(e => 
-        e.event_type === "vehicle_view" || e.event_type === "dealer_view"
-      ).length;
+      // Separate dealer page views and vehicle page views
+      const dealerViews = (events || []).filter(e => e.event_type === "dealer_view").length;
+      const vehicleViews = (events || []).filter(e => e.event_type === "vehicle_view").length;
       const enquiriesCount = (events || []).filter(e => e.event_type === "enquiry_submit").length;
       const calls = (events || []).filter(e => e.event_type === "cta_call").length;
       const whatsapp = (events || []).filter(e => e.event_type === "cta_whatsapp").length;
 
+      // Count test drive requests from leads
+      const { count: testDriveCount } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("source", "marketplace")
+        .ilike("notes", "%TEST DRIVE REQUESTED%");
+
+      const totalViews = dealerViews + vehicleViews;
+
       setAnalyticsStats({
-        totalViews: views,
+        dealerPageViews: dealerViews,
+        vehiclePageViews: vehicleViews,
         totalEnquiries: enquiriesCount,
+        testDriveRequests: testDriveCount || 0,
         totalCalls: calls,
         totalWhatsapp: whatsapp,
         publicVehicles: publicVehiclesCount || 0,
-        conversionRate: views > 0 ? ((enquiriesCount + calls + whatsapp) / views) * 100 : 0,
+        conversionRate: totalViews > 0 ? ((enquiriesCount + calls + whatsapp) / totalViews) * 100 : 0,
       });
 
-      const dailyMap: Record<string, { date: string; views: number; enquiries: number }> = {};
+      // Daily breakdown with separate dealer/vehicle views
+      const dailyMap: Record<string, { date: string; dealerViews: number; vehicleViews: number; enquiries: number }> = {};
       for (let i = 0; i < days; i++) {
         const d = format(subDays(new Date(), i), "MMM dd");
-        dailyMap[d] = { date: d, views: 0, enquiries: 0 };
+        dailyMap[d] = { date: d, dealerViews: 0, vehicleViews: 0, enquiries: 0 };
       }
 
       (events || []).forEach(e => {
         const d = format(new Date(e.created_at), "MMM dd");
         if (dailyMap[d]) {
-          if (e.event_type === "vehicle_view" || e.event_type === "dealer_view") dailyMap[d].views++;
+          if (e.event_type === "dealer_view") dailyMap[d].dealerViews++;
+          if (e.event_type === "vehicle_view") dailyMap[d].vehicleViews++;
           if (e.event_type === "enquiry_submit") dailyMap[d].enquiries++;
         }
       });
@@ -204,27 +224,29 @@ const DealerMarketplaceHub = () => {
     }
   };
 
-  const fetchTestDrives = async (userId: string) => {
+  const fetchMarketplaceLeads = async (userId: string) => {
+    // Fetch all marketplace leads (both enquiries and test drives)
     const { data } = await supabase
       .from("leads")
       .select("*")
       .eq("user_id", userId)
       .eq("source", "marketplace")
-      .ilike("notes", "%TEST DRIVE REQUESTED%")
       .order("created_at", { ascending: false });
 
     const parsed = (data || []).map(lead => {
       const notes = lead.notes || "";
+      const isTestDrive = notes.includes("TEST DRIVE REQUESTED");
       const dateMatch = notes.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
       const timeMatch = notes.match(/at (\d{1,2}:\d{2} [AP]M)/);
       return {
         ...lead,
         testDriveDate: dateMatch?.[1],
-        testDriveTime: timeMatch?.[1]
+        testDriveTime: timeMatch?.[1],
+        isTestDrive
       };
     });
 
-    setTestDriveRequests(parsed);
+    setMarketplaceLeads(parsed);
   };
 
   const fetchSellRequests = async (userId: string) => {
@@ -232,7 +254,7 @@ const DealerMarketplaceHub = () => {
       .from("leads")
       .select("*")
       .eq("user_id", userId)
-      .eq("lead_type", "seller")
+      .eq("lead_type", "selling")
       .order("created_at", { ascending: false });
 
     const parsedRequests = (data || []).map(req => {
@@ -248,17 +270,26 @@ const DealerMarketplaceHub = () => {
     setSellRequests(parsedRequests);
   };
 
-  const fetchEnquiries = async (userId: string) => {
+  const fetchAllVehicles = async (userId: string) => {
     const { data } = await supabase
-      .from("leads")
+      .from("vehicles")
       .select("*")
       .eq("user_id", userId)
-      .eq("source", "marketplace")
-      .not("notes", "ilike", "%TEST DRIVE REQUESTED%")
-      .order("created_at", { ascending: false })
+      .eq("is_public", true)
+      .order("created_at", { ascending: false });
+
+    setAllVehicles(data || []);
+  };
+
+  const fetchAllDealers = async () => {
+    const { data } = await supabase
+      .from("settings")
+      .select("*")
+      .eq("marketplace_enabled", true)
+      .eq("public_page_enabled", true)
       .limit(50);
 
-    setEnquiries(data || []);
+    setAllDealers(data || []);
   };
 
   const handleStatusUpdate = async (requestId: string, newStatus: string) => {
@@ -277,9 +308,10 @@ const DealerMarketplaceHub = () => {
 
   const tabs: { id: HubTab; label: string; icon: any }[] = [
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "test-drives", label: "Test Drives", icon: Calendar },
+    { id: "test-drives", label: "Test Drives & Enquiries", icon: Calendar },
     { id: "vehicles-for-sale", label: "Vehicles for Sale", icon: Tag },
-    { id: "enquiries", label: "Enquiries", icon: MessageSquare },
+    { id: "all-vehicles", label: "All Vehicles", icon: Car },
+    { id: "dealers", label: "All Dealers", icon: Store },
   ];
 
   const statusColors: Record<string, string> = {
@@ -293,6 +325,10 @@ const DealerMarketplaceHub = () => {
     purchased: "bg-purple-100 text-purple-700",
   };
 
+  // Separate test drives and enquiries
+  const testDrives = useMemo(() => marketplaceLeads.filter(l => l.isTestDrive), [marketplaceLeads]);
+  const enquiries = useMemo(() => marketplaceLeads.filter(l => !l.isTestDrive), [marketplaceLeads]);
+
   if (loading) {
     return (
       <Layout>
@@ -301,8 +337,8 @@ const DealerMarketplaceHub = () => {
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-8 w-32" />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <Skeleton key={i} className="h-24 rounded-lg" />
             ))}
           </div>
@@ -322,27 +358,27 @@ const DealerMarketplaceHub = () => {
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
+              <BarChart3 className="h-6 w-6 text-primary" />
               Marketplace Hub
             </h1>
             <p className="text-muted-foreground">Manage your marketplace presence</p>
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
+        {/* Tab Switcher - Zoho Style */}
+        <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
               }`}
             >
               <tab.icon className="h-4 w-4" />
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -367,17 +403,19 @@ const DealerMarketplaceHub = () => {
               ))}
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: "Total Views", value: analyticsStats.totalViews, icon: Eye, color: "text-blue-600 bg-blue-50" },
-                { label: "Enquiries", value: analyticsStats.totalEnquiries, icon: MessageSquare, color: "text-green-600 bg-green-50" },
-                { label: "Calls", value: analyticsStats.totalCalls, icon: Phone, color: "text-purple-600 bg-purple-50" },
+                { label: "Dealer Page Views", value: analyticsStats.dealerPageViews, icon: Store, color: "text-blue-600 bg-blue-50" },
+                { label: "Vehicle Page Views", value: analyticsStats.vehiclePageViews, icon: Eye, color: "text-indigo-600 bg-indigo-50" },
+                { label: "Total Enquiries", value: analyticsStats.totalEnquiries, icon: MessageSquare, color: "text-green-600 bg-green-50" },
+                { label: "Test Drive Requests", value: analyticsStats.testDriveRequests, icon: Calendar, color: "text-purple-600 bg-purple-50" },
+                { label: "Calls", value: analyticsStats.totalCalls, icon: Phone, color: "text-amber-600 bg-amber-50" },
                 { label: "WhatsApp", value: analyticsStats.totalWhatsapp, icon: MessageSquare, color: "text-emerald-600 bg-emerald-50" },
-                { label: "Public Vehicles", value: analyticsStats.publicVehicles, icon: Car, color: "text-amber-600 bg-amber-50" },
+                { label: "Public Vehicles", value: analyticsStats.publicVehicles, icon: Car, color: "text-slate-600 bg-slate-100" },
                 { label: "Conversion Rate", value: `${analyticsStats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: "text-rose-600 bg-rose-50" },
               ].map((stat, i) => (
-                <Card key={i} className="border-0 shadow-sm">
+                <Card key={i} className="border shadow-sm hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
@@ -393,82 +431,114 @@ const DealerMarketplaceHub = () => {
               ))}
             </div>
 
-            {/* Charts */}
+            {/* Dealer Page vs Vehicle Page Analytics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="border-0 shadow-sm">
+              {/* Dealer Page Analytics */}
+              <Card className="border shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-base">Views & Enquiries Trend</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Store className="h-4 w-4 text-blue-600" />
+                    Dealer Page Performance
+                  </CardTitle>
+                  <CardDescription>Views and engagement on your dealer page</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
+                  <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={dailyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="date" fontSize={12} stroke="#9CA3AF" />
-                        <YAxis fontSize={12} stroke="#9CA3AF" />
+                      <BarChart data={dailyData.slice(-7)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis fontSize={10} stroke="hsl(var(--muted-foreground))" />
                         <Tooltip />
-                        <Line type="monotone" dataKey="views" stroke="#3B82F6" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="enquiries" stroke="#10B981" strokeWidth={2} dot={false} />
-                      </LineChart>
+                        <Bar dataKey="dealerViews" fill="hsl(217 91% 60%)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-sm">
+              {/* Vehicle Page Analytics */}
+              <Card className="border shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Car className="h-4 w-4 text-indigo-600" />
+                    Vehicle Page Performance
+                  </CardTitle>
+                  <CardDescription>Views and enquiries per vehicle</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {vehicleStats.map((v, i) => (
-                      <div key={v.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-muted-foreground w-6">#{i + 1}</span>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{v.name}</p>
-                            <p className="text-xs text-muted-foreground">{formatCurrency(v.selling_price)}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="flex items-center gap-1 text-blue-600">
-                            <Eye className="h-3 w-3" /> {v.views}
-                          </span>
-                          <span className="flex items-center gap-1 text-green-600">
-                            <MessageSquare className="h-3 w-3" /> {v.enquiries}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                    {vehicleStats.length === 0 && (
-                      <p className="text-center text-muted-foreground py-8">
-                        No vehicle data available
-                      </p>
-                    )}
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={dailyData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="vehicleViews" stroke="hsl(245 58% 58%)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="enquiries" stroke="hsl(142 71% 45%)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Top Performing Vehicles */}
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
+                <CardDescription>Individual vehicle analytics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {vehicleStats.map((v, i) => (
+                    <div key={v.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-primary w-6">#{i + 1}</span>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{v.name}</p>
+                          <p className="text-xs text-muted-foreground">{formatCurrency(v.selling_price)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-1 text-blue-600">
+                          <Eye className="h-3 w-3" /> {v.views}
+                        </span>
+                        <span className="flex items-center gap-1 text-green-600">
+                          <MessageSquare className="h-3 w-3" /> {v.enquiries}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {vehicleStats.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No vehicle data available
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* Test Drives Tab */}
+        {/* Test Drives & Enquiries Tab */}
         {activeTab === "test-drives" && (
-          <div className="space-y-4 animate-fade-in">
+          <div className="space-y-6 animate-fade-in">
+            {/* Summary Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: "Pending", value: testDriveRequests.filter(r => r.status === "new" || r.status === "pending").length, color: "text-amber-600 bg-amber-50" },
-                { label: "Confirmed", value: testDriveRequests.filter(r => r.status === "confirmed").length, color: "text-blue-600 bg-blue-50" },
-                { label: "Completed", value: testDriveRequests.filter(r => r.status === "completed").length, color: "text-emerald-600 bg-emerald-50" },
-                { label: "Total", value: testDriveRequests.length, color: "text-slate-600 bg-slate-100" },
+                { label: "Test Drives Pending", value: testDrives.filter(r => r.status === "new" || r.status === "pending").length, color: "text-amber-600 bg-amber-50" },
+                { label: "Test Drives Confirmed", value: testDrives.filter(r => r.status === "confirmed").length, color: "text-blue-600 bg-blue-50" },
+                { label: "Enquiries Pending", value: enquiries.filter(r => r.status === "new").length, color: "text-purple-600 bg-purple-50" },
+                { label: "Total Leads", value: marketplaceLeads.length, color: "text-slate-600 bg-slate-100" },
               ].map((stat, i) => (
-                <Card key={i} className="border-0 shadow-sm">
+                <Card key={i} className="border shadow-sm">
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
                       <Calendar className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   </CardContent>
@@ -476,59 +546,122 @@ const DealerMarketplaceHub = () => {
               ))}
             </div>
 
-            {testDriveRequests.length === 0 ? (
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-12 text-center">
-                  <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Test Drive Requests</h3>
-                  <p className="text-muted-foreground">When customers request test drives, they'll appear here.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {testDriveRequests.map((request) => (
-                  <Card key={request.id} className="border-0 shadow-sm">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-lg bg-blue-50 flex items-center justify-center">
-                            <Calendar className="h-6 w-6 text-blue-600" />
+            {/* Test Drives Section */}
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-purple-600" />
+                  Test Drive Requests ({testDrives.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {testDrives.map((req) => (
+                    <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                      <div className="flex flex-col sm:flex-row justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{req.customer_name}</span>
+                            <Badge className={statusColors[req.status] || "bg-slate-100"}>
+                              {req.status}
+                            </Badge>
                           </div>
-                          <div>
-                            <p className="font-semibold">{request.customer_name}</p>
-                            <p className="text-sm text-muted-foreground">{request.vehicle_interest}</p>
-                            {request.testDriveDate && (
-                              <p className="text-xs text-blue-600 mt-1">
-                                📅 {request.testDriveDate} at {request.testDriveTime}
-                              </p>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" /> {req.phone}
+                            </span>
+                            {req.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" /> {req.email}
+                              </span>
                             )}
                           </div>
+                          <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
+                          {req.testDriveDate && (
+                            <p className="text-sm text-purple-600 font-medium">
+                              <Calendar className="h-3 w-3 inline mr-1" />
+                              {req.testDriveDate} at {req.testDriveTime}
+                            </p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={statusColors[request.status] || statusColors.new}>
-                            {request.status.replace("_", " ")}
-                          </Badge>
+                        <div className="flex gap-2">
                           <Button
-                            variant="outline"
                             size="sm"
-                            onClick={() => window.open(`tel:${request.phone}`, "_self")}
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(req.id, "confirmed")}
                           >
-                            <Phone className="h-4 w-4 mr-1" />
-                            Call
+                            <CheckCircle className="h-3 w-3 mr-1" /> Confirm
                           </Button>
                           <Button
                             size="sm"
-                            onClick={() => handleStatusUpdate(request.id, "confirmed")}
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(req.id, "completed")}
                           >
-                            Confirm
+                            Complete
                           </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                    </div>
+                  ))}
+                  {testDrives.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No test drive requests yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* General Enquiries Section */}
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-green-600" />
+                  General Enquiries ({enquiries.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {enquiries.slice(0, 20).map((req) => (
+                    <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                      <div className="flex flex-col sm:flex-row justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{req.customer_name}</span>
+                            <Badge className={statusColors[req.status] || "bg-slate-100"}>
+                              {req.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" /> {req.phone}
+                            </span>
+                          </div>
+                          {req.vehicle_interest && (
+                            <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(req.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(req.id, "contacted")}
+                          >
+                            Contacted
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {enquiries.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No enquiries yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -539,16 +672,16 @@ const DealerMarketplaceHub = () => {
               {[
                 { label: "New Requests", value: sellRequests.filter(r => r.status === "new").length, color: "text-blue-600 bg-blue-50" },
                 { label: "Contacted", value: sellRequests.filter(r => r.status === "contacted").length, color: "text-amber-600 bg-amber-50" },
-                { label: "Interested", value: sellRequests.filter(r => r.status === "interested").length, color: "text-emerald-600 bg-emerald-50" },
-                { label: "Purchased", value: sellRequests.filter(r => r.status === "purchased").length, color: "text-purple-600 bg-purple-50" },
+                { label: "Purchased", value: sellRequests.filter(r => r.status === "purchased").length, color: "text-emerald-600 bg-emerald-50" },
+                { label: "Total", value: sellRequests.length, color: "text-slate-600 bg-slate-100" },
               ].map((stat, i) => (
-                <Card key={i} className="border-0 shadow-sm">
+                <Card key={i} className="border shadow-sm">
                   <CardContent className="p-4 flex items-center gap-3">
                     <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-                      <Car className="h-5 w-5" />
+                      <Tag className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   </CardContent>
@@ -556,160 +689,175 @@ const DealerMarketplaceHub = () => {
               ))}
             </div>
 
-            {sellRequests.length === 0 ? (
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-12 text-center">
-                  <Car className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Vehicles Yet</h3>
-                  <p className="text-muted-foreground">When sellers submit vehicles for sale, they'll appear here.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sellRequests.map((request) => (
-                  <Card key={request.id} className="border-0 shadow-sm overflow-hidden">
-                    <div className="aspect-video bg-muted relative">
-                      {request.parsedData?.images?.[0] ? (
-                        <img src={request.parsedData.images[0]} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Car className="h-12 w-12 text-muted-foreground/50" />
+            <Card className="border shadow-sm">
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {sellRequests.map((req) => (
+                    <div
+                      key={req.id}
+                      className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedRequest(req);
+                        setDetailOpen(true);
+                      }}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{req.customer_name}</span>
+                            <Badge className={statusColors[req.status] || "bg-slate-100"}>
+                              {req.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{req.vehicle_interest}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {req.phone}
+                          </p>
                         </div>
-                      )}
-                      <Badge className={`absolute top-3 left-3 ${statusColors[request.status] || statusColors.new}`}>
-                        {request.status.replace("_", " ")}
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(req.created_at), "MMM dd")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {sellRequests.length === 0 && (
+                    <p className="text-center text-muted-foreground py-12">
+                      No vehicle selling requests yet
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* All Vehicles Tab */}
+        {activeTab === "all-vehicles" && (
+          <div className="space-y-4 animate-fade-in">
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Your Public Vehicles ({allVehicles.length})</CardTitle>
+                <CardDescription>All vehicles visible on the marketplace</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {allVehicles.map((v) => (
+                    <div key={v.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Car className="h-5 w-5 text-primary" />
+                        <span className="font-medium">{v.brand} {v.model}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p>{v.manufacturing_year} • {v.fuel_type} • {v.transmission}</p>
+                        <p className="font-semibold text-foreground">{formatCurrency(v.selling_price)}</p>
+                      </div>
+                      <Badge className="mt-2" variant={v.status === "in_stock" ? "default" : "secondary"}>
+                        {v.status}
                       </Badge>
                     </div>
-                    <CardContent className="p-4 space-y-3">
-                      <div>
-                        <h3 className="font-semibold">{request.vehicle_interest}</h3>
-                        {request.parsedData?.expectedPrice && (
-                          <p className="text-lg font-bold text-blue-600">₹{request.parsedData.expectedPrice}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-4 w-4" />
-                        <span>{request.customer_name}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1" onClick={() => {
-                          setSelectedRequest(request);
-                          setDetailOpen(true);
-                        }}>
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        <Button size="sm" className="flex-1" onClick={() => window.open(`tel:${request.phone}`, "_self")}>
-                          <Phone className="h-4 w-4 mr-1" />
-                          Call
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                  ))}
+                  {allVehicles.length === 0 && (
+                    <p className="col-span-full text-center text-muted-foreground py-12">
+                      No public vehicles. Enable "Show on Marketplace" for your vehicles.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* Enquiries Tab */}
-        {activeTab === "enquiries" && (
+        {/* All Dealers Tab */}
+        {activeTab === "dealers" && (
           <div className="space-y-4 animate-fade-in">
-            {enquiries.length === 0 ? (
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-12 text-center">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Enquiries Yet</h3>
-                  <p className="text-muted-foreground">Marketplace enquiries will appear here.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {enquiries.map((enquiry) => (
-                  <Card key={enquiry.id} className="border-0 shadow-sm">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-lg bg-green-50 flex items-center justify-center">
-                            <MessageSquare className="h-6 w-6 text-green-600" />
-                          </div>
-                          <div>
-                            <p className="font-semibold">{enquiry.customer_name}</p>
-                            <p className="text-sm text-muted-foreground">{enquiry.vehicle_interest}</p>
-                            <p className="text-xs text-muted-foreground">{new Date(enquiry.created_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={statusColors[enquiry.status] || statusColors.new}>
-                            {enquiry.status}
-                          </Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`tel:${enquiry.phone}`, "_self")}
-                          >
-                            <Phone className="h-4 w-4" />
-                          </Button>
-                        </div>
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Marketplace Dealers ({allDealers.length})</CardTitle>
+                <CardDescription>All dealers listed on the marketplace</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {allDealers.map((d) => (
+                    <div key={d.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Store className="h-5 w-5 text-primary" />
+                        <span className="font-medium">{d.dealer_name || "Unnamed Dealer"}</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        {d.dealer_address && <p className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {d.dealer_address}</p>}
+                        {d.dealer_phone && <p className="flex items-center gap-1"><Phone className="h-3 w-3" /> {d.dealer_phone}</p>}
+                      </div>
+                      {d.marketplace_badge && (
+                        <Badge className="mt-2" variant="secondary">{d.marketplace_badge}</Badge>
+                      )}
+                    </div>
+                  ))}
+                  {allDealers.length === 0 && (
+                    <p className="col-span-full text-center text-muted-foreground py-12">
+                      No dealers on marketplace yet
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* Vehicle Detail Dialog */}
+        {/* Detail Dialog for Sell Requests */}
         <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Vehicle Details</DialogTitle>
+              <DialogTitle>Vehicle Selling Request</DialogTitle>
             </DialogHeader>
             {selectedRequest && (
-              <div className="space-y-6">
-                {selectedRequest.parsedData?.images && selectedRequest.parsedData.images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {selectedRequest.parsedData.images.map((img, i) => (
-                      <img key={i} src={img} alt="" className="aspect-video rounded-lg object-cover" />
-                    ))}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-sm text-muted-foreground">Vehicle</p>
-                    <p className="font-semibold">{selectedRequest.vehicle_interest}</p>
+                    <p className="text-muted-foreground">Customer</p>
+                    <p className="font-medium">{selectedRequest.customer_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Expected Price</p>
-                    <p className="font-semibold text-blue-600">₹{selectedRequest.parsedData?.expectedPrice || "Not specified"}</p>
+                    <p className="text-muted-foreground">Phone</p>
+                    <p className="font-medium">{selectedRequest.phone}</p>
+                  </div>
+                  {selectedRequest.email && (
+                    <div>
+                      <p className="text-muted-foreground">Email</p>
+                      <p className="font-medium">{selectedRequest.email}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-muted-foreground">Vehicle</p>
+                    <p className="font-medium">{selectedRequest.vehicle_interest}</p>
                   </div>
                 </div>
 
-                <Card className="bg-muted border-0">
-                  <CardContent className="p-4 space-y-2">
-                    <h4 className="font-semibold">Seller Information</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedRequest.customer_name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedRequest.phone}</span>
-                      </div>
+                {selectedRequest.parsedData && Object.keys(selectedRequest.parsedData).length > 0 && (
+                  <div className="pt-4 border-t">
+                    <p className="font-medium mb-2">Vehicle Details</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {selectedRequest.parsedData.brand && (
+                        <p><span className="text-muted-foreground">Brand:</span> {selectedRequest.parsedData.brand}</p>
+                      )}
+                      {selectedRequest.parsedData.model && (
+                        <p><span className="text-muted-foreground">Model:</span> {selectedRequest.parsedData.model}</p>
+                      )}
+                      {selectedRequest.parsedData.year && (
+                        <p><span className="text-muted-foreground">Year:</span> {selectedRequest.parsedData.year}</p>
+                      )}
+                      {selectedRequest.parsedData.expectedPrice && (
+                        <p><span className="text-muted-foreground">Expected:</span> {selectedRequest.parsedData.expectedPrice}</p>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                )}
 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => handleStatusUpdate(selectedRequest.id, "contacted")} className="flex-1">
+                <div className="flex gap-2 pt-4">
+                  <Button onClick={() => handleStatusUpdate(selectedRequest.id, "contacted")} variant="outline">
                     Mark Contacted
                   </Button>
-                  <Button onClick={() => handleStatusUpdate(selectedRequest.id, "interested")} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Interested
+                  <Button onClick={() => handleStatusUpdate(selectedRequest.id, "purchased")}>
+                    Mark Purchased
                   </Button>
                 </div>
               </div>
