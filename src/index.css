@@ -140,39 +140,78 @@
     .zoho-table tr:hover td {
         @apply bg-muted/30;
     }
+    
     /* Zoho-like card styles */
     .zoho-card {
-        @apply bg-card border border-border rounded-md shadow-sm;
+        @apply bg-card border-0 rounded-xl shadow-sm ring-1 ring-border/50 transition-all duration-200 hover:shadow-md;
     }
+    
+    /* Premium stat card */
+    .stat-card {
+        @apply relative overflow-hidden bg-card border-0 rounded-xl shadow-sm ring-1 ring-border/50;
+    }
+    .stat-card::before {
+        content: '';
+        @apply absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-muted/20;
+    }
+    
     /* Zoho-like button styles */
     .zoho-btn {
-        @apply inline-flex items-center justify-center gap-2 font-medium text-sm px-4 py-2 rounded-md transition-all;
+        @apply inline-flex items-center justify-center gap-2 font-medium text-sm px-4 py-2.5 rounded-lg transition-all duration-200 active:scale-[0.98];
     }
     .zoho-btn-primary {
-        @apply bg-primary text-primary-foreground hover: opacity-90;
+        @apply bg-primary text-primary-foreground hover:opacity-90 shadow-sm;
     }
     .zoho-btn-secondary {
-        @apply bg-secondary text-secondary-foreground hover: bg-muted;
+        @apply bg-secondary text-secondary-foreground hover:bg-muted;
     }
+    
     /* Zoho-like input styles */
     .zoho-input {
-        @apply w-full px-3 py-2 text-sm border border-input rounded-md bg-background focus: outline-none focus: ring-2 focus: ring-ring focus: border-transparent;
+        @apply w-full px-3.5 py-2.5 text-sm border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200;
     }
-    /* Status badges */
+    
+    /* Status badges with modern styling */
     .status-badge {
-        @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+        @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
     }
     .status-success {
-        @apply bg-green-100 text-green-800 dark: bg-green-900/30 dark: text-green-400;
+        @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400;
     }
     .status-warning {
-        @apply bg-yellow-100 text-yellow-800 dark: bg-yellow-900/30 dark: text-yellow-400;
+        @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
     }
     .status-error {
-        @apply bg-red-100 text-red-800 dark: bg-red-900/30 dark: text-red-400;
+        @apply bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400;
     }
     .status-info {
-        @apply bg-blue-100 text-blue-800 dark: bg-blue-900/30 dark: text-blue-400;
+        @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
+    }
+    
+    /* Dashboard metric card */
+    .metric-card {
+        @apply bg-card border-0 rounded-xl p-4 shadow-sm ring-1 ring-border/50 hover:shadow-md transition-all duration-200;
+    }
+    
+    /* Modern tab styling */
+    .modern-tabs {
+        @apply flex gap-1 p-1 bg-muted/50 rounded-xl overflow-x-auto scrollbar-hide;
+    }
+    .modern-tab {
+        @apply px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap;
+    }
+    .modern-tab-active {
+        @apply bg-background text-foreground shadow-sm;
+    }
+    .modern-tab-inactive {
+        @apply text-muted-foreground hover:text-foreground;
+    }
+    
+    /* Mobile-optimized touch targets */
+    @media (max-width: 640px) {
+        .touch-target {
+            @apply min-h-[44px] min-w-[44px];
+        }
     }
 }
 
