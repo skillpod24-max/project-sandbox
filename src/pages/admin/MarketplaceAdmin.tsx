@@ -13,8 +13,8 @@ import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import {
   Shield, Users, Car, Star, CheckCircle, XCircle, AlertTriangle,
   Sparkles, Building2, Search, MoreVertical, Eye, Ban,
-  Award, TrendingUp, Calendar, Image, Upload, Settings, Gavel,
-  Timer, Crown, DollarSign, MessageSquare, CreditCard, Clock
+  Award, TrendingUp, Calendar, Image, Upload, Settings,
+  Crown, DollarSign, MessageSquare, CreditCard, Clock
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -67,8 +67,6 @@ const MarketplaceAdmin = () => {
     pendingDealers: 0,
     totalVehicles: 0,
     featuredDealers: 0,
-    liveAuctions: 0,
-    totalBids: 0,
   });
 
   useEffect(() => {
@@ -166,8 +164,6 @@ const MarketplaceAdmin = () => {
         pendingDealers: pending,
         totalVehicles: (vehiclesData || []).length,
         featuredDealers: featured,
-        liveAuctions: live,
-        totalBids: (bidsData || []).length,
       });
 
       // Load saved banner URLs
@@ -454,15 +450,13 @@ const MarketplaceAdmin = () => {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           {[
             { label: "Total Dealers", value: stats.totalDealers, icon: Building2, color: "text-blue-600 bg-blue-50" },
             { label: "Active", value: stats.activeDealers, icon: CheckCircle, color: "text-emerald-600 bg-emerald-50" },
             { label: "Pending", value: stats.pendingDealers, icon: AlertTriangle, color: "text-amber-600 bg-amber-50" },
             { label: "Featured", value: stats.featuredDealers, icon: Sparkles, color: "text-purple-600 bg-purple-50" },
             { label: "Vehicles", value: stats.totalVehicles, icon: Car, color: "text-slate-600 bg-slate-100" },
-            { label: "Live Auctions", value: stats.liveAuctions, icon: Gavel, color: "text-red-600 bg-red-50" },
-            { label: "Total Bids", value: stats.totalBids, icon: TrendingUp, color: "text-cyan-600 bg-cyan-50" },
           ].map((stat, i) => (
             <Card key={i} className="border-0 shadow-sm">
               <CardContent className="p-4 flex items-center gap-3">
@@ -488,9 +482,6 @@ const MarketplaceAdmin = () => {
             </TabsTrigger>
             <TabsTrigger value="featured" className="gap-2">
               <Sparkles className="h-4 w-4" /> Featured
-            </TabsTrigger>
-            <TabsTrigger value="bidding" className="gap-2">
-              <Gavel className="h-4 w-4" /> Bidding
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" /> Settings
@@ -806,168 +797,6 @@ const MarketplaceAdmin = () => {
             </div>
           </TabsContent>
 
-          {/* Bidding Tab */}
-          <TabsContent value="bidding">
-            <div className="space-y-6">
-              {/* Auctions Management */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Gavel className="h-5 w-5 text-red-600" />
-                    Auction Management
-                  </CardTitle>
-                  <CardDescription>View and manage all auctions</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Vehicle</TableHead>
-                        <TableHead>Current Bid</TableHead>
-                        <TableHead>Bids</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Time Left</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {auctions.map((auction) => {
-                        const endTime = new Date(auction.end_time).getTime();
-                        const now = Date.now();
-                        const diff = endTime - now;
-                        const hours = Math.floor(diff / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        const timeLeft = diff <= 0 ? 'Ended' : `${hours}h ${minutes}m`;
-
-                        return (
-                          <TableRow key={auction.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="h-12 w-16 bg-slate-100 rounded-lg flex items-center justify-center">
-                                  <Car className="h-6 w-6 text-slate-400" />
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-slate-900">{auction.title}</p>
-                                  {auction.vehicle && (
-                                    <p className="text-xs text-slate-500">
-                                      {auction.vehicle.brand} {auction.vehicle.model}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <p className="font-bold text-emerald-600">
-                                {formatCurrency(auction.current_bid || auction.starting_price)}
-                              </p>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{auction.bid_count || 0} bids</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={`${statusColors[auction.status] || 'bg-slate-100'} border-0`}>
-                                {auction.status?.replace(/_/g, ' ')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`flex items-center gap-1 text-sm ${diff <= 0 ? 'text-slate-400' : 'text-amber-600'}`}>
-                                <Timer className="h-3 w-3" />
-                                {timeLeft}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Select
-                                value={auction.status}
-                                onValueChange={(v) => handleAuctionStatusChange(auction.id, v)}
-                              >
-                                <SelectTrigger className="w-40">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="auction_live">Live</SelectItem>
-                                  <SelectItem value="auction_ended">End Auction</SelectItem>
-                                  <SelectItem value="post_bid_seller_pending">Seller Pending</SelectItem>
-                                  <SelectItem value="post_bid_dealer_pending">Dealer Pending</SelectItem>
-                                  <SelectItem value="post_bid_negotiation">Negotiation</SelectItem>
-                                  <SelectItem value="payment_pending">Payment Pending</SelectItem>
-                                  <SelectItem value="sold">Mark Sold</SelectItem>
-                                  <SelectItem value="failed">Mark Failed</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              {/* All Bids with User Info */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    All Bids & Bidders
-                  </CardTitle>
-                  <CardDescription>Complete bid history with user information</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Bidder</TableHead>
-                        <TableHead>Auction</TableHead>
-                        <TableHead>Bid Amount</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bids.slice(0, 30).map((bid) => {
-                        const auction = auctions.find(a => a.id === bid.auction_id);
-                        const isWinning = auction?.current_bidder_id === bid.bidder_id;
-                        
-                        return (
-                          <TableRow key={bid.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                  <Users className="h-4 w-4 text-blue-600" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-slate-900">{getBidderName(bid.bidder_id)}</p>
-                                  <p className="text-xs text-slate-500">{getBidderEmail(bid.bidder_id)}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm">{auction?.title || 'Unknown Auction'}</p>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-bold text-emerald-600">{formatCurrency(bid.bid_amount)}</span>
-                            </TableCell>
-                            <TableCell className="text-sm text-slate-500">
-                              {new Date(bid.created_at).toLocaleString()}
-                            </TableCell>
-                            <TableCell>
-                              {isWinning ? (
-                                <Badge className="bg-amber-100 text-amber-700 border-0">
-                                  <Crown className="h-3 w-3 mr-1" /> Winning
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-slate-500">Outbid</Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings">

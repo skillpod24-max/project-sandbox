@@ -9,7 +9,7 @@ import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import {
   Car, Clock, MapPin, Phone, User, Eye, CheckCircle, XCircle,
   Calendar, Fuel, Gauge, Image as ImageIcon, Tag, MessageSquare,
-  BarChart3, TrendingUp, Timer, ArrowUpRight, ArrowDownRight
+  BarChart3, TrendingUp, Timer, ArrowUpRight, ArrowDownRight, Mail
 } from "lucide-react";
 import {
   Dialog,
@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import Layout from "@/components/Layout";
-import CarLoader from "@/components/CarLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { format, subDays, startOfDay } from "date-fns";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -294,7 +294,25 @@ const DealerMarketplaceHub = () => {
   };
 
   if (loading) {
-    return <Layout><CarLoader /></Layout>;
+    return (
+      <Layout>
+        <div className="space-y-6">
+          <div className="flex gap-4">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-80 rounded-lg" />
+            <Skeleton className="h-80 rounded-lg" />
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (

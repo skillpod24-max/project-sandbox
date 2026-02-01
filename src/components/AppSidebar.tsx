@@ -121,11 +121,7 @@ const transactionMenuItems = [
   { title: "EMI", icon: CalendarClock, url: "/emi" },
 ];
 
-const marketplaceMenuItems = [
-  { title: "Marketplace Hub", icon: BarChart3, url: "/marketplace-hub" },
-  { title: "Vehicles for Sale", icon: Tag, url: "/vehicles-for-sale" },
-  { title: "Test Drive Requests", icon: Calendar, url: "/test-drive-requests" },
-];
+// Marketplace menu items will be built dynamically with badge
 
 const managementMenuItems = [
   { title: "Documents", icon: FileText, url: "/documents" },
@@ -142,6 +138,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [newLeadsCount, setNewLeadsCount] = useState(0);
+  const [marketplaceEnquiryCount, setMarketplaceEnquiryCount] = useState(0);
 
   const fetchNewLeadsCount = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -155,6 +152,16 @@ export function AppSidebar() {
       .is("last_viewed_at", null);
 
     setNewLeadsCount(count || 0);
+
+    // Fetch marketplace enquiry count
+    const { count: mpCount } = await supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("source", "marketplace")
+      .eq("status", "new");
+
+    setMarketplaceEnquiryCount(mpCount || 0);
   }, []);
 
   useEffect(() => {
@@ -219,6 +226,10 @@ export function AppSidebar() {
     { title: "Vendors", icon: UserCircle, url: "/vendors", badge: 0 },
     { title: "Leads", icon: UserPlus, url: "/leads", badge: newLeadsCount },
   ], [newLeadsCount]);
+
+  const marketplaceMenuItems = useMemo(() => [
+    { title: "Marketplace Hub", icon: BarChart3, url: "/marketplace-hub", badge: marketplaceEnquiryCount },
+  ], [marketplaceEnquiryCount]);
 
   return (
     <Sidebar collapsible="icon" className="will-change-transform">
