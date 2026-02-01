@@ -33,11 +33,6 @@ export async function createPublicLead({
     .eq("user_id", dealerUserId)
     .single();
 
-  if (settingsError || !settings?.dealer_email) {
-    console.error("Dealer email not configured");
-    return;
-  }
-
   // 2️⃣ Prepare lead insert (STRICTLY MATCHING DB)
   const leadData: TablesInsert<"leads"> = {
     user_id: dealerUserId,
@@ -60,22 +55,31 @@ export async function createPublicLead({
 
   if (leadError) {
     console.error("Failed to create lead", leadError);
-    return;
+    throw new Error("Failed to create lead");
   }
 
-  // 3️⃣ Send email to dealer
-  await sendEmail({
-    to: settings.dealer_email,
-    subject: "🚗 New Enquiry Received",
-    html: `
-      <h2>New Enquiry</h2>
-      <p><b>Dealer:</b> ${settings.dealer_name ?? "-"}</p>
-      <p><b>Name:</b> ${customerName}</p>
-      <p><b>Phone:</b> ${phone}</p>
-      ${email ? `<p><b>Email:</b> ${email}</p>` : ""}
-      ${vehicleInterest ? `<p><b>Vehicle:</b> ${vehicleInterest}</p>` : ""}
-      ${notes ? `<p><b>Message:</b> ${notes}</p>` : ""}
-      <p><b>Source:</b> ${source}</p>
-    `,
-  });
+  // 3️⃣ Send email to dealer (only if email is configured)
+  if (!settingsError && settings?.dealer_email) {
+    try {
+      await sendEmail({
+        to: settings.dealer_email,
+        subject: "🚗 New Enquiry Received",
+        html: `
+          <h2>New Enquiry</h2>
+          <p><b>Dealer:</b> ${settings.dealer_name ?? "-"}</p>
+          <p><b>Name:</b> ${customerName}</p>
+          <p><b>Phone:</b> ${phone}</p>
+          ${email ? `<p><b>Email:</b> ${email}</p>` : ""}
+          ${vehicleInterest ? `<p><b>Vehicle:</b> ${vehicleInterest}</p>` : ""}
+          ${notes ? `<p><b>Message:</b> ${notes}</p>` : ""}
+          <p><b>Source:</b> ${source}</p>
+        `,
+      });
+    } catch (emailError) {
+      console.error("Failed to send email notification:", emailError);
+      // Don't throw - lead was created successfully, email is secondary
+    }
+  } else {
+    console.warn("Dealer email not configured, skipping email notification");
+  }
 }

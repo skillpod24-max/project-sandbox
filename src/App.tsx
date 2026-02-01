@@ -192,7 +192,11 @@ const App = () => (
           />
           <Route
             path="/marketplace-hub"
-            element={<DealerMarketplaceHub />}
+            element={
+              <Layout>
+                <DealerMarketplaceHub />
+              </Layout>
+            }
           />
           <Route
             path="/analytics/marketplace"

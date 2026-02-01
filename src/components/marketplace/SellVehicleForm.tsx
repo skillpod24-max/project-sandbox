@@ -38,8 +38,10 @@ const SellVehicleForm = ({ onSuccess, onClose }: SellVehicleFormProps) => {
     owners: "1",
   });
 
-  const brands = getBrandsForType(form.vehicleType);
-  const models = getModelsForBrand(form.vehicleType, form.brand);
+  const brandsList = getBrandsForType(form.vehicleType);
+  const brandNames = brandsList.map(b => b.name);
+  const modelsList = getModelsForBrand(form.vehicleType, form.brand);
+  const modelNames = modelsList.map(m => m.name);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -210,9 +212,9 @@ const SellVehicleForm = ({ onSuccess, onClose }: SellVehicleFormProps) => {
             <Label>Brand *</Label>
             <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v, model: "" })}>
               <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
-              <SelectContent>
-                {brands.map(b => (
-                  <SelectItem key={String(b)} value={String(b)}>{String(b)}</SelectItem>
+              <SelectContent className="z-[200] bg-white max-h-60">
+                {brandNames.map(b => (
+                  <SelectItem key={b} value={b}>{b}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -221,9 +223,9 @@ const SellVehicleForm = ({ onSuccess, onClose }: SellVehicleFormProps) => {
             <Label>Model *</Label>
             <Select value={form.model} onValueChange={(v) => setForm({ ...form, model: v })}>
               <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
-              <SelectContent>
-                {models.map(m => (
-                  <SelectItem key={String(m)} value={String(m)}>{String(m)}</SelectItem>
+              <SelectContent className="z-[200] bg-white max-h-60">
+                {modelNames.map(m => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
