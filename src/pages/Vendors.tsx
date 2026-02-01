@@ -16,7 +16,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 type Vendor = Database["public"]["Tables"]["vendors"]["Row"];
 type VendorInsert = Database["public"]["Tables"]["vendors"]["Insert"];
@@ -232,8 +232,8 @@ if (!user) {
   );
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -15,7 +15,7 @@ import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as DatePickerCalendar } from "@/components/ui/calendar";
@@ -312,8 +312,8 @@ toast({ title: "Expense added successfully" });
 
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
 const visibleCategories = showAllCategories
   ? categoryBreakdown

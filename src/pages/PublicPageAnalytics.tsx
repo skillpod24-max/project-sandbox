@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import CarLoader from "@/components/CarLoader";
+import { AnalyticsSkeleton } from "@/components/ui/page-skeleton";
 import { Badge } from "@/components/ui/badge";
 
 import {
@@ -441,7 +441,7 @@ const PublicPageAnalytics = () => {
 
   const publicPageUrl = publicPageId ? `${window.location.origin}/d/${publicPageId}` : "";
 
-  if (loading) return <CarLoader />;
+  if (loading) return <AnalyticsSkeleton />;
 
   if (!publicEnabled) {
     return (

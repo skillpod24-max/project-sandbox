@@ -15,7 +15,7 @@ import { format, addMonths } from "date-fns";
 import { ArrowLeft, Car, User, DollarSign, Calendar, CreditCard, Settings2, Plus, Search } from "lucide-react";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 type EMISchedule = Database["public"]["Tables"]["emi_schedules"]["Row"];
 type Sale = Database["public"]["Tables"]["sales"]["Row"];
@@ -535,8 +535,8 @@ useEffect(() => {
 
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
   // Detail View
   if (detailView && selectedSaleId) {

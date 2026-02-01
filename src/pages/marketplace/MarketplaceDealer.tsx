@@ -11,8 +11,7 @@ import {
 import { formatCurrency } from "@/lib/formatters";
 import { trackPublicEvent } from "@/lib/publicAnalytics";
 import { DealerPageSkeleton } from "@/components/marketplace/ShimmerSkeleton";
-import MarketplaceDealerEnquiryForm from "@/components/public/MarketplaceDealerEnquiryForm";
-
+import DealerEnquiryForm from "@/components/public/DealerEnquiryForm";
 const MarketplaceDealer = () => {
   const { dealerId } = useParams();
   const navigate = useNavigate();
@@ -393,12 +392,13 @@ const MarketplaceDealer = () => {
           {/* Right Column - Enquiry Form */}
           <div className="space-y-4">
             <div className="sticky top-20">
-              <MarketplaceDealerEnquiryForm 
+              <DealerEnquiryForm 
                 dealerInfo={{ 
                   user_id: dealerId!, 
                   public_page_id: dealer.public_page_id,
                   dealer_name: dealer.dealer_name 
                 }} 
+                pageId="marketplace"
               />
             </div>
 

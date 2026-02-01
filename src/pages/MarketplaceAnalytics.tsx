@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import CarLoader from "@/components/CarLoader";
+import { AnalyticsSkeleton } from "@/components/ui/page-skeleton";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell
@@ -128,7 +128,7 @@ const MarketplaceAnalytics = () => {
   };
 
   if (loading) {
-    return <CarLoader variant="top" text="Loading analytics..." />;
+    return <AnalyticsSkeleton />;
   }
 
   return (

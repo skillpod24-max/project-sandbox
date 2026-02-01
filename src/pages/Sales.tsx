@@ -17,7 +17,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { generateSaleInvoicePDF } from "@/lib/pdfGenerator";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getEffectiveBalance } from "@/lib/accounting";
 
 
@@ -594,8 +594,8 @@ generateSaleInvoicePDF(
 
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
 const isEmiNotConfigured = (sale: Sale) => {
   return sale.is_emi && !sale.emi_configured;

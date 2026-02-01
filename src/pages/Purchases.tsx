@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 const formatINR = (value: string) => {
   const num = value.replace(/,/g, "");
@@ -350,8 +350,8 @@ const handleAddPayment = async () => {
   );
 
   if (loading) {
-  return <CarLoader />;
-}
+    return <PageSkeleton />;
+  }
 
 // ✅ Vehicles eligible for manual purchase
 const purchasedVehicleIds = new Set(
