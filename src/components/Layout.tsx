@@ -191,11 +191,12 @@ useEffect(() => {
       <AppSidebar />
 
       <div className="flex-1 flex flex-col w-full min-w-0">
-        <header className="h-16 border-b border-border bg-card flex items-center px-4 sm:px-6 sticky top-0 z-[60]">
+        {/* Zoho-style Top Header */}
+        <header className="h-14 border-b border-border bg-card flex items-center px-4 sm:px-6 sticky top-0 z-[60] shadow-sm">
           {!isOnline && (
-            <div className="bg-red-50 border-b border-red-200 text-red-700 px-4 py-2 text-sm flex items-center gap-2">
+            <div className="absolute top-14 left-0 right-0 bg-destructive/10 border-b border-destructive/20 text-destructive px-4 py-2 text-sm flex items-center gap-2">
               <WifiOff className="h-4 w-4" />
-              <span>You’re offline. Reconnect to access the platform.</span>
+              <span>You're offline. Reconnect to access the platform.</span>
             </div>
           )}
 
@@ -204,7 +205,7 @@ useEffect(() => {
               transition-none
               flex items-center justify-center
               h-9 w-9
-              rounded-md
+              rounded-lg
               hover:bg-muted
               active:scale-95
               will-change-transform
@@ -213,41 +214,40 @@ useEffect(() => {
             <span className="sr-only">Toggle Sidebar</span>
           </SidebarTrigger>
 
-          {/* Sticky Notes Icon */}
-          <button
-            onClick={() => setNotesOpen(true)}
-            className="ml-2 p-2 rounded-md hover:bg-muted transition"
-            title="Sticky Notes"
-          >
-            <StickyNote className="h-5 w-5 text-muted-foreground" />
-          </button>
+          {/* Quick Actions - Zoho Style */}
+          <div className="flex items-center gap-1 ml-3 border-l border-border pl-3">
+            <button
+              onClick={() => setNotesOpen(true)}
+              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target"
+              title="Sticky Notes"
+            >
+              <StickyNote className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={() => setInfoOpen(true)}
+              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target"
+              title="Platform Info"
+            >
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={() => setEmiCalcOpen(true)}
+              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target"
+              title="EMI Calculator"
+            >
+              <Calculator className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
 
-          {/* Info Icon */}
-          <button
-            onClick={() => setInfoOpen(true)}
-            className="ml-2 p-2 rounded-md hover:bg-muted transition"
-            title="Platform Info & Guidelines"
-          >
-            <Info className="h-5 w-5 text-muted-foreground" />
-          </button>
-
-          {/* EMI Calculator */}
-          <button
-            onClick={() => setEmiCalcOpen(true)}
-            className="ml-2 p-2 rounded-md hover:bg-muted transition"
-            title="EMI Calculator"
-          >
-            <Calculator className="h-5 w-5 text-muted-foreground" />
-          </button>
-
+          {/* Right Side - User Info */}
           <div className="ml-auto flex items-center gap-3">
             {shopName ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div
-                  className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
                     isOnline
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-700"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      : "bg-destructive/10 text-destructive"
                   }`}
                 >
                   {isOnline ? (
@@ -261,7 +261,7 @@ useEffect(() => {
                   )}
                 </div>
 
-                <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-semibold px-3 py-1 shadow-md">
+                <Badge className="bg-primary text-primary-foreground font-semibold px-3 py-1.5 shadow-sm rounded-lg text-xs">
                   {shopName}
                 </Badge>
               </div>
@@ -273,8 +273,11 @@ useEffect(() => {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 overflow-auto transition-[opacity] duration-200 scrollbar-hide">
-          {children}
+        {/* Main Content Area - Zoho Style */}
+        <main className="flex-1 p-4 sm:p-6 overflow-auto transition-[opacity] duration-200 scrollbar-hide bg-muted/30">
+          <div className="max-w-[1920px] mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

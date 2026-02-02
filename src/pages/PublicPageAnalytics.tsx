@@ -4,6 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { AnalyticsSkeleton } from "@/components/ui/page-skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  MetricCard,
+  EngagementRing,
+  ReachGraph,
+  ActivityHeatmap,
+} from "@/components/analytics/SocialStyleMetrics";
 
 import {
   Eye,
@@ -23,6 +29,9 @@ import {
   FormInput,
   XCircle,
   CheckCircle2,
+  Sparkles,
+  Target,
+  Zap,
 } from "lucide-react";
 import {
   XAxis,
@@ -104,7 +113,7 @@ const isTopPerformer = (v: VehicleStat) => v.enquiries >= 3 || v.conversion >= 1
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-/* ---------------- MEMOIZED COMPONENTS ---------------- */
+/* ---------------- MEMOIZED STAT CARD ---------------- */
 
 const StatCard = memo(({ title, value, suffix = "", icon: Icon, color, trend, inverseTrend }: any) => {
   const bgMap: any = {
@@ -118,7 +127,7 @@ const StatCard = memo(({ title, value, suffix = "", icon: Icon, color, trend, in
   };
 
   return (
-    <Card className="shadow-sm border-border hover:shadow-md transition-shadow duration-200">
+    <Card className="zoho-card hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-4 sm:p-5">
         <div className="flex justify-between items-start mb-2">
           <div className={`p-2 rounded-lg ${bgMap[color] || 'bg-muted'}`}>

@@ -208,10 +208,49 @@
     }
     
     /* Mobile-optimized touch targets */
-    @media (max-width: 640px) {
-        .touch-target {
-            @apply min-h-[44px] min-w-[44px];
-        }
+    .touch-target {
+        @apply min-h-[44px] min-w-[44px];
+    }
+    
+    /* Zoho-style page header */
+    .page-header {
+        @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6;
+    }
+    .page-title {
+        @apply text-xl sm:text-2xl font-semibold tracking-tight text-foreground;
+    }
+    .page-subtitle {
+        @apply text-sm text-muted-foreground;
+    }
+    
+    /* Action bar for mobile */
+    .action-bar {
+        @apply flex items-center gap-2 flex-wrap;
+    }
+    
+    /* Analytics metric grid */
+    .metrics-grid {
+        @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4;
+    }
+    
+    /* Social style insights card */
+    .insight-card {
+        @apply bg-card rounded-xl p-4 border border-border/50 shadow-sm;
+    }
+    .insight-value {
+        @apply text-2xl sm:text-3xl font-bold text-foreground;
+    }
+    .insight-label {
+        @apply text-xs sm:text-sm text-muted-foreground mt-1;
+    }
+    .insight-trend {
+        @apply inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full;
+    }
+    .insight-trend-up {
+        @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400;
+    }
+    .insight-trend-down {
+        @apply bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400;
     }
 }
 
