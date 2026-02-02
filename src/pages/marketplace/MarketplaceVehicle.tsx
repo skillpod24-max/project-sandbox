@@ -662,13 +662,22 @@ const MarketplaceVehicle = () => {
                   </h3>
                   <div className="space-y-3">
                     {[
-                      { label: "Engine", value: vehicle.engine_number ? "Available" : "Contact Dealer" },
-                      { label: "Chassis", value: vehicle.chassis_number ? "Available" : "Contact Dealer" },
+                      { label: "Engine", value: vehicle.engine_number && vehicle.show_engine_number ? vehicle.engine_number : (vehicle.engine_number ? "Available" : "Contact Dealer") },
+                      { label: "Chassis", value: vehicle.chassis_number && vehicle.show_chassis_number ? vehicle.chassis_number : (vehicle.chassis_number ? "Available" : "Contact Dealer") },
                       { label: "Mileage", value: vehicle.mileage ? `${vehicle.mileage} kmpl` : "Contact Dealer" },
                       { label: "Color", value: vehicle.color || "Contact Dealer" },
-                      { label: "Seating Capacity", value: vehicle.seating_capacity || "Contact Dealer" },
+                      { label: "Seating Capacity", value: vehicle.seating_capacity ? `${vehicle.seating_capacity} Seater` : "Contact Dealer" },
                       { label: "Boot Space", value: vehicle.boot_space || "Contact Dealer" },
-                    ].map((spec, i) => (
+                      { label: "Battery Health", value: vehicle.battery_health || (vehicle.fuel_type === 'electric' ? "Contact Dealer" : null) },
+                      { label: "Tyre Condition", value: vehicle.tyre_condition || "Contact Dealer" },
+                      { label: "Service History", value: vehicle.service_history || "Contact Dealer" },
+                      { label: "Hypothecation", value: vehicle.hypothecation || "None" },
+                      { label: "Insurance Valid Till", value: vehicle.insurance_expiry ? new Date(vehicle.insurance_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "Contact Dealer" },
+                      { label: "PUC Valid Till", value: vehicle.puc_expiry ? new Date(vehicle.puc_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "Contact Dealer" },
+                      { label: "Fitness Valid Till", value: vehicle.fitness_expiry ? new Date(vehicle.fitness_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "Contact Dealer" },
+                      { label: "Road Tax Valid Till", value: vehicle.road_tax_expiry ? new Date(vehicle.road_tax_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "Contact Dealer" },
+                      { label: "Last Service", value: vehicle.last_service_date ? new Date(vehicle.last_service_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "Contact Dealer" },
+                    ].filter(spec => spec.value !== null).map((spec, i) => (
                       <div key={i} className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
                         <span className="text-sm text-slate-500">{spec.label}</span>
                         <span className="text-sm font-medium text-slate-900 capitalize">{spec.value}</span>

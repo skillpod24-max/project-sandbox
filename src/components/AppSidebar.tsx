@@ -231,14 +231,16 @@ export function AppSidebar() {
   ], [marketplaceEnquiryCount]);
 
   return (
-    <Sidebar collapsible="icon" className="will-change-transform">
+    <Sidebar collapsible="icon" className="will-change-transform border-r border-border">
       <SidebarContent className="bg-sidebar flex flex-col h-full">
-        {/* Logo */}
+        {/* Logo - Zoho Style */}
         <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <Car className="h-6 w-6 text-sidebar-foreground flex-shrink-0" />
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
+              <Car className="h-4 w-4 text-primary-foreground" />
+            </div>
             <span
-              className={`text-lg font-bold text-sidebar-foreground transition-opacity duration-150
+              className={`text-base font-bold text-sidebar-foreground tracking-tight transition-opacity duration-150
                 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"}`}
             >
               VahanHub
@@ -246,16 +248,16 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Scrollable Menu - Invisible scrollbar */}
-        <div className="flex-1 overflow-y-auto scrollbar-invisible">
+        {/* Scrollable Menu - Zoho Style with invisible scrollbar */}
+        <div className="flex-1 overflow-y-auto scrollbar-invisible py-2">
           <MemoizedMenuGroup label="Main" items={mainMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Transactions" items={transactionMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Marketplace" items={marketplaceMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Management" items={managementMenuItems} isCollapsed={isCollapsed} />
         </div>
 
-        {/* Bottom: Settings & Logout */}
-        <div className="border-t border-sidebar-border">
+        {/* Bottom: Settings & Logout - Zoho Style */}
+        <div className="border-t border-sidebar-border py-2">
           <SidebarMenu>
             <MemoizedMenuItem 
               title="Settings" 
@@ -266,10 +268,10 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleLogout}
-                className="text-sidebar-foreground hover:bg-sidebar-accent"
+                className="text-sidebar-foreground hover:bg-sidebar-accent rounded-lg mx-2"
               >
-                <LogOut className="h-5 w-5" />
-                <span>Logout</span>
+                <LogOut className="h-4 w-4" />
+                <span className="text-sm">Logout</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
