@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Send, CheckCircle, Calendar, Clock } from "lucide-react";
+import { Send, CheckCircle, Calendar, Clock, Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createPublicLead } from "@/lib/leads";
 import { trackPublicEvent } from "@/lib/publicAnalytics";
@@ -128,16 +128,29 @@ const MarketplaceEnquiryForm = memo(({
     );
   }
 
-  // Generate time slots
+  // Generate time slots with more options
   const timeSlots = [
-    "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-    "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM"
+    { value: "09:00 AM", label: "9:00 AM - Morning" },
+    { value: "10:00 AM", label: "10:00 AM - Morning" },
+    { value: "11:00 AM", label: "11:00 AM - Late Morning" },
+    { value: "12:00 PM", label: "12:00 PM - Noon" },
+    { value: "02:00 PM", label: "2:00 PM - Afternoon" },
+    { value: "03:00 PM", label: "3:00 PM - Afternoon" },
+    { value: "04:00 PM", label: "4:00 PM - Late Afternoon" },
+    { value: "05:00 PM", label: "5:00 PM - Evening" },
+    { value: "06:00 PM", label: "6:00 PM - Evening" },
+    { value: "07:00 PM", label: "7:00 PM - Late Evening" },
   ];
 
   // Get min date (tomorrow)
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const minDate = tomorrow.toISOString().split('T')[0];
+  
+  // Get max date (30 days from now)
+  const maxDateObj = new Date();
+  maxDateObj.setDate(maxDateObj.getDate() + 30);
+  const maxDate = maxDateObj.toISOString().split('T')[0];
 
   return (
     <div className="space-y-3">
@@ -171,46 +184,72 @@ const MarketplaceEnquiryForm = memo(({
         rows={3}
       />
       
-      {/* Test Drive Option */}
+      {/* Test Drive Option - Enhanced UI */}
       {showTestDrive && (
         <div className="space-y-3 pt-2">
-          <div className="flex items-center space-x-2">
+          <div 
+            onClick={() => setWantTestDrive(!wantTestDrive)}
+            className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+              wantTestDrive 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+            }`}
+          >
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+              wantTestDrive ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'
+            }`}>
+              <Calendar className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`font-medium text-sm ${wantTestDrive ? 'text-blue-700' : 'text-slate-700'}`}>
+                Free Test Drive
+              </p>
+              <p className="text-xs text-slate-500">Schedule a test drive at the dealership</p>
+            </div>
             <Checkbox 
               id="testDrive" 
               checked={wantTestDrive}
               onCheckedChange={(checked) => setWantTestDrive(checked as boolean)}
+              className="shrink-0"
             />
-            <Label htmlFor="testDrive" className="text-sm font-medium cursor-pointer flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              I want a free test drive
-            </Label>
           </div>
           
           {wantTestDrive && (
-            <div className="grid grid-cols-2 gap-2 p-3 bg-blue-50 rounded-xl">
-              <div>
-                <Label className="text-xs text-slate-500 mb-1 block">Preferred Date</Label>
-                <Input
-                  type="date"
-                  min={minDate}
-                  value={testDriveDate}
-                  onChange={(e) => setTestDriveDate(e.target.value)}
-                  className="h-10 text-sm"
-                />
+            <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl space-y-3 border border-blue-100">
+              <div className="flex items-center gap-2 text-blue-700">
+                <Clock className="h-4 w-4" />
+                <span className="text-sm font-medium">Select your preferred slot</span>
               </div>
-              <div>
-                <Label className="text-xs text-slate-500 mb-1 block">Preferred Time</Label>
-                <select
-                  value={testDriveTime}
-                  onChange={(e) => setTestDriveTime(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                >
-                  <option value="">Select time</option>
-                  {timeSlots.map((time) => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-slate-600 mb-1.5 block font-medium">Date</Label>
+                  <Input
+                    type="date"
+                    min={minDate}
+                    max={maxDate}
+                    value={testDriveDate}
+                    onChange={(e) => setTestDriveDate(e.target.value)}
+                    className="h-11 text-sm bg-white border-slate-200"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-600 mb-1.5 block font-medium">Time</Label>
+                  <select
+                    value={testDriveTime}
+                    onChange={(e) => setTestDriveTime(e.target.value)}
+                    className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Choose time</option>
+                    {timeSlots.map((slot) => (
+                      <option key={slot.value} value={slot.value}>{slot.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              <p className="text-xs text-slate-500 flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 text-emerald-500" />
+                Dealer will confirm your slot within 2 hours
+              </p>
             </div>
           )}
         </div>
