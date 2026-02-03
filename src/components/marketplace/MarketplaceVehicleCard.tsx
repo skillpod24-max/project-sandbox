@@ -24,12 +24,48 @@ const MarketplaceVehicleCard = memo(({
   onWishlistToggle,
   onCompareToggle
 }: Props) => {
-  // Get badge background color - use dealer's selected color or default blue
+  // Color mapping for Tailwind color names to hex
+  const colorMap: Record<string, string> = {
+    red: '#EF4444',
+    orange: '#F97316', 
+    amber: '#F59E0B',
+    yellow: '#EAB308',
+    lime: '#84CC16',
+    green: '#22C55E',
+    emerald: '#10B981',
+    teal: '#14B8A6',
+    cyan: '#06B6D4',
+    sky: '#0EA5E9',
+    blue: '#3B82F6',
+    indigo: '#6366F1',
+    violet: '#8B5CF6',
+    purple: '#A855F7',
+    fuchsia: '#D946EF',
+    pink: '#EC4899',
+    rose: '#F43F5E',
+    slate: '#64748B',
+    gray: '#6B7280',
+    zinc: '#71717A',
+    neutral: '#737373',
+    stone: '#78716C',
+  };
+
+  // Get badge background color - use dealer's selected color or default emerald
   const getBadgeStyle = () => {
     if (vehicle.image_badge_color) {
-      return { backgroundColor: vehicle.image_badge_color };
+      // Check if it's a Tailwind color name
+      const color = colorMap[vehicle.image_badge_color.toLowerCase()];
+      if (color) {
+        return { backgroundColor: color };
+      }
+      // If it starts with #, use as-is
+      if (vehicle.image_badge_color.startsWith('#')) {
+        return { backgroundColor: vehicle.image_badge_color };
+      }
+      // Default fallback
+      return { backgroundColor: colorMap[vehicle.image_badge_color] || '#10B981' };
     }
-    return { backgroundColor: '#3B82F6' }; // Default blue
+    return { backgroundColor: '#10B981' }; // Default emerald
   };
 
   const monthlyEmi = Math.round(vehicle.selling_price / 48);

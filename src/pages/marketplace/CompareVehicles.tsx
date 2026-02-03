@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Car, Fuel, Gauge, Calendar, Users, X, Check, Minus,
-  CheckCircle, Phone, MessageCircle
+  CheckCircle, Phone, MessageCircle, Shield, Zap, Battery, Settings,
+  FileText, MapPin, Building2
 } from "lucide-react";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import CarLoader from "@/components/CarLoader";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
 
@@ -18,6 +19,7 @@ const CompareVehicles = () => {
   const [loading, setLoading] = useState(true);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [dealers, setDealers] = useState<Record<string, any>>({});
+  const [vehicleImages, setVehicleImages] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     const ids = searchParams.get("ids")?.split(",").filter(Boolean) || [];
@@ -41,17 +43,23 @@ const CompareVehicles = () => {
         return;
       }
 
-      // Fetch images
+      // Fetch ALL images for each vehicle
       const { data: imagesData } = await supabase
         .from("vehicle_images")
         .select("*")
         .in("vehicle_id", ids)
-        .eq("is_primary", true);
+        .order("is_primary", { ascending: false });
 
-      const imageMap: Record<string, string> = {};
+      const imageMap: Record<string, string[]> = {};
+      const primaryImageMap: Record<string, string> = {};
       (imagesData || []).forEach(img => {
-        imageMap[img.vehicle_id] = img.image_url;
+        if (!imageMap[img.vehicle_id]) imageMap[img.vehicle_id] = [];
+        imageMap[img.vehicle_id].push(img.image_url);
+        if (img.is_primary || !primaryImageMap[img.vehicle_id]) {
+          primaryImageMap[img.vehicle_id] = img.image_url;
+        }
       });
+      setVehicleImages(imageMap);
 
       // Fetch dealers
       const userIds = [...new Set(vehiclesData.map(v => v.user_id))];
@@ -67,7 +75,7 @@ const CompareVehicles = () => {
 
       setVehicles(vehiclesData.map(v => ({
         ...v,
-        image_url: imageMap[v.id]
+        image_url: primaryImageMap[v.id] || imageMap[v.id]?.[0]
       })));
       setDealers(dealerMap);
     } catch (error) {
@@ -91,18 +99,66 @@ const CompareVehicles = () => {
     return <CarLoader />;
   }
 
-  const specs = [
-    { label: "Price", key: "selling_price", format: (v: any) => formatCurrency(v.selling_price) },
-    { label: "Year", key: "manufacturing_year", format: (v: any) => v.manufacturing_year },
-    { label: "Fuel Type", key: "fuel_type", format: (v: any) => v.fuel_type?.toUpperCase() },
-    { label: "Transmission", key: "transmission", format: (v: any) => v.transmission?.toUpperCase() },
-    { label: "Kilometers", key: "odometer_reading", format: (v: any) => v.odometer_reading ? `${(v.odometer_reading / 1000).toFixed(0)}K km` : "N/A" },
-    { label: "Owners", key: "number_of_owners", format: (v: any) => `${v.number_of_owners || 1} Owner` },
-    { label: "Condition", key: "condition", format: (v: any) => v.condition?.toUpperCase() },
-    { label: "Color", key: "color", format: (v: any) => v.color || "N/A" },
-    { label: "Mileage", key: "mileage", format: (v: any) => v.mileage ? `${v.mileage} km/l` : "N/A" },
-    { label: "Seating", key: "seating_capacity", format: (v: any) => v.seating_capacity ? `${v.seating_capacity} Seats` : "N/A" },
+  // Comprehensive specs grouped by category
+  const specCategories = [
+    {
+      title: "Price & Value",
+      icon: Shield,
+      specs: [
+        { label: "Price", format: (v: any) => formatCurrency(v.selling_price), highlight: true },
+        { label: "Original Price", format: (v: any) => v.strikeout_price ? formatCurrency(v.strikeout_price) : "-" },
+        { label: "EMI (48 months)", format: (v: any) => `₹${formatIndianNumber(Math.round(v.selling_price / 48))}/mo` },
+      ]
+    },
+    {
+      title: "Basic Info",
+      icon: Car,
+      specs: [
+        { label: "Year", format: (v: any) => v.manufacturing_year },
+        { label: "Fuel Type", format: (v: any) => v.fuel_type?.toUpperCase() },
+        { label: "Transmission", format: (v: any) => v.transmission?.toUpperCase() },
+        { label: "Condition", format: (v: any) => v.condition?.toUpperCase() },
+        { label: "Color", format: (v: any) => v.color || "-" },
+      ]
+    },
+    {
+      title: "Performance",
+      icon: Zap,
+      specs: [
+        { label: "Kilometers", format: (v: any) => v.odometer_reading ? `${formatIndianNumber(v.odometer_reading)} km` : "-" },
+        { label: "Mileage", format: (v: any) => v.mileage ? `${v.mileage} km/l` : "-" },
+        { label: "Seating", format: (v: any) => v.seating_capacity ? `${v.seating_capacity} Seats` : "-" },
+        { label: "Boot Space", format: (v: any) => v.boot_space || "-" },
+      ]
+    },
+    {
+      title: "Health & Condition",
+      icon: Battery,
+      specs: [
+        { label: "Owners", format: (v: any) => `${v.number_of_owners || 1} Owner(s)` },
+        { label: "Tyre Condition", format: (v: any) => v.tyre_condition || "-" },
+        { label: "Battery Health", format: (v: any) => v.battery_health || "-" },
+        { label: "Service History", format: (v: any) => v.service_history || "-" },
+      ]
+    },
+    {
+      title: "Documents & Compliance",
+      icon: FileText,
+      specs: [
+        { label: "Insurance Valid", format: (v: any) => v.insurance_expiry ? new Date(v.insurance_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "-" },
+        { label: "PUC Valid", format: (v: any) => v.puc_expiry ? new Date(v.puc_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "-" },
+        { label: "Fitness Valid", format: (v: any) => v.fitness_expiry ? new Date(v.fitness_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "-" },
+        { label: "Road Tax Valid", format: (v: any) => v.road_tax_expiry ? new Date(v.road_tax_expiry).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : "-" },
+        { label: "Hypothecation", format: (v: any) => v.hypothecation || "None" },
+      ]
+    },
   ];
+
+  const getBestValue = (vehicles: any[], getValue: (v: any) => number, lower = true) => {
+    const values = vehicles.map(v => getValue(v)).filter(v => !isNaN(v) && v > 0);
+    if (values.length === 0) return null;
+    return lower ? Math.min(...values) : Math.max(...values);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -124,126 +180,162 @@ const CompareVehicles = () => {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">Compare Vehicles</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Compare Vehicles</h1>
+          <Badge variant="outline" className="text-sm">
+            {vehicles.length} vehicles
+          </Badge>
+        </div>
 
-        {/* Comparison Grid */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px]">
-            {/* Vehicle Cards Header */}
-            <thead>
-              <tr>
-                <th className="w-40 p-2"></th>
-                {vehicles.map((vehicle) => (
-                  <th key={vehicle.id} className="p-2 text-left">
-                    <Card className="p-3 relative border-0 shadow-md rounded-xl">
-                      <button
-                        onClick={() => removeVehicle(vehicle.id)}
-                        className="absolute top-2 right-2 h-6 w-6 rounded-full bg-slate-100 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                      <div className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100 mb-3">
-                        {vehicle.image_url ? (
-                          <img
-                            src={vehicle.image_url}
-                            alt={`${vehicle.brand} ${vehicle.model}`}
-                            className="w-full h-full object-cover"
-                          />
+        {/* Vehicle Cards - Sticky on desktop */}
+        <div className="sticky top-14 z-40 bg-slate-50 pb-4 -mx-4 px-4">
+          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${vehicles.length}, minmax(160px, 1fr))` }}>
+            {vehicles.map((vehicle) => {
+              const dealer = dealers[vehicle.user_id];
+              return (
+                <Card key={vehicle.id} className="relative border-0 shadow-lg rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => removeVehicle(vehicle.id)}
+                    className="absolute top-2 right-2 z-10 h-7 w-7 rounded-full bg-white/90 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors shadow-sm"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  
+                  <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
+                    {vehicle.image_url ? (
+                      <img
+                        src={vehicle.image_url}
+                        alt={`${vehicle.brand} ${vehicle.model}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Car className="h-12 w-12 text-slate-300" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <CardContent className="p-3">
+                    <h3 className="font-semibold text-slate-900 text-sm line-clamp-1">
+                      {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
+                    </h3>
+                    <p className="text-xs text-slate-500 line-clamp-1">{vehicle.variant}</p>
+                    <p className="text-lg font-bold text-blue-600 mt-1">
+                      {formatCurrency(vehicle.selling_price)}
+                    </p>
+                    
+                    {/* Dealer badge */}
+                    {dealer && (
+                      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
+                        {dealer.shop_logo_url ? (
+                          <img src={dealer.shop_logo_url} alt="" className="h-4 w-4 rounded-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Car className="h-12 w-12 text-slate-300" />
+                          <Building2 className="h-4 w-4 text-slate-400" />
+                        )}
+                        <span className="text-xs text-slate-500 truncate">{dealer.dealer_name}</span>
+                        <CheckCircle className="h-3 w-3 text-blue-500 shrink-0" />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Comparison Table */}
+        <div className="space-y-4 mt-4">
+          {specCategories.map((category) => (
+            <Card key={category.title} className="border-0 shadow-sm rounded-xl overflow-hidden">
+              <div className="bg-slate-100 px-4 py-3 flex items-center gap-2">
+                <category.icon className="h-4 w-4 text-slate-600" />
+                <h3 className="font-semibold text-slate-900 text-sm">{category.title}</h3>
+              </div>
+              <CardContent className="p-0">
+                {category.specs.map((spec, i) => {
+                  // Determine best value for price (lowest)
+                  const isBestPrice = spec.label === "Price";
+                  const bestPrice = isBestPrice ? getBestValue(vehicles, v => v.selling_price, true) : null;
+                  
+                  return (
+                    <div key={spec.label} className={`grid items-center px-4 py-3 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                         style={{ gridTemplateColumns: `120px repeat(${vehicles.length}, 1fr)` }}>
+                      <span className="text-sm font-medium text-slate-600">{spec.label}</span>
+                      {vehicles.map((vehicle) => {
+                        const value = spec.format(vehicle);
+                        const isLowestPrice = isBestPrice && vehicle.selling_price === bestPrice;
+                        
+                        return (
+                          <div key={vehicle.id} className={`text-sm font-medium text-center ${
+                            spec.highlight ? 'text-blue-600 font-bold' : 'text-slate-900'
+                          } ${isLowestPrice ? 'relative' : ''}`}>
+                            {value}
+                            {isLowestPrice && (
+                              <Badge className="ml-1 bg-green-100 text-green-700 text-xs px-1.5 py-0">Best</Badge>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <h3 className="font-semibold text-slate-900 text-sm line-clamp-1">
-                        {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
-                      </h3>
-                      <p className="text-xs text-slate-500 line-clamp-1">{vehicle.variant}</p>
-                      <p className="text-lg font-bold text-blue-600 mt-2">
-                        {formatCurrency(vehicle.selling_price)}
-                      </p>
-                    </Card>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {specs.map((spec, i) => (
-                <tr key={spec.key} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
-                  <td className="p-3 text-sm font-medium text-slate-600">{spec.label}</td>
-                  {vehicles.map((vehicle) => (
-                    <td key={vehicle.id} className="p-3 text-sm text-slate-900 font-medium">
-                      {spec.format(vehicle)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-
-              {/* Highlights */}
-              <tr className="bg-white">
-                <td className="p-3 text-sm font-medium text-slate-600">Highlights</td>
-                {vehicles.map((vehicle) => (
-                  <td key={vehicle.id} className="p-3">
-                    <div className="flex flex-wrap gap-1">
-                      {(vehicle.public_highlights || []).slice(0, 3).map((h: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
-                          {h}
-                        </Badge>
-                      ))}
-                      {(!vehicle.public_highlights || vehicle.public_highlights.length === 0) && (
-                        <span className="text-xs text-slate-400">-</span>
-                      )}
+                        );
+                      })}
                     </div>
-                  </td>
-                ))}
-              </tr>
-
-              {/* Dealer */}
-              <tr className="bg-slate-50">
-                <td className="p-3 text-sm font-medium text-slate-600">Dealer</td>
-                {vehicles.map((vehicle) => {
-                  const dealer = dealers[vehicle.user_id];
-                  return (
-                    <td key={vehicle.id} className="p-3 text-sm text-slate-900">
-                      {dealer?.dealer_name || "N/A"}
-                    </td>
                   );
                 })}
-              </tr>
+              </CardContent>
+            </Card>
+          ))}
 
-              {/* Actions */}
-              <tr className="bg-white">
-                <td className="p-3"></td>
-                {vehicles.map((vehicle) => {
-                  const dealer = dealers[vehicle.user_id];
-                  return (
-                    <td key={vehicle.id} className="p-3">
-                      <div className="flex flex-col gap-2">
-                        <Link to={`/marketplace/vehicle/${vehicle.id}`}>
-                          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-sm">
-                            View Details
-                          </Button>
-                        </Link>
-                        {dealer?.whatsapp_number && (
-                          <a
-                            href={`https://wa.me/${dealer.whatsapp_number.replace(/\D/g, "")}?text=Hi, I'm interested in ${vehicle.brand} ${vehicle.model}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Button variant="outline" className="w-full text-sm gap-1 border-green-300 text-green-600">
-                              <MessageCircle className="h-4 w-4" />
-                              WhatsApp
-                            </Button>
-                          </a>
-                        )}
+          {/* Highlights Comparison */}
+          <Card className="border-0 shadow-sm rounded-xl overflow-hidden">
+            <div className="bg-emerald-50 px-4 py-3 flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
+              <h3 className="font-semibold text-slate-900 text-sm">Highlights</h3>
+            </div>
+            <CardContent className="p-4">
+              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${vehicles.length}, 1fr)` }}>
+                {vehicles.map((vehicle) => (
+                  <div key={vehicle.id} className="space-y-2">
+                    {(vehicle.public_highlights || []).map((h: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                        <span className="text-slate-700">{h}</span>
                       </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
+                    ))}
+                    {(!vehicle.public_highlights || vehicle.public_highlights.length === 0) && (
+                      <span className="text-sm text-slate-400">No highlights listed</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="grid gap-4 pb-8" style={{ gridTemplateColumns: `repeat(${vehicles.length}, 1fr)` }}>
+            {vehicles.map((vehicle) => {
+              const dealer = dealers[vehicle.user_id];
+              return (
+                <div key={vehicle.id} className="space-y-2">
+                  <Link to={`/marketplace/vehicle/${vehicle.id}`} className="block">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                      View Details
+                    </Button>
+                  </Link>
+                  {dealer?.whatsapp_number && (
+                    <a
+                      href={`https://wa.me/${dealer.whatsapp_number.replace(/\D/g, "")}?text=Hi, I'm interested in ${vehicle.brand} ${vehicle.model}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Button variant="outline" className="w-full gap-1 border-green-300 text-green-600 hover:bg-green-50">
+                        <MessageCircle className="h-4 w-4" />
+                        WhatsApp
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

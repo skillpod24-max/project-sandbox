@@ -151,10 +151,18 @@ const VehicleValuationCalculator = ({ open, onOpenChange, vehicleData }: Props) 
     // Apply condition multiplier
     currentValue *= conditionMultipliers[condition] || 1;
 
+    // RULE: Valuation must always be AT LEAST selling price + 10%
+    // If vehicleData.sellingPrice is provided, ensure valuation >= sellingPrice * 1.1
+    const sellingPrice = vehicleData?.sellingPrice || 0;
+    const minimumValuation = Math.round(sellingPrice * 1.10);
+    const calculatedValue = Math.round(currentValue);
+    
+    // Use the higher of calculated value or minimum valuation
+    const marketValue = Math.max(calculatedValue, minimumValuation);
+
     // Calculate ranges
-    const lowValue = Math.round(currentValue * 0.9);
-    const highValue = Math.round(currentValue * 1.1);
-    const marketValue = Math.round(currentValue);
+    const lowValue = Math.round(marketValue * 0.95);
+    const highValue = Math.round(marketValue * 1.08);
 
     // Calculate depreciation percentage
     const totalDepreciation = ((basePrice - marketValue) / basePrice) * 100;
@@ -163,10 +171,11 @@ const VehicleValuationCalculator = ({ open, onOpenChange, vehicleData }: Props) 
       marketValue,
       lowValue,
       highValue,
-      totalDepreciation: Math.round(totalDepreciation),
+      totalDepreciation: Math.max(0, Math.round(totalDepreciation)),
       originalPrice: basePrice,
+      isMinimumApplied: calculatedValue < minimumValuation,
     };
-  }, [vehicleType, category, age, mileage, condition, originalPrice]);
+  }, [vehicleType, category, age, mileage, condition, originalPrice, vehicleData?.sellingPrice]);
 
   const getConditionColor = (cond: string) => {
     switch (cond) {

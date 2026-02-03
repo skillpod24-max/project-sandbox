@@ -27,6 +27,8 @@ export type PublicEventType =
   | "scroll_75"
   | "scroll_100"
   | "engaged_30s"
+  | "engaged_60s"
+  | "engaged_120s"
   | "form_opened"
   | "form_abandoned";
 
