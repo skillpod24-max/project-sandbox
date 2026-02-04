@@ -10,8 +10,8 @@ import {
   FileText, MapPin, Building2
 } from "lucide-react";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
-import CarLoader from "@/components/CarLoader";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CompareVehicles = () => {
   const [searchParams] = useSearchParams();
@@ -96,7 +96,57 @@ const CompareVehicles = () => {
   };
 
   if (loading) {
-    return <CarLoader />;
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* Header Skeleton */}
+        <header className="sticky top-0 z-50 bg-white border-b border-slate-100 shadow-sm">
+          <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-28" />
+            <div className="w-20" />
+          </div>
+        </header>
+
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+
+          {/* Vehicle Cards Skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            {[1, 2, 3].slice(0, 2).map((i) => (
+              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-lg">
+                <Skeleton className="aspect-[4/3]" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-5 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Specs Skeleton */}
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl overflow-hidden">
+                <Skeleton className="h-12 w-full" />
+                <div className="p-4 space-y-3">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 flex-1" />
+                      <Skeleton className="h-4 flex-1" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Comprehensive specs grouped by category

@@ -11,7 +11,8 @@ import {
   Search, MapPin, Car, Bike, Truck, Star, CheckCircle, Shield, 
   CreditCard, ChevronRight, Building2, ArrowRight, Heart, Sparkles,
   Menu, X, Play, Award, Users, Clock, TrendingUp, Calculator, GitCompare,
-  DollarSign, Tag, Phone
+  DollarSign, Tag, Phone, Zap, FileCheck, Headphones, RefreshCw, ThumbsUp,
+  ShieldCheck, BadgePercent
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { MarketplaceSkeleton } from "@/components/marketplace/ShimmerSkeleton";
@@ -24,6 +25,7 @@ import LiveSearchSuggestions from "@/components/marketplace/LiveSearchSuggestion
 import AutoShowroomHero from "@/components/marketplace/AutoShowroomHero";
 import HeroCarousel from "@/components/marketplace/HeroCarousel";
 import LocationSelector from "@/components/marketplace/LocationSelector";
+import HighDemandCard from "@/components/marketplace/HighDemandCard";
 import useWishlist from "@/hooks/useWishlist";
 import useComparison from "@/hooks/useComparison";
 import MarketplacePopup from "@/components/marketplace/MarketplacePopup";
@@ -493,35 +495,50 @@ const Marketplace = () => {
         </div>
       </section>
 
-      {/* Vehicles in High Demand - 1 per row on mobile, 4 on desktop */}
-      <section className="bg-gradient-to-b from-blue-50 to-white py-10">
+      {/* Vehicles in High Demand - 2 per row on mobile, 4 on desktop */}
+      <section className="bg-gradient-to-b from-orange-50 to-white py-8 md:py-10">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-blue-500" />
-                High Demand Vehicles
+              <h2 className="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-orange-500" />
+                High Demand
               </h2>
-              <p className="text-slate-500 text-sm mt-1">Most viewed vehicles this week</p>
+              <p className="text-slate-500 text-xs md:text-sm mt-0.5">Most viewed this week</p>
             </div>
-            <Button variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1">
-              View All <ChevronRight className="h-4 w-4" />
+            <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 gap-1 text-xs md:text-sm">
+              View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
             </Button>
           </div>
 
-          {/* 1 column on mobile, 2 on tablet, 4 on desktop */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 2 columns on mobile, 4 on desktop - Compact cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {highDemandVehicles.map((vehicle) => (
-              <MarketplaceVehicleCard
+              <HighDemandCard
                 key={vehicle.id}
                 vehicle={vehicle}
                 dealer={getDealerForVehicle(vehicle.user_id)}
-                compact={false}
-                isInWishlist={isInWishlist(vehicle.id)}
-                isInCompare={isInCompare(vehicle.id)}
-                onWishlistToggle={toggleWishlist}
-                onCompareToggle={toggleCompare}
               />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Cars24-Style Features Strip */}
+      <section className="bg-white border-y border-slate-100 py-4 overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex gap-6 md:gap-12 overflow-x-auto scrollbar-hide items-center justify-start md:justify-center">
+            {[
+              { icon: ShieldCheck, text: "150+ Point Inspection", color: "text-blue-600" },
+              { icon: RefreshCw, text: "7-Day Return Policy", color: "text-emerald-600" },
+              { icon: FileCheck, text: "Fixed Price", color: "text-purple-600" },
+              { icon: Headphones, text: "24/7 Support", color: "text-orange-600" },
+              { icon: BadgePercent, text: "Best Price Guarantee", color: "text-pink-600" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2 shrink-0">
+                <item.icon className={`h-5 w-5 ${item.color}`} />
+                <span className="text-sm font-medium text-slate-700 whitespace-nowrap">{item.text}</span>
+              </div>
             ))}
           </div>
         </div>
