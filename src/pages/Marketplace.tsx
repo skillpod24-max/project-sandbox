@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -26,8 +26,11 @@ import AutoShowroomHero from "@/components/marketplace/AutoShowroomHero";
 import HeroCarousel from "@/components/marketplace/HeroCarousel";
 import LocationSelector from "@/components/marketplace/LocationSelector";
 import HighDemandCard from "@/components/marketplace/HighDemandCard";
+import RecentlyViewedSection from "@/components/marketplace/RecentlyViewedSection";
+import OffersDealsSection from "@/components/marketplace/OffersDealsSection";
 import useWishlist from "@/hooks/useWishlist";
 import useComparison from "@/hooks/useComparison";
+import useRecentlyViewed from "@/hooks/useRecentlyViewed";
 import MarketplacePopup from "@/components/marketplace/MarketplacePopup";
 import FloatingCTA from "@/components/marketplace/FloatingCTA";
 import {
@@ -146,9 +149,10 @@ const Marketplace = () => {
   const [showAllVehicles, setShowAllVehicles] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
-  // Wishlist and comparison hooks
+  // Wishlist, comparison, and recently viewed hooks
   const { isInWishlist, toggleWishlist, wishlistCount } = useWishlist();
   const { compareList, isInCompare, toggleCompare, removeFromCompare, clearCompare } = useComparison();
+  const { recentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -288,6 +292,13 @@ const Marketplace = () => {
   const compareVehicles = useMemo(() => {
     return vehicles.filter(v => compareList.includes(v.id));
   }, [vehicles, compareList]);
+
+  // Get recently viewed vehicles data
+  const recentlyViewedVehicles = useMemo(() => {
+    return recentlyViewed
+      .map(id => vehicles.find(v => v.id === id))
+      .filter(Boolean);
+  }, [recentlyViewed, vehicles]);
 
   // Limit vehicles shown initially - admin controlled (default 6)
   const vehiclesPerPage = 6;
@@ -523,6 +534,18 @@ const Marketplace = () => {
           </div>
         </div>
       </section>
+
+      {/* Recently Viewed Section */}
+      <RecentlyViewedSection 
+        vehicles={recentlyViewedVehicles}
+        onClear={clearRecentlyViewed}
+      />
+
+      {/* Offers & Deals Section */}
+      <OffersDealsSection 
+        vehicles={vehicles}
+        getDealerForVehicle={getDealerForVehicle}
+      />
 
       {/* Cars24-Style Features Strip */}
       <section className="bg-white border-y border-slate-100 py-4 overflow-hidden">
