@@ -306,6 +306,77 @@ const FamilyRoadTripHero = memo(() => {
 });
 FamilyRoadTripHero.displayName = "FamilyRoadTripHero";
 
+// Cars24-Style Promotional Banner
+const PromoBannerHero = memo(() => {
+  return (
+    <div className="relative w-full h-full overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800">
+      {/* Decorative elements */}
+      <div className="absolute inset-0">
+        {/* Circles */}
+        <div className="absolute top-10 right-20 w-64 h-64 rounded-full bg-white/5 blur-xl" />
+        <div className="absolute bottom-10 left-10 w-80 h-80 rounded-full bg-blue-400/10 blur-2xl" />
+        <div className="absolute top-1/2 left-1/3 w-40 h-40 rounded-full bg-yellow-400/10 blur-xl" />
+        
+        {/* Dotted pattern */}
+        <svg className="absolute inset-0 w-full h-full opacity-10">
+          <pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1" fill="white" />
+          </pattern>
+          <rect width="100%" height="100%" fill="url(#dots)" />
+        </svg>
+      </div>
+
+      {/* Content */}
+      <div className="relative h-full flex items-center">
+        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          {/* Left - Text */}
+          <div className="text-white space-y-4 md:space-y-6">
+            <div className="inline-flex items-center gap-2 bg-yellow-500/20 backdrop-blur px-4 py-2 rounded-full text-yellow-300 text-sm font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-400"></span>
+              </span>
+              Limited Time Offer
+            </div>
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight">
+              Get <span className="text-yellow-400">₹50,000</span> Off
+              <br />
+              On Your First Car
+            </h1>
+            <p className="text-lg md:text-xl text-blue-100 max-w-md">
+              Use code <span className="font-bold bg-white/20 px-2 py-0.5 rounded">FIRST50</span> at checkout. Valid till month end.
+            </p>
+            <div className="flex flex-wrap gap-4 pt-2">
+              <button className="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold px-8 py-3 rounded-full transition-all shadow-lg shadow-yellow-500/30 hover:shadow-yellow-400/40">
+                Browse Cars
+              </button>
+              <button className="bg-white/10 hover:bg-white/20 backdrop-blur text-white font-medium px-6 py-3 rounded-full border border-white/20 transition-all">
+                View Offers
+              </button>
+            </div>
+          </div>
+
+          {/* Right - Stats */}
+          <div className="hidden md:grid grid-cols-2 gap-4">
+            {[
+              { value: "10,000+", label: "Verified Cars" },
+              { value: "500+", label: "Trusted Dealers" },
+              { value: "4.8★", label: "Customer Rating" },
+              { value: "7 Days", label: "Return Policy" },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/10 hover:bg-white/15 transition-colors">
+                <div className="text-3xl font-bold text-white">{stat.value}</div>
+                <div className="text-blue-200 text-sm mt-1">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+PromoBannerHero.displayName = "PromoBannerHero";
+
 // Hero Carousel Component
 interface HeroCarouselProps {
   autoplayInterval?: number;
@@ -313,7 +384,7 @@ interface HeroCarouselProps {
 
 const HeroCarousel = memo(({ autoplayInterval = 5000 }: HeroCarouselProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const slides = [AutoShowroomHero, PremiumRacingHero, FamilyRoadTripHero];
+  const slides = [PromoBannerHero, AutoShowroomHero, PremiumRacingHero, FamilyRoadTripHero];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -351,5 +422,5 @@ const HeroCarousel = memo(({ autoplayInterval = 5000 }: HeroCarouselProps) => {
 
 HeroCarousel.displayName = "HeroCarousel";
 
-export { HeroCarousel, PremiumRacingHero, FamilyRoadTripHero };
+export { HeroCarousel, PremiumRacingHero, FamilyRoadTripHero, PromoBannerHero };
 export default HeroCarousel;
