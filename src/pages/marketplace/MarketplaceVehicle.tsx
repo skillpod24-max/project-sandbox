@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +23,10 @@ import { VehiclePageSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceEMICalculator from "@/components/marketplace/MarketplaceEMICalculator";
 import VehicleValuationCalculator from "@/components/marketplace/VehicleValuationCalculator";
 import ShareDialog from "@/components/marketplace/ShareDialog";
+import DealerVehiclesSection from "@/components/marketplace/DealerVehiclesSection";
+import RelatedVehiclesSection from "@/components/marketplace/RelatedVehiclesSection";
 import useWishlist from "@/hooks/useWishlist";
+import useRecentlyViewed from "@/hooks/useRecentlyViewed";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
 import {
   Sheet,
@@ -56,9 +59,15 @@ const MarketplaceVehicle = () => {
   const [enquirySheetOpen, setEnquirySheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Wishlist hook
+  // Wishlist and recently viewed hooks
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const { addToRecentlyViewed } = useRecentlyViewed();
   const isWishlisted = vehicle ? isInWishlist(vehicle.id) : false;
+  
+  // State for dealer vehicles and all marketplace vehicles
+  const [dealerVehicles, setDealerVehicles] = useState<any[]>([]);
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
+  const [allDealers, setAllDealers] = useState<any[]>([]);
   
   // Form state - Using individual states to avoid re-render issues
   const [formName, setFormName] = useState("");
@@ -75,6 +84,13 @@ const MarketplaceVehicle = () => {
   useEffect(() => {
     if (vehicleId) fetchVehicle();
   }, [vehicleId]);
+  
+  // Track recently viewed
+  useEffect(() => {
+    if (vehicle?.id) {
+      addToRecentlyViewed(vehicle.id);
+    }
+  }, [vehicle?.id, addToRecentlyViewed]);
 
   const fetchVehicle = async () => {
     try {
@@ -117,12 +133,89 @@ const MarketplaceVehicle = () => {
         .order("is_primary", { ascending: false });
 
       setImages(imagesData || []);
+      
+      // Fetch dealer's other vehicles
+      const { data: dealerVehiclesData } = await supabase
+        .from("vehicles")
+        .select("*")
+        .eq("user_id", vehicleData.user_id)
+        .eq("is_public", true)
+        .eq("status", "in_stock")
+        .neq("id", vehicleId)
+        .limit(10);
+      
+      // Get images for dealer vehicles
+      if (dealerVehiclesData && dealerVehiclesData.length > 0) {
+        const vehicleIds = dealerVehiclesData.map(v => v.id);
+        const { data: dealerImagesData } = await supabase
+          .from("vehicle_images")
+          .select("*")
+          .in("vehicle_id", vehicleIds);
+        
+        const imageMap: Record<string, string> = {};
+        (dealerImagesData || []).forEach(img => {
+          if (!imageMap[img.vehicle_id] || img.is_primary) {
+            imageMap[img.vehicle_id] = img.image_url;
+          }
+        });
+        
+        setDealerVehicles(dealerVehiclesData.map(v => ({
+          ...v,
+          image_url: imageMap[v.id]
+        })));
+      }
+      
+      // Fetch all marketplace vehicles for related suggestions
+      const { data: allDealersData } = await supabase
+        .from("settings")
+        .select("*")
+        .eq("public_page_enabled", true)
+        .eq("marketplace_enabled", true);
+      
+      if (allDealersData) {
+        setAllDealers(allDealersData);
+        const dealerIds = allDealersData.map(d => d.user_id);
+        
+        const { data: allVehiclesData } = await supabase
+          .from("vehicles")
+          .select("*")
+          .eq("is_public", true)
+          .in("user_id", dealerIds)
+          .eq("status", "in_stock")
+          .limit(50);
+        
+        if (allVehiclesData && allVehiclesData.length > 0) {
+          const allVehicleIds = allVehiclesData.map(v => v.id);
+          const { data: allImagesData } = await supabase
+            .from("vehicle_images")
+            .select("*")
+            .in("vehicle_id", allVehicleIds);
+          
+          const allImageMap: Record<string, string> = {};
+          (allImagesData || []).forEach(img => {
+            if (!allImageMap[img.vehicle_id] || img.is_primary) {
+              allImageMap[img.vehicle_id] = img.image_url;
+            }
+          });
+          
+          setAllVehicles(allVehiclesData.map(v => ({
+            ...v,
+            image_url: allImageMap[v.id]
+          })));
+        }
+      }
+      
     } catch (error) {
       console.error("Error fetching vehicle:", error);
     } finally {
       setLoading(false);
     }
   };
+  
+  // Helper to get dealer for related vehicles
+  const getDealerForVehicle = useCallback((userId: string) => {
+    return allDealers.find(d => d.user_id === userId);
+  }, [allDealers]);
 
   const handleFormFocus = useCallback(() => {
     if (!formOpened && vehicle && dealer) {
@@ -836,6 +929,24 @@ const MarketplaceVehicle = () => {
             </Card>
           </div>
         </div>
+        
+        {/* More from this Dealer */}
+        {dealerVehicles.length > 0 && vehicle && (
+          <DealerVehiclesSection
+            vehicles={dealerVehicles}
+            dealer={dealer}
+            currentVehicleId={vehicle.id}
+          />
+        )}
+        
+        {/* Similar/Related Vehicles */}
+        {allVehicles.length > 0 && vehicle && (
+          <RelatedVehiclesSection
+            currentVehicle={vehicle}
+            allVehicles={allVehicles}
+            getDealerForVehicle={getDealerForVehicle}
+          />
+        )}
       </div>
 
       {/* Mobile Sticky CTA - Cars24 Style - Fixed properly */}
