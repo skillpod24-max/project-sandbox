@@ -101,8 +101,8 @@ const LocationSelector = ({ selectedCity, onCityChange, availableCities }: Locat
           className="gap-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 px-3"
         >
           <MapPin className="h-4 w-4 text-blue-600" />
-          <span className="hidden sm:inline font-medium max-w-[100px] truncate">
-            {detecting ? "Detecting..." : displayCity}
+          <span className="font-medium max-w-[80px] sm:max-w-[100px] truncate text-xs sm:text-sm">
+            {detecting ? "..." : displayCity}
           </span>
           {detecting ? (
             <Loader2 className="h-3 w-3 animate-spin" />

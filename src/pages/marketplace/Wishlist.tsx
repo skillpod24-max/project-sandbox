@@ -34,18 +34,20 @@ const Wishlist = () => {
 
       setVehicles(vehiclesData || []);
 
-      // Fetch images
+      // Fetch images - get all images for each vehicle, not just primary
       if (vehiclesData && vehiclesData.length > 0) {
         const vehicleIds = vehiclesData.map(v => v.id);
         const { data: imagesData } = await supabase
           .from("vehicle_images")
           .select("*")
-          .in("vehicle_id", vehicleIds)
-          .eq("is_primary", true);
+          .in("vehicle_id", vehicleIds);
 
         const imageMap: Record<string, string> = {};
         (imagesData || []).forEach(img => {
-          imageMap[img.vehicle_id] = img.image_url;
+          // Prefer primary, but use first available if no primary
+          if (!imageMap[img.vehicle_id] || img.is_primary) {
+            imageMap[img.vehicle_id] = img.image_url;
+          }
         });
         setVehicleImages(imageMap);
       }
