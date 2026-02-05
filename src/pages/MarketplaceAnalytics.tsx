@@ -79,33 +79,38 @@ const MarketplaceAnalytics = () => {
         .eq("is_public", true)
         .eq("marketplace_status", "listed");
 
-      // Calculate stats
-      const views = (events || []).filter(e => 
-        e.event_type === "vehicle_view" || e.event_type === "dealer_view"
-      ).length;
+      // Calculate stats - separate vehicle and dealer views
+      const vehicleViews = (events || []).filter(e => e.event_type === "vehicle_view").length;
+      const dealerViews = (events || []).filter(e => e.event_type === "dealer_view").length;
+      const totalViews = vehicleViews + dealerViews;
       const enquiries = (events || []).filter(e => e.event_type === "enquiry_submit").length;
       const calls = (events || []).filter(e => e.event_type === "cta_call").length;
       const whatsapp = (events || []).filter(e => e.event_type === "cta_whatsapp").length;
+      const formOpened = (events || []).filter(e => e.event_type === "form_opened").length;
 
       // Previous period stats
-      const prevViews = (prevEvents || []).filter(e => 
-        e.event_type === "vehicle_view" || e.event_type === "dealer_view"
-      ).length;
+      const prevVehicleViews = (prevEvents || []).filter(e => e.event_type === "vehicle_view").length;
+      const prevDealerViews = (prevEvents || []).filter(e => e.event_type === "dealer_view").length;
+      const prevTotalViews = prevVehicleViews + prevDealerViews;
       const prevEnquiries = (prevEvents || []).filter(e => e.event_type === "enquiry_submit").length;
       const prevCalls = (prevEvents || []).filter(e => e.event_type === "cta_call").length;
       const prevWhatsapp = (prevEvents || []).filter(e => e.event_type === "cta_whatsapp").length;
 
+      // Engagement rate = (enquiries + calls + whatsapp + form_opened) / total views
+      const totalInteractions = enquiries + calls + whatsapp;
+      const engagementRate = totalViews > 0 ? (totalInteractions / totalViews) * 100 : 0;
+
       setStats({
-        totalViews: views,
+        totalViews,
         totalEnquiries: enquiries,
         totalCalls: calls,
         totalWhatsapp: whatsapp,
         publicVehicles: publicVehiclesCount || 0,
-        conversionRate: views > 0 ? ((enquiries + calls + whatsapp) / views) * 100 : 0,
+        conversionRate: engagementRate,
       });
 
       setPrevStats({
-        totalViews: prevViews,
+        totalViews: prevTotalViews,
         totalEnquiries: prevEnquiries,
         totalCalls: prevCalls,
         totalWhatsapp: prevWhatsapp,
