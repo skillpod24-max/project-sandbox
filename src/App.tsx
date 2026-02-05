@@ -40,6 +40,8 @@ import VehicleInspection from "./pages/VehicleInspection";
 import SellVehicle from "./pages/marketplace/SellVehicle";
 import SellVehicleFormPage from "./pages/marketplace/SellVehicleFormPage";
 import Wishlist from "./pages/marketplace/Wishlist";
+import AllDealers from "./pages/marketplace/AllDealers";
+import AllVehicles from "./pages/marketplace/AllVehicles";
 import DealerMarketplaceHub from "./pages/DealerMarketplaceHub";
 
 // Footer Pages
@@ -68,6 +70,8 @@ const App = () => (
           <Route path="/marketplace/compare" element={<CompareVehicles />} />
           <Route path="/marketplace/auction/:auctionId" element={<AuctionDetail />} />
           <Route path="/marketplace/wishlist" element={<Wishlist />} />
+          <Route path="/marketplace/dealers" element={<AllDealers />} />
+          <Route path="/marketplace/vehicles" element={<AllVehicles />} />
           <Route path="/sell-vehicle" element={<SellVehicle />} />
           <Route path="/sell-vehicle/form" element={<SellVehicleFormPage />} />
           <Route path="/admin/marketplace" element={<MarketplaceAdmin />} />

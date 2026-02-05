@@ -33,6 +33,7 @@ import useComparison from "@/hooks/useComparison";
 import useRecentlyViewed from "@/hooks/useRecentlyViewed";
 import MarketplacePopup from "@/components/marketplace/MarketplacePopup";
 import FloatingCTA from "@/components/marketplace/FloatingCTA";
+import MarketplaceEMICalculator from "@/components/marketplace/MarketplaceEMICalculator";
 import {
   Sheet,
   SheetContent,
@@ -153,7 +154,7 @@ const Marketplace = () => {
   const { isInWishlist, toggleWishlist, wishlistCount } = useWishlist();
   const { compareList, isInCompare, toggleCompare, removeFromCompare, clearCompare } = useComparison();
   const { recentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
-
+  const [showEMICalculator, setShowEMICalculator] = useState(false);
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [vehicleType, setVehicleType] = useState<string>("car");
@@ -309,7 +310,7 @@ const Marketplace = () => {
   }
 
     return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-20 md:pb-0 overflow-x-hidden">
       {/* Top Navigation - Mobile-First Professional App Style */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-3 md:px-4">
@@ -525,9 +526,11 @@ const Marketplace = () => {
             </h2>
             <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">Verified & trusted dealers</p>
           </div>
-          <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 text-xs md:text-sm">
-            View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
-          </Button>
+          <Link to="/marketplace/dealers">
+            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 text-xs md:text-sm">
+              View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+            </Button>
+          </Link>
         </div>
 
         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
@@ -558,9 +561,11 @@ const Marketplace = () => {
               </h2>
               <p className="text-muted-foreground text-xs mt-0.5">Most viewed this week</p>
             </div>
-            <Button variant="ghost" size="sm" className="text-orange-600 gap-1 text-xs h-8 px-2">
-              View All <ChevronRight className="h-3 w-3" />
-            </Button>
+            <Link to="/marketplace/vehicles">
+              <Button variant="ghost" size="sm" className="text-orange-600 gap-1 text-xs h-8 px-2">
+                View All <ChevronRight className="h-3 w-3" />
+              </Button>
+            </Link>
           </div>
 
           {/* 2 columns on mobile, 4 on desktop */}
@@ -621,7 +626,10 @@ const Marketplace = () => {
                 <p className="text-emerald-100 text-sm">EMI starting from ₹4,999/month • Instant approval</p>
               </div>
             </div>
-            <Button className="bg-white text-emerald-700 hover:bg-emerald-50 rounded-full px-6">
+            <Button 
+              className="bg-white text-emerald-700 hover:bg-emerald-50 rounded-full px-6"
+              onClick={() => setShowEMICalculator(true)}
+            >
               Calculate EMI
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
@@ -830,6 +838,12 @@ const Marketplace = () => {
       
       {/* Floating CTA */}
       <FloatingCTA />
+
+      {/* EMI Calculator */}
+      <MarketplaceEMICalculator 
+        open={showEMICalculator} 
+        onOpenChange={setShowEMICalculator} 
+      />
 
       {/* Footer */}
       <MarketplaceFooter />
