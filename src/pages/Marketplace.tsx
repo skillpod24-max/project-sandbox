@@ -308,30 +308,31 @@ const Marketplace = () => {
     return <MarketplaceSkeleton />;
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Top Navigation - Blue Theme */}
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="container mx-auto px-4">
-          <div className="h-16 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Car className="h-6 w-6 text-white" />
+    return (
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
+      {/* Top Navigation - Mobile-First Professional App Style */}
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border">
+        <div className="container mx-auto px-3 md:px-4">
+          {/* Main Header Row */}
+          <div className="h-14 md:h-16 flex items-center justify-between gap-3">
+            <Link to="/" className="flex items-center gap-2 shrink-0">
+              <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+                <Car className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
               </div>
-              <div>
-                <span className="text-xl font-bold text-slate-900">VahanHub</span>
-              </div>
+              <span className="text-lg md:text-xl font-bold text-foreground hidden xs:inline">VahanHub</span>
             </Link>
 
-            {/* Location Selector */}
-            <LocationSelector
-              selectedCity={cityFilter}
-              onCityChange={setCityFilter}
-              availableCities={availableCities}
-            />
+            {/* Location Selector - Compact on Mobile */}
+            <div className="shrink-0">
+              <LocationSelector
+                selectedCity={cityFilter}
+                onCityChange={setCityFilter}
+                availableCities={availableCities}
+              />
+            </div>
 
-            {/* Desktop Search with Live Suggestions */}
-            <div className="hidden md:flex flex-1 max-w-xl mx-8">
+            {/* Desktop Search */}
+            <div className="hidden md:flex flex-1 max-w-xl mx-6">
               <div className="relative w-full">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
@@ -352,6 +353,7 @@ const Marketplace = () => {
               </div>
             </div>
 
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-4">
               <a href="#vehicles" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Buy Vehicle
@@ -377,93 +379,132 @@ const Marketplace = () => {
               )}
             </nav>
 
-            {/* Mobile menu toggle */}
-            <button 
-              className="md:hidden p-2 hover:bg-slate-100 rounded-lg"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+            {/* Mobile Actions */}
+            <div className="flex items-center gap-2 md:hidden">
+              {wishlistCount > 0 && (
+                <Link 
+                  to="/marketplace/wishlist" 
+                  className="relative p-2 rounded-full bg-muted/50 hover:bg-muted"
+                >
+                  <Heart className="h-5 w-5 text-muted-foreground" />
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-medium">
+                    {wishlistCount}
+                  </span>
+                </Link>
+              )}
+              <button 
+                className="p-2 rounded-full bg-muted/50 hover:bg-muted"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile Search Bar - Always Visible */}
+          <div className="md:hidden pb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search cars, bikes, dealers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                className="pl-10 pr-4 h-10 rounded-xl bg-muted border-0 text-sm"
+              />
+              <LiveSearchSuggestions 
+                vehicles={vehicles}
+                dealers={dealers}
+                searchTerm={searchTerm}
+                onSelect={(term) => { setSearchTerm(term); setSearchFocused(false); }}
+                onClose={() => setSearchFocused(false)}
+                visible={searchFocused}
+              />
+            </div>
+          </div>
+
+          {/* Mobile Dropdown Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-slate-100 animate-fade-in">
-              <div className="relative mb-4">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 h-11 rounded-full bg-slate-100 border-0"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <a href="#vehicles" className="py-2 text-slate-600 hover:text-blue-600">Buy Vehicle</a>
-                <a href="#dealers" className="py-2 text-slate-600 hover:text-blue-600">Dealers</a>
-                <Link to="/auth" className="py-2 text-slate-600 hover:text-blue-600">Login</Link>
+            <div className="md:hidden py-3 border-t border-border animate-fade-in">
+              <div className="flex flex-col gap-1">
+                <a href="#vehicles" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground">
+                  <Car className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Buy Vehicle</span>
+                </a>
+                <Link to="/sell-vehicle" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-emerald-600">
+                  <DollarSign className="h-5 w-5" />
+                  <span className="font-medium">Sell Your Vehicle</span>
+                </Link>
+                <a href="#dealers" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Browse Dealers</span>
+                </a>
+                <Link to="/auth" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Login / Register</span>
+                </Link>
               </div>
             </div>
           )}
         </div>
       </header>
 
-      {/* Hero Section - Animated Carousel with Multiple Banners */}
-      <section className="relative h-[280px] md:h-[400px] overflow-hidden">
+      {/* Hero Section - Smaller on Mobile */}
+      <section className="relative h-[200px] md:h-[400px] overflow-hidden">
         <HeroCarousel />
       </section>
 
-      {/* Category Pills - Compact on Mobile */}
-      <section className="sticky top-16 z-40 bg-white border-b border-slate-100 shadow-sm">
+      {/* Category Pills - App-Style */}
+      <section className="sticky top-14 md:top-16 z-40 bg-background border-b border-border shadow-sm">
         <div className="container mx-auto px-4 py-2 md:py-3">
           {/* Main category pills - smaller on mobile */}
           <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 scrollbar-hide">
             <button
               onClick={() => { setVehicleType("car"); setBodyType("all"); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm ${
+              className={`flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm font-medium ${
                 vehicleType === "car" 
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                  ? 'bg-primary text-primary-foreground shadow-md' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
-              <Car className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="font-medium">Cars</span>
+              <Car className="h-4 w-4" />
+              <span>Cars</span>
             </button>
             <button
               onClick={() => { setVehicleType("bike"); setBodyType("all"); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm ${
+              className={`flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm font-medium ${
                 vehicleType === "bike" 
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                  ? 'bg-primary text-primary-foreground shadow-md' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
-              <Bike className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="font-medium">Bikes</span>
+              <Bike className="h-4 w-4" />
+              <span>Bikes</span>
             </button>
             <button
               onClick={() => { setVehicleType("commercial"); setBodyType("all"); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm ${
+              className={`flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm font-medium ${
                 vehicleType === "commercial" 
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25' 
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                  ? 'bg-primary text-primary-foreground shadow-md' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
-              <Truck className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="font-medium">Commercial</span>
+              <Truck className="h-4 w-4" />
+              <span>Commercial</span>
             </button>
           </div>
 
-          {/* Body Type Filter for Cars - Compact on mobile */}
+          {/* Body Type Filter for Cars */}
           {vehicleType === "car" && (
             <div className="flex gap-1.5 md:gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
               {carBodyTypes.map((type) => (
                 <button
                   key={type}
                   onClick={() => setBodyType(type.toLowerCase())}
-                  className={`px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
                     bodyType === type.toLowerCase() 
-                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' 
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-2 border-transparent'
+                      ? 'bg-primary/10 text-primary border border-primary/30' 
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-transparent'
                   }`}
                 >
                   {type}
@@ -475,17 +516,17 @@ const Marketplace = () => {
       </section>
 
       {/* Top Dealers Section */}
-      <section id="dealers" className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <section id="dealers" className="container mx-auto px-3 md:px-4 py-6 md:py-8">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
+            <h2 className="text-lg md:text-2xl font-bold text-foreground flex items-center gap-2">
+              <Star className="h-5 w-5 md:h-6 md:w-6 text-amber-500 fill-amber-500" />
               Top Rated Dealers
             </h2>
-            <p className="text-slate-500 text-sm mt-1">Verified & trusted dealers with best ratings</p>
+            <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">Verified & trusted dealers</p>
           </div>
-          <Button variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1">
-            View All <ChevronRight className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 text-xs md:text-sm">
+            View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
         </div>
 
@@ -507,23 +548,23 @@ const Marketplace = () => {
       </section>
 
       {/* Vehicles in High Demand - 2 per row on mobile, 4 on desktop */}
-      <section className="bg-gradient-to-b from-orange-50 to-white py-8 md:py-10">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
+      <section className="bg-gradient-to-b from-orange-50/50 to-background py-6 md:py-10">
+        <div className="container mx-auto px-3 md:px-4">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-orange-500" />
+              <h2 className="text-base md:text-2xl font-bold text-foreground flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-orange-500" />
                 High Demand
               </h2>
-              <p className="text-slate-500 text-xs md:text-sm mt-0.5">Most viewed this week</p>
+              <p className="text-muted-foreground text-xs mt-0.5">Most viewed this week</p>
             </div>
-            <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 gap-1 text-xs md:text-sm">
-              View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+            <Button variant="ghost" size="sm" className="text-orange-600 gap-1 text-xs h-8 px-2">
+              View All <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
 
-          {/* 2 columns on mobile, 4 on desktop - Compact cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {/* 2 columns on mobile, 4 on desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
             {highDemandVehicles.map((vehicle) => (
               <HighDemandCard
                 key={vehicle.id}
@@ -547,20 +588,20 @@ const Marketplace = () => {
         getDealerForVehicle={getDealerForVehicle}
       />
 
-      {/* Cars24-Style Features Strip */}
-      <section className="bg-white border-y border-slate-100 py-4 overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="flex gap-6 md:gap-12 overflow-x-auto scrollbar-hide items-center justify-start md:justify-center">
+      {/* Features Strip - Mobile Optimized */}
+      <section className="bg-background border-y border-border py-3 md:py-4 overflow-hidden">
+        <div className="container mx-auto px-3 md:px-4">
+          <div className="flex gap-4 md:gap-12 overflow-x-auto scrollbar-hide items-center justify-start md:justify-center">
             {[
-              { icon: ShieldCheck, text: "150+ Point Inspection", color: "text-blue-600" },
-              { icon: RefreshCw, text: "7-Day Return Policy", color: "text-emerald-600" },
+              { icon: ShieldCheck, text: "150+ Inspection", color: "text-primary" },
+              { icon: RefreshCw, text: "7-Day Return", color: "text-emerald-600" },
               { icon: FileCheck, text: "Fixed Price", color: "text-purple-600" },
               { icon: Headphones, text: "24/7 Support", color: "text-orange-600" },
-              { icon: BadgePercent, text: "Best Price Guarantee", color: "text-pink-600" },
+              { icon: BadgePercent, text: "Best Price", color: "text-pink-600" },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-2 shrink-0">
-                <item.icon className={`h-5 w-5 ${item.color}`} />
-                <span className="text-sm font-medium text-slate-700 whitespace-nowrap">{item.text}</span>
+              <div key={i} className="flex items-center gap-1.5 shrink-0">
+                <item.icon className={`h-4 w-4 ${item.color}`} />
+                <span className="text-xs md:text-sm font-medium text-foreground whitespace-nowrap">{item.text}</span>
               </div>
             ))}
           </div>
@@ -737,36 +778,49 @@ const Marketplace = () => {
       />
 
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-inset-bottom">
-        <div className="grid grid-cols-4 gap-1 p-2">
+      {/* Mobile Bottom Navigation - Professional App Style */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border z-50">
+        <div className="grid grid-cols-4 h-16">
           <button 
             onClick={() => document.getElementById('vehicles')?.scrollIntoView({ behavior: 'smooth' })}
-            className="flex flex-col items-center py-2 text-muted-foreground hover:text-primary"
+            className="flex flex-col items-center justify-center gap-0.5 text-primary"
           >
-            <Car className="h-5 w-5" />
-            <span className="text-xs mt-1">Buy</span>
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Car className="h-4 w-4" />
+            </div>
+            <span className="text-[10px] font-medium">Buy</span>
           </button>
           <Link
             to="/sell-vehicle"
-            className="flex flex-col items-center py-2 text-emerald-600"
+            className="flex flex-col items-center justify-center gap-0.5 text-emerald-600"
           >
-            <Tag className="h-5 w-5" />
-            <span className="text-xs mt-1">Sell</span>
+            <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center">
+              <Tag className="h-4 w-4" />
+            </div>
+            <span className="text-[10px] font-medium">Sell</span>
+          </Link>
+          <Link
+            to="/marketplace/wishlist"
+            className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
+          >
+            <div className="relative h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+              <Heart className="h-4 w-4" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">
+                  {wishlistCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-medium">Wishlist</span>
           </Link>
           <button 
-            onClick={() => document.getElementById('dealers')?.scrollIntoView({ behavior: 'smooth' })}
-            className="flex flex-col items-center py-2 text-muted-foreground hover:text-primary"
-          >
-            <Building2 className="h-5 w-5" />
-            <span className="text-xs mt-1">Dealers</span>
-          </button>
-          <button 
             onClick={() => navigate("/auth")}
-            className="flex flex-col items-center py-2 text-muted-foreground hover:text-primary"
+            className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
           >
-            <Users className="h-5 w-5" />
-            <span className="text-xs mt-1">Login</span>
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+              <Users className="h-4 w-4" />
+            </div>
+            <span className="text-[10px] font-medium">Account</span>
           </button>
         </div>
       </div>
