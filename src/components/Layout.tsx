@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { User } from "@supabase/supabase-js";
 import { Badge } from "@/components/ui/badge";
-import { Wifi, WifiOff, Info } from "lucide-react";
+import { Wifi, WifiOff, Info, LayoutDashboard, Car, ShoppingCart, Receipt, BarChart3, Settings, Menu, X, UserPlus, CreditCard, ReceiptText, CalendarClock, FileText, Bell } from "lucide-react";
 import { Calculator } from "lucide-react";
 import EMICalculatorDialog from "@/components/EMICalculatorDialog";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { StickyNote } from "lucide-react";
 import StickyNotesPanel from "@/components/StickyNotesPanel";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 
 
@@ -61,6 +62,8 @@ const Layout = ({ children }: LayoutProps) => {
 const [infoOpen, setInfoOpen] = useState(false);
 const [notesOpen, setNotesOpen] = useState(false);
 const [emiCalcOpen, setEmiCalcOpen] = useState(false);
+const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const location = useLocation();
 
 
 
@@ -185,10 +188,35 @@ useEffect(() => {
     return null;
   }
 
+  // Mobile bottom nav items
+  const bottomNavItems = [
+    { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
+    { title: "Vehicles", icon: Car, url: "/vehicles" },
+    { title: "Sales", icon: Receipt, url: "/sales" },
+    { title: "Leads", icon: UserPlus, url: "/leads" },
+  ];
+
+  const moreMenuItems = [
+    { title: "Purchases", icon: ShoppingCart, url: "/purchases" },
+    { title: "Payments", icon: CreditCard, url: "/payments" },
+    { title: "Expenses", icon: ReceiptText, url: "/expenses" },
+    { title: "EMI", icon: CalendarClock, url: "/emi" },
+    { title: "Documents", icon: FileText, url: "/documents" },
+    { title: "Reports", icon: BarChart3, url: "/reports" },
+    { title: "Marketplace Hub", icon: BarChart3, url: "/marketplace-hub" },
+    { title: "Alerts", icon: Bell, url: "/alerts" },
+    { title: "Settings", icon: Settings, url: "/settings" },
+  ];
+
+  const isActive = (url: string) => location.pathname === url;
+
   return (
   <SidebarProvider>
-    <div className="min-h-screen flex w-full bg-background">
-      <AppSidebar />
+    <div className="min-h-screen flex w-full bg-background pb-16 md:pb-0">
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
+        <AppSidebar />
+      </div>
 
       <div className="flex-1 flex flex-col w-full min-w-0">
         {/* Zoho-style Top Header */}
@@ -200,19 +228,30 @@ useEffect(() => {
             </div>
           )}
 
-          <SidebarTrigger
-            className="
-              transition-none
-              flex items-center justify-center
-              h-9 w-9
-              rounded-lg
-              hover:bg-muted
-              active:scale-95
-              will-change-transform
-            "
-          >
-            <span className="sr-only">Toggle Sidebar</span>
-          </SidebarTrigger>
+          {/* Desktop: Sidebar trigger, Mobile: Logo */}
+          <div className="hidden md:block">
+            <SidebarTrigger
+              className="
+                transition-none
+                flex items-center justify-center
+                h-9 w-9
+                rounded-lg
+                hover:bg-muted
+                active:scale-95
+                will-change-transform
+              "
+            >
+              <span className="sr-only">Toggle Sidebar</span>
+            </SidebarTrigger>
+          </div>
+
+          {/* Mobile: Brand */}
+          <div className="md:hidden flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+              <Car className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-foreground">VahanHub</span>
+          </div>
 
           {/* Quick Actions - Zoho Style */}
           <div className="flex items-center gap-1 ml-3 border-l border-border pl-3">
@@ -225,7 +264,7 @@ useEffect(() => {
             </button>
             <button
               onClick={() => setInfoOpen(true)}
-              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target"
+              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target hidden sm:block"
               title="Platform Info"
             >
               <Info className="h-4 w-4 text-muted-foreground" />
@@ -244,7 +283,7 @@ useEffect(() => {
             {shopName ? (
               <div className="flex items-center gap-3">
                 <div
-                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
+                  className={`hidden sm:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
                     isOnline
                       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                       : "bg-destructive/10 text-destructive"
@@ -280,10 +319,65 @@ useEffect(() => {
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-50">
+        <div className="grid grid-cols-5 h-16">
+          {bottomNavItems.map((item) => (
+            <Link
+              key={item.url}
+              to={item.url}
+              className={`flex flex-col items-center justify-center gap-0.5 ${
+                isActive(item.url) ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                isActive(item.url) ? "bg-primary/10" : ""
+              }`}>
+                <item.icon className="h-5 w-5" />
+              </div>
+              <span className="text-[10px] font-medium">{item.title}</span>
+            </Link>
+          ))}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
+          >
+            <div className="h-8 w-8 rounded-full flex items-center justify-center">
+              <Menu className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-medium">More</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile More Menu Sheet */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>More Options</SheetTitle>
+          </SheetHeader>
+          <div className="grid grid-cols-4 gap-4 py-6">
+            {moreMenuItems.map((item) => (
+              <Link
+                key={item.url}
+                to={item.url}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-colors ${
+                  isActive(item.url) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <item.icon className="h-6 w-6" />
+                <span className="text-xs font-medium text-center">{item.title}</span>
+              </Link>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
 
     <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>Platform Usage & Guidelines</DialogTitle>
         </DialogHeader>

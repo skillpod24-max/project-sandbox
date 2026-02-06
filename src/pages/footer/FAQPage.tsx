@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Car, ArrowLeft, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,10 +9,20 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
-import { useState } from "react";
+import FooterPageSkeleton from "@/components/marketplace/FooterPageSkeleton";
 
 const FAQPage = () => {
+  const [pageLoading, setPageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return <FooterPageSkeleton />;
+  }
 
   const faqCategories = [
     {

@@ -41,10 +41,18 @@ const MarketplaceDealerCard = memo(({ dealer, vehicleCount, rating }: Props) => 
             <CheckCircle className="h-4 w-4 text-blue-500 shrink-0" />
           </div>
           
-          {/* Location */}
+          {/* Location - City and State */}
           <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
             <MapPin className="h-3 w-3" />
-            {dealer.dealer_address?.split(",").slice(-2, -1).join("").trim() || "India"}
+            {(() => {
+              const parts = (dealer.dealer_address || "").split(",").map((p: string) => p.trim()).filter(Boolean);
+              if (parts.length >= 2) {
+                const city = parts[parts.length - 2];
+                const state = parts[parts.length - 1];
+                return `${city}, ${state}`;
+              }
+              return parts[parts.length - 1] || "India";
+            })()}
           </p>
           
           {/* Stats */}

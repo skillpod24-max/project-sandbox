@@ -80,7 +80,7 @@ const ShareDialog = ({ open, onOpenChange, title, url, description }: ShareDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle>Share Vehicle</DialogTitle>
         </DialogHeader>

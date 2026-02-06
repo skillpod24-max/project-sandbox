@@ -122,7 +122,11 @@ const LiveSearchSuggestions = ({
 
   if (!visible) return null;
 
-  const hasResults = suggestions && (suggestions.matchingVehicles?.length > 0 || suggestions.brandModelSuggestions?.length > 0);
+  const hasResults = suggestions && (
+    suggestions.matchingVehicles?.length > 0 || 
+    suggestions.brandModelSuggestions?.length > 0 ||
+    suggestions.matchingDealers?.length > 0
+  );
   const showNoSearchContent = searchTerm.length < 2;
 
   return (

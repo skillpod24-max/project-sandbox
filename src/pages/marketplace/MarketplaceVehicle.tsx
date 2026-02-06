@@ -632,24 +632,28 @@ const MarketplaceVehicle = () => {
               </div>
             </Card>
 
-            {/* Quick Specs Pills - Cars24 Style */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {[
-                { icon: Gauge, value: vehicle.odometer_reading ? `${(vehicle.odometer_reading / 1000).toFixed(0)}K km` : "N/A" },
-                { icon: Fuel, value: vehicle.fuel_type },
-                { icon: Settings, value: vehicle.transmission },
-                { icon: Users, value: `${vehicle.number_of_owners || 1} Owner` },
-                { icon: Calendar, value: vehicle.manufacturing_year },
-              ].map((spec, i) => (
-                <div 
-                  key={i} 
-                  className="shrink-0 flex items-center gap-2 bg-white px-4 py-2.5 rounded-full border border-slate-200 shadow-sm"
-                >
-                  <spec.icon className="h-4 w-4 text-slate-500" />
-                  <span className="text-sm font-medium text-slate-700 capitalize whitespace-nowrap">{spec.value}</span>
-                </div>
-              ))}
-            </div>
+            {/* Quick Specs Grid - No horizontal scroll */}
+            <Card className="p-4 border-0 shadow-sm rounded-2xl bg-white">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Overview</h3>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                {[
+                  { icon: Gauge, label: "KM Driven", value: vehicle.odometer_reading ? `${(vehicle.odometer_reading / 1000).toFixed(0)}K` : "N/A" },
+                  { icon: Fuel, label: "Fuel", value: vehicle.fuel_type },
+                  { icon: Settings, label: "Transmission", value: vehicle.transmission },
+                  { icon: Users, label: "Owner", value: `${vehicle.number_of_owners || 1}${vehicle.number_of_owners === 1 ? 'st' : 'nd'}` },
+                  { icon: Calendar, label: "Year", value: vehicle.manufacturing_year },
+                ].map((spec, i) => (
+                  <div 
+                    key={i} 
+                    className="flex flex-col items-center text-center p-2 rounded-xl bg-slate-50"
+                  >
+                    <spec.icon className="h-5 w-5 text-primary mb-1" />
+                    <span className="text-xs text-slate-500">{spec.label}</span>
+                    <span className="text-sm font-semibold text-slate-800 capitalize">{spec.value}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
 
             {/* Dealer Card - Cars24 Style */}
             {dealer && (

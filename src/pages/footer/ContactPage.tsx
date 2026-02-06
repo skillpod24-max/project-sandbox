@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Car, Phone, Mail, MapPin, ArrowLeft, Send, MessageCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import FooterPageSkeleton from "@/components/marketplace/FooterPageSkeleton";
 
 const ContactPage = () => {
   const { toast } = useToast();
+  const [pageLoading, setPageLoading] = useState(true);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -21,6 +23,11 @@ const ContactPage = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) {
@@ -29,12 +36,15 @@ const ContactPage = () => {
     }
 
     setSubmitting(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({ title: "Message sent successfully!", description: "We'll get back to you within 24 hours." });
     setForm({ name: "", email: "", phone: "", subject: "", message: "" });
     setSubmitting(false);
   };
+
+  if (pageLoading) {
+    return <FooterPageSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
