@@ -151,11 +151,11 @@ const PremiumRacingHero = memo(() => {
       {/* Marketing Text */}
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-black/70 via-transparent to-black/70">
         <div className="text-center text-white px-4 max-w-4xl">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 drop-shadow-lg">
+          <h1 className="text-xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 drop-shadow-lg">
             Speed Meets Trust
           </h1>
-          <p className="text-lg md:text-xl lg:text-2xl opacity-90 drop-shadow-md">
-            Premium Pre-Owned Vehicles • Instant Loan Approval • 7-Day Return Policy
+          <p className="text-sm sm:text-lg md:text-xl lg:text-2xl opacity-90 drop-shadow-md">
+            Premium Pre-Owned Vehicles • Instant Loan Approval
           </p>
         </div>
       </div>
@@ -293,11 +293,11 @@ const FamilyRoadTripHero = memo(() => {
       {/* Marketing Text */}
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-black/50 via-transparent to-black/50">
         <div className="text-center text-white px-4 max-w-4xl">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 drop-shadow-lg">
+          <h1 className="text-xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 drop-shadow-lg">
             Adventure Starts Here
           </h1>
-          <p className="text-lg md:text-xl lg:text-2xl opacity-90 drop-shadow-md">
-            Family Cars • SUVs • 150+ Safety Checks • Free Home Test Drive
+          <p className="text-sm sm:text-lg md:text-xl lg:text-2xl opacity-90 drop-shadow-md">
+            Family Cars • SUVs • 150+ Safety Checks
           </p>
         </div>
       </div>
@@ -338,19 +338,19 @@ const PromoBannerHero = memo(() => {
               </span>
               Limited Time Offer
             </div>
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight">
+            <h1 className="text-xl sm:text-3xl md:text-5xl lg:text-6xl font-bold leading-tight">
               Get <span className="text-yellow-400">₹50,000</span> Off
-              <br />
-              On Your First Car
+              <br className="hidden sm:block" />
+              <span className="sm:hidden"> </span>On Your First Car
             </h1>
-            <p className="text-lg md:text-xl text-blue-100 max-w-md">
-              Use code <span className="font-bold bg-white/20 px-2 py-0.5 rounded">FIRST50</span> at checkout. Valid till month end.
+            <p className="text-sm sm:text-lg md:text-xl text-blue-100 max-w-md">
+              Use code <span className="font-bold bg-white/20 px-2 py-0.5 rounded">FIRST50</span> at checkout.
             </p>
-            <div className="flex flex-wrap gap-4 pt-2">
-              <button className="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold px-8 py-3 rounded-full transition-all shadow-lg shadow-yellow-500/30 hover:shadow-yellow-400/40">
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button className="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold px-6 py-2.5 sm:px-8 sm:py-3 rounded-full transition-all shadow-lg shadow-yellow-500/30 hover:shadow-yellow-400/40 text-sm sm:text-base">
                 Browse Cars
               </button>
-              <button className="bg-white/10 hover:bg-white/20 backdrop-blur text-white font-medium px-6 py-3 rounded-full border border-white/20 transition-all">
+              <button className="bg-white/10 hover:bg-white/20 backdrop-blur text-white font-medium px-5 py-2.5 sm:px-6 sm:py-3 rounded-full border border-white/20 transition-all text-sm sm:text-base">
                 View Offers
               </button>
             </div>

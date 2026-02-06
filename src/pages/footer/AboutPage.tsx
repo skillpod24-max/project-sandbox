@@ -1,10 +1,24 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Car, Users, Shield, Award, Target, Heart, ArrowLeft } from "lucide-react";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import FooterPageSkeleton from "@/components/marketplace/FooterPageSkeleton";
 
 const AboutPage = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <FooterPageSkeleton />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}

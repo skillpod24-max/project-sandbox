@@ -1,10 +1,22 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Car, Search, MessageCircle, CheckCircle, ArrowLeft, ArrowRight, Shield, Gavel } from "lucide-react";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import FooterPageSkeleton from "@/components/marketplace/FooterPageSkeleton";
 
 const HowItWorksPage = () => {
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return <FooterPageSkeleton />;
+  }
   const buyerSteps = [
     {
       icon: Search,

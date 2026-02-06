@@ -22,11 +22,14 @@ const getInitialWishlist = (): string[] => {
 };
 
 export const useWishlist = () => {
-  const [wishlist, setWishlist] = useState<string[]>(getInitialWishlist);
+  // Initialize with empty array, then hydrate from localStorage on mount
+  const [wishlist, setWishlist] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Mark as initialized after first mount
+  // Hydrate from localStorage on mount (client-side only)
   useEffect(() => {
+    const stored = getInitialWishlist();
+    setWishlist(stored);
     setIsInitialized(true);
   }, []);
 

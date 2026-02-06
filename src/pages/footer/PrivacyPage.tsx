@@ -1,9 +1,21 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Car, ArrowLeft, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import FooterPageSkeleton from "@/components/marketplace/FooterPageSkeleton";
 
 const PrivacyPage = () => {
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return <FooterPageSkeleton />;
+  }
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
