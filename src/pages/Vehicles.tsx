@@ -1831,35 +1831,55 @@ setVehicleImages(prev => ({
                     )}
                   </div>
 
-                  <div
-  className={`grid gap-3 ${
-    selectedVehicle.vehicle_type === "bike"
-      ? "grid-cols-2 sm:grid-cols-3"
-      : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
-  }`}
->
-
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Type</p><p className="font-medium capitalize text-sm">{selectedVehicle.vehicle_type}</p></div>
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Year</p><p className="font-medium text-sm">{selectedVehicle.manufacturing_year}</p></div>
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Color</p><p className="font-medium text-sm">{selectedVehicle.color || 'N/A'}</p></div>
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Fuel</p><p className="font-medium capitalize text-sm">{selectedVehicle.fuel_type}</p></div>
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Transmission</p><p className="font-medium uppercase text-sm">{selectedVehicle.transmission}</p></div>
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Reg No</p><p className="font-medium text-sm">{selectedVehicle.registration_number || 'N/A'}</p></div>
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Odometer</p><p className="font-medium text-sm">{selectedVehicle.odometer_reading ? `${selectedVehicle.odometer_reading.toLocaleString()} km` : 'N/A'}</p></div>
-                    <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Variant</p><p className="font-medium text-sm">{selectedVehicle.variant || 'N/A'}</p></div>
-                    {selectedVehicle.engine_number && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Engine No</p><p className="font-medium text-sm font-mono break-all">{selectedVehicle.engine_number}</p></div>}
-                    {selectedVehicle.chassis_number && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Chassis No</p><p className="font-medium text-sm font-mono break-all">{selectedVehicle.chassis_number}</p></div>}
-                    {(selectedVehicle as any).number_of_owners && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Owners</p><p className="font-medium text-sm">{(selectedVehicle as any).number_of_owners}</p></div>}
-                    {(selectedVehicle as any).mileage && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Mileage</p><p className="font-medium text-sm">{(selectedVehicle as any).mileage} km/l</p></div>}
-                    {(selectedVehicle as any).insurance_expiry && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Insurance</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).insurance_expiry), "dd MMM yyyy")}</p></div>}
-                    {(selectedVehicle as any).puc_expiry && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">PUC Expiry</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).puc_expiry), "dd MMM yyyy")}</p></div>}
-                    {(selectedVehicle as any).fitness_expiry && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Fitness</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).fitness_expiry), "dd MMM yyyy")}</p></div>}
-                    {(selectedVehicle as any).tyre_condition && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Tyre Condition</p><p className="font-medium text-sm">{(selectedVehicle as any).tyre_condition}</p></div>}
-                    {(selectedVehicle as any).battery_health && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Battery</p><p className="font-medium text-sm">{(selectedVehicle as any).battery_health}</p></div>}
-                    {(selectedVehicle as any).hypothecation && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Hypothecation</p><p className="font-medium text-sm">{(selectedVehicle as any).hypothecation}</p></div>}
-                    {(selectedVehicle as any).seating_capacity && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Seats</p><p className="font-medium text-sm">{(selectedVehicle as any).seating_capacity}</p></div>}
-                    {(selectedVehicle as any).boot_space && <div className="p-2 bg-muted/50 rounded"><p className="text-xs text-muted-foreground uppercase">Boot Space</p><p className="font-medium text-sm">{(selectedVehicle as any).boot_space}</p></div>}
+                  {/* Specs Grid - Mobile Optimized */}
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Type</p><p className="font-medium capitalize text-sm truncate">{selectedVehicle.vehicle_type}</p></div>
+                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Color</p><p className="font-medium text-sm truncate">{selectedVehicle.color || 'N/A'}</p></div>
+                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Transmission</p><p className="font-medium uppercase text-sm truncate">{selectedVehicle.transmission}</p></div>
+                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Odometer</p><p className="font-medium text-sm truncate">{selectedVehicle.odometer_reading ? `${selectedVehicle.odometer_reading.toLocaleString()} km` : 'N/A'}</p></div>
+                    {(selectedVehicle as any).number_of_owners && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Owners</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).number_of_owners}</p></div>}
+                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Fuel</p><p className="font-medium capitalize text-sm truncate">{selectedVehicle.fuel_type}</p></div>
                   </div>
+
+                  {/* Extended Specs - Collapsible on Mobile */}
+                  {((selectedVehicle.registration_number) || 
+                    (selectedVehicle.variant) ||
+                    (selectedVehicle.engine_number) ||
+                    (selectedVehicle.chassis_number) ||
+                    ((selectedVehicle as any).mileage) ||
+                    ((selectedVehicle as any).insurance_expiry) ||
+                    ((selectedVehicle as any).puc_expiry) ||
+                    ((selectedVehicle as any).fitness_expiry) ||
+                    ((selectedVehicle as any).tyre_condition) ||
+                    ((selectedVehicle as any).battery_health) ||
+                    ((selectedVehicle as any).hypothecation) ||
+                    ((selectedVehicle as any).seating_capacity) ||
+                    ((selectedVehicle as any).boot_space)) && (
+                    <details className="group">
+                      <summary className="cursor-pointer list-none flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                        <span className="font-medium text-sm">View More Specifications</span>
+                        <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </summary>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
+                        <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Year</p><p className="font-medium text-sm truncate">{selectedVehicle.manufacturing_year}</p></div>
+                        {selectedVehicle.registration_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Reg No</p><p className="font-medium text-sm truncate">{selectedVehicle.registration_number}</p></div>}
+                        {selectedVehicle.variant && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Variant</p><p className="font-medium text-sm truncate">{selectedVehicle.variant}</p></div>}
+                        {selectedVehicle.engine_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Engine No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.engine_number}</p></div>}
+                        {selectedVehicle.chassis_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Chassis No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.chassis_number}</p></div>}
+                        {(selectedVehicle as any).mileage && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Mileage</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).mileage} km/l</p></div>}
+                        {(selectedVehicle as any).insurance_expiry && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Insurance</p><p className="font-medium text-sm truncate">{format(new Date((selectedVehicle as any).insurance_expiry), "dd MMM yyyy")}</p></div>}
+                        {(selectedVehicle as any).puc_expiry && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">PUC Expiry</p><p className="font-medium text-sm truncate">{format(new Date((selectedVehicle as any).puc_expiry), "dd MMM yyyy")}</p></div>}
+                        {(selectedVehicle as any).fitness_expiry && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Fitness</p><p className="font-medium text-sm truncate">{format(new Date((selectedVehicle as any).fitness_expiry), "dd MMM yyyy")}</p></div>}
+                        {(selectedVehicle as any).tyre_condition && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Tyre Condition</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).tyre_condition}</p></div>}
+                        {(selectedVehicle as any).battery_health && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Battery</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).battery_health}</p></div>}
+                        {(selectedVehicle as any).hypothecation && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Hypothecation</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).hypothecation}</p></div>}
+                        {(selectedVehicle as any).seating_capacity && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Seats</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).seating_capacity}</p></div>}
+                        {(selectedVehicle as any).boot_space && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Boot Space</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).boot_space}</p></div>}
+                      </div>
+                    </details>
+                  )}
 
                   {selectedVehicle.is_public && selectedVehicle.public_page_id && (
                     <div className="flex flex-col sm:flex-row gap-2 p-3 bg-muted rounded-lg">
