@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { User } from "@supabase/supabase-js";
-import { Badge } from "@/components/ui/badge";
-import { Wifi, WifiOff, Info, LayoutDashboard, Car, ShoppingCart, Receipt, BarChart3, Settings, Menu, X, UserPlus, CreditCard, ReceiptText, CalendarClock, FileText, Bell } from "lucide-react";
+import { Wifi, WifiOff, Info, LayoutDashboard, Car, ShoppingCart, Receipt, BarChart3, Settings, Menu, UserPlus, CreditCard, ReceiptText, CalendarClock, FileText, Bell, LogOut } from "lucide-react";
 import { Calculator } from "lucide-react";
 import EMICalculatorDialog from "@/components/EMICalculatorDialog";
 import {
@@ -17,8 +16,8 @@ import {
 import { StickyNote } from "lucide-react";
 import StickyNotesPanel from "@/components/StickyNotesPanel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-
-
+import GlobalSearch from "@/components/layout/GlobalSearch";
+import TopBarUserMenu from "@/components/layout/TopBarUserMenu";
 
 const applyThemeByIndex = (index: number) => {
   const themeColors = [
@@ -44,32 +43,23 @@ const applyThemeByIndex = (index: number) => {
   document.documentElement.style.setProperty("--chart-1", theme.accent);
 };
 
-
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-
-
-
 const Layout = ({ children }: LayoutProps) => {
-    
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [shopName, setShopName] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
-const [infoOpen, setInfoOpen] = useState(false);
-const [notesOpen, setNotesOpen] = useState(false);
-const [emiCalcOpen, setEmiCalcOpen] = useState(false);
-const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-const location = useLocation();
-
-
-
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [emiCalcOpen, setEmiCalcOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -79,7 +69,6 @@ const location = useLocation();
       }
     });
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (!session?.user) {
@@ -92,72 +81,58 @@ const location = useLocation();
   }, [navigate]);
 
   useEffect(() => {
-  if (!user) return;
+    if (!user) return;
 
-  const savedTheme = localStorage.getItem("theme-index");
-  if (savedTheme !== null) {
-    applyThemeByIndex(Number(savedTheme));
-  }
-
-  const darkMode = localStorage.getItem("dark-mode") === "true";
-  document.documentElement.classList.toggle("dark", darkMode);
-}, [user]);
-
-
-
-const checkInternet = async () => {
-  // If browser already says offline, trust it
-  if (!navigator.onLine) return false;
-
-  try {
-    const { error } = await supabase
-      .from("settings")
-      .select("id")
-      .limit(1);
-
-    return !error;
-  } catch {
-    return false;
-  }
-};
-
-
-useEffect(() => {
-  let interval: NodeJS.Timeout;
-
-  const updateStatus = async () => {
-    // Fast browser hint
-    if (!navigator.onLine) {
-      setIsOnline(false);
-      return;
+    const savedTheme = localStorage.getItem("theme-index");
+    if (savedTheme !== null) {
+      applyThemeByIndex(Number(savedTheme));
     }
 
-    const backendOk = await checkInternet();
-    setIsOnline(backendOk);
+    const darkMode = localStorage.getItem("dark-mode") === "true";
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [user]);
+
+  const checkInternet = async () => {
+    if (!navigator.onLine) return false;
+    try {
+      const { error } = await supabase
+        .from("settings")
+        .select("id")
+        .limit(1);
+      return !error;
+    } catch {
+      return false;
+    }
   };
 
-  // Initial
-  updateStatus();
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
 
-  // Poll every 8s (not aggressive)
-  interval = setInterval(updateStatus, 8000);
+    const updateStatus = async () => {
+      if (!navigator.onLine) {
+        setIsOnline(false);
+        return;
+      }
+      const backendOk = await checkInternet();
+      setIsOnline(backendOk);
+    };
 
-  const handleOnline = () => updateStatus();
-  const handleOffline = () => setIsOnline(false);
+    updateStatus();
+    interval = setInterval(updateStatus, 8000);
 
-  window.addEventListener("online", handleOnline);
-  window.addEventListener("offline", handleOffline);
+    const handleOnline = () => updateStatus();
+    const handleOffline = () => setIsOnline(false);
 
-  return () => {
-    clearInterval(interval);
-    window.removeEventListener("online", handleOnline);
-    window.removeEventListener("offline", handleOffline);
-  };
-}, []);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
-
-  // Fetch shop name from settings
   useEffect(() => {
     const fetchShopName = async () => {
       if (!user) return;
@@ -211,220 +186,209 @@ useEffect(() => {
   const isActive = (url: string) => location.pathname === url;
 
   return (
-  <SidebarProvider>
-    <div className="min-h-screen flex w-full bg-background pb-16 md:pb-0">
-      {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden md:block">
-        <AppSidebar />
-      </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background pb-16 md:pb-0 overflow-x-hidden">
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block">
+          <AppSidebar />
+        </div>
 
-      <div className="flex-1 flex flex-col w-full min-w-0">
-        {/* Zoho-style Top Header */}
-        <header className="h-14 border-b border-border bg-card flex items-center px-4 sm:px-6 sticky top-0 z-[60] shadow-sm">
-          {!isOnline && (
-            <div className="absolute top-14 left-0 right-0 bg-destructive/10 border-b border-destructive/20 text-destructive px-4 py-2 text-sm flex items-center gap-2">
-              <WifiOff className="h-4 w-4" />
-              <span>You're offline. Reconnect to access the platform.</span>
-            </div>
-          )}
-
-          {/* Desktop: Sidebar trigger, Mobile: Logo */}
-          <div className="hidden md:block">
-            <SidebarTrigger
-              className="
-                transition-none
-                flex items-center justify-center
-                h-9 w-9
-                rounded-lg
-                hover:bg-muted
-                active:scale-95
-                will-change-transform
-              "
-            >
-              <span className="sr-only">Toggle Sidebar</span>
-            </SidebarTrigger>
-          </div>
-
-          {/* Mobile: Brand */}
-          <div className="md:hidden flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              <Car className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-foreground">VahanHub</span>
-          </div>
-
-          {/* Quick Actions - Zoho Style */}
-          <div className="flex items-center gap-1 ml-3 border-l border-border pl-3">
-            <button
-              onClick={() => setNotesOpen(true)}
-              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target"
-              title="Sticky Notes"
-            >
-              <StickyNote className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <button
-              onClick={() => setInfoOpen(true)}
-              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target hidden sm:block"
-              title="Platform Info"
-            >
-              <Info className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <button
-              onClick={() => setEmiCalcOpen(true)}
-              className="p-2 rounded-lg hover:bg-muted transition-colors touch-target"
-              title="EMI Calculator"
-            >
-              <Calculator className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-
-          {/* Right Side - User Info */}
-          <div className="ml-auto flex items-center gap-3">
-            {shopName ? (
-              <div className="flex items-center gap-3">
-                <div
-                  className={`hidden sm:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
-                    isOnline
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  {isOnline ? (
-                    <>
-                      <Wifi className="h-3 w-3" /> Online
-                    </>
-                  ) : (
-                    <>
-                      <WifiOff className="h-3 w-3" /> Offline
-                    </>
-                  )}
-                </div>
-
-                <Badge className="bg-primary text-primary-foreground font-semibold px-3 py-1.5 shadow-sm rounded-lg text-xs">
-                  {shopName}
-                </Badge>
+        <div className="flex-1 flex flex-col w-full min-w-0 overflow-x-hidden">
+          {/* Zoho-style Top Header */}
+          <header className="h-14 border-b border-border bg-card flex items-center px-3 sm:px-6 sticky top-0 z-[60] shadow-sm">
+            {!isOnline && (
+              <div className="absolute top-14 left-0 right-0 bg-destructive/10 border-b border-destructive/20 text-destructive px-4 py-2 text-sm flex items-center gap-2">
+                <WifiOff className="h-4 w-4" />
+                <span>You're offline. Reconnect to access the platform.</span>
               </div>
-            ) : (
-              <span className="text-sm text-muted-foreground hidden sm:block">
-                {user.email}
-              </span>
             )}
-          </div>
-        </header>
 
-        {/* Main Content Area - Zoho Style */}
-        <main className="flex-1 p-4 sm:p-6 overflow-auto transition-[opacity] duration-200 scrollbar-hide bg-muted/30">
-          <div className="max-w-[1920px] mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
+            {/* Desktop: Sidebar trigger */}
+            <div className="hidden md:block">
+              <SidebarTrigger className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-muted active:scale-95 transition-transform" />
+            </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-50">
-        <div className="grid grid-cols-5 h-16">
-          {bottomNavItems.map((item) => (
-            <Link
-              key={item.url}
-              to={item.url}
-              className={`flex flex-col items-center justify-center gap-0.5 ${
-                isActive(item.url) ? "text-primary" : "text-muted-foreground"
+            {/* Mobile: Brand */}
+            <div className="md:hidden flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                <Car className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-foreground">VahanHub</span>
+            </div>
+
+            {/* Global Search - Zoho Style */}
+            <div className="ml-4 flex-1">
+              <GlobalSearch />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-1 mx-2 border-l border-r border-border px-3">
+              <button
+                onClick={() => setNotesOpen(true)}
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                title="Sticky Notes"
+              >
+                <StickyNote className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => setInfoOpen(true)}
+                className="p-2 rounded-lg hover:bg-muted transition-colors hidden sm:flex"
+                title="Platform Info"
+              >
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => setEmiCalcOpen(true)}
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                title="EMI Calculator"
+              >
+                <Calculator className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Online Status */}
+            <div
+              className={`hidden lg:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mr-3 ${
+                isOnline
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                  : "bg-destructive/10 text-destructive"
               }`}
             >
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                isActive(item.url) ? "bg-primary/10" : ""
-              }`}>
-                <item.icon className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] font-medium">{item.title}</span>
-            </Link>
-          ))}
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
-          >
-            <div className="h-8 w-8 rounded-full flex items-center justify-center">
-              <Menu className="h-5 w-5" />
+              {isOnline ? (
+                <>
+                  <Wifi className="h-3 w-3" /> Online
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-3 w-3" /> Offline
+                </>
+              )}
             </div>
-            <span className="text-[10px] font-medium">More</span>
-          </button>
-        </div>
-      </div>
 
-      {/* Mobile More Menu Sheet */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader>
-            <SheetTitle>More Options</SheetTitle>
-          </SheetHeader>
-          <div className="grid grid-cols-4 gap-4 py-6">
-            {moreMenuItems.map((item) => (
+            {/* User Menu with Settings, Alerts, Logout */}
+            <TopBarUserMenu shopName={shopName} userEmail={user.email} />
+          </header>
+
+          {/* Main Content Area */}
+          <main className="flex-1 p-4 sm:p-6 overflow-auto transition-[opacity] duration-200 scrollbar-hide bg-muted/30">
+            <div className="max-w-[1920px] mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-50">
+          <div className="grid grid-cols-5 h-16">
+            {bottomNavItems.map((item) => (
               <Link
                 key={item.url}
                 to={item.url}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-colors ${
-                  isActive(item.url) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                className={`flex flex-col items-center justify-center gap-0.5 ${
+                  isActive(item.url) ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <item.icon className="h-6 w-6" />
-                <span className="text-xs font-medium text-center">{item.title}</span>
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                  isActive(item.url) ? "bg-primary/10" : ""
+                }`}>
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <span className="text-[10px] font-medium">{item.title}</span>
               </Link>
             ))}
-          </div>
-        </SheetContent>
-      </Sheet>
-    </div>
-
-    <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
-        <DialogHeader>
-          <DialogTitle>Platform Usage & Guidelines</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 text-sm">
-          <div>
-            <h4 className="font-semibold">📌 General Usage</h4>
-            <ul className="list-disc ml-5 text-muted-foreground space-y-1">
-              <li>Keep your internet connection active for real-time sync</li>
-              <li>Avoid refreshing during form submissions</li>
-              <li>Always mark vehicles as Sold instead of deleting</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold">🚗 Inventory Best Practices</h4>
-            <ul className="list-disc ml-5 text-muted-foreground space-y-1">
-              <li>Upload clear images for better lead conversion</li>
-              <li>Do not delete sold vehicles (affects reports)</li>
-              <li>Use public page only for available stock</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold">📊 Reports & Data</h4>
-            <ul className="list-disc ml-5 text-muted-foreground space-y-1">
-              <li>Reports are calculated from sold vehicles</li>
-              <li>Deleting historical data may affect profits</li>
-              <li>Export data regularly for backup</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold">⚡ Tips</h4>
-            <ul className="list-disc ml-5 text-muted-foreground space-y-1">
-              <li>Use search & filters to manage large data</li>
-              <li>Keep vendor & customer data updated</li>
-              <li>Use notes for internal tracking</li>
-            </ul>
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
+            >
+              <div className="h-8 w-8 rounded-full flex items-center justify-center">
+                <Menu className="h-5 w-5" />
+              </div>
+              <span className="text-[10px] font-medium">More</span>
+            </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
 
-    <StickyNotesPanel open={notesOpen} onOpenChange={setNotesOpen} />
-    <EMICalculatorDialog open={emiCalcOpen} onOpenChange={setEmiCalcOpen} />
-  </SidebarProvider>
+        {/* Mobile More Menu Sheet */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>More Options</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-4 gap-3 py-4">
+              {moreMenuItems.map((item) => (
+                <Link
+                  key={item.url}
+                  to={item.url}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-colors ${
+                    isActive(item.url) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-[10px] font-medium text-center leading-tight">{item.title}</span>
+                </Link>
+              ))}
+              {/* Logout button in mobile menu */}
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate("/auth");
+                }}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="text-[10px] font-medium text-center leading-tight">Logout</span>
+              </button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Platform Usage & Guidelines</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div>
+              <h4 className="font-semibold">📌 General Usage</h4>
+              <ul className="list-disc ml-5 text-muted-foreground space-y-1">
+                <li>Keep your internet connection active for real-time sync</li>
+                <li>Avoid refreshing during form submissions</li>
+                <li>Always mark vehicles as Sold instead of deleting</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold">🚗 Inventory Best Practices</h4>
+              <ul className="list-disc ml-5 text-muted-foreground space-y-1">
+                <li>Upload clear images for better lead conversion</li>
+                <li>Do not delete sold vehicles (affects reports)</li>
+                <li>Use public page only for available stock</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold">📊 Reports & Data</h4>
+              <ul className="list-disc ml-5 text-muted-foreground space-y-1">
+                <li>Reports are calculated from sold vehicles</li>
+                <li>Deleting historical data may affect profits</li>
+                <li>Export data regularly for backup</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold">⚡ Tips</h4>
+              <ul className="list-disc ml-5 text-muted-foreground space-y-1">
+                <li>Use search & filters to manage large data</li>
+                <li>Keep vendor & customer data updated</li>
+                <li>Use notes for internal tracking</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <StickyNotesPanel open={notesOpen} onOpenChange={setNotesOpen} />
+      <EMICalculatorDialog open={emiCalcOpen} onOpenChange={setEmiCalcOpen} />
+    </SidebarProvider>
   );
 };
 
