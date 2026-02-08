@@ -11,20 +11,13 @@ import {
   CreditCard,
   FileText,
   BarChart3,
-  Settings,
-  LogOut,
-  Bell,
   CalendarClock,
-  Tag,
-  Wrench,
-  Calendar,
 } from "lucide-react";
 
 import { useSidebar } from "@/components/ui/sidebar";
 import { NavLink } from "react-router-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 import {
   Sidebar,
@@ -62,14 +55,14 @@ const MemoizedMenuItem = memo(({
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
         <span
-          className={`transition-opacity duration-150 ${
+          className={`transition-opacity duration-150 whitespace-nowrap ${
             isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
           }`}
         >
           {title}
         </span>
-        {badge > 0 && (
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium px-1">
+        {badge > 0 && !isCollapsed && (
+          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium px-1">
             {badge}
           </span>
         )}
@@ -91,7 +84,7 @@ const MemoizedMenuGroup = memo(({
   isCollapsed: boolean;
 }) => (
   <SidebarGroup>
-    <SidebarGroupLabel className="text-sidebar-foreground/70">
+    <SidebarGroupLabel className={`text-sidebar-foreground/70 ${isCollapsed ? "sr-only" : ""}`}>
       {label}
     </SidebarGroupLabel>
     <SidebarGroupContent>
@@ -121,19 +114,15 @@ const transactionMenuItems = [
   { title: "EMI", icon: CalendarClock, url: "/emi" },
 ];
 
-// Marketplace menu items will be built dynamically with badge
-
 const managementMenuItems = [
   { title: "Documents", icon: FileText, url: "/documents" },
   { title: "Reports", icon: BarChart3, url: "/reports" },
   { title: "Catalogue Analytics", icon: BarChart3, url: "/analytics/public-page" },
-  { title: "Alerts", icon: Bell, url: "/alerts" },
 ];
 
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [newLeadsCount, setNewLeadsCount] = useState(0);
@@ -152,13 +141,14 @@ export function AppSidebar() {
 
     setNewLeadsCount(count || 0);
 
-    // Fetch marketplace enquiry count
+    // Fetch marketplace enquiry count - only new ones not viewed
     const { count: mpCount } = await supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("source", "marketplace")
-      .eq("status", "new");
+      .eq("status", "new")
+      .is("last_viewed_at", null);
 
     setMarketplaceEnquiryCount(mpCount || 0);
   }, []);
@@ -201,22 +191,28 @@ export function AppSidebar() {
     }
   }, [location.pathname, fetchNewLeadsCount]);
 
-  const handleLogout = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to log out",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
-      navigate("/auth");
+  // Mark marketplace leads as viewed when visiting marketplace hub
+  useEffect(() => {
+    if (location.pathname === "/marketplace-hub") {
+      const markMarketplaceAsViewed = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        await supabase
+          .from("leads")
+          .update({ last_viewed_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .eq("source", "marketplace")
+          .eq("status", "new")
+          .is("last_viewed_at", null);
+        
+        fetchNewLeadsCount();
+      };
+      
+      const timeout = setTimeout(markMarketplaceAsViewed, 1000);
+      return () => clearTimeout(timeout);
     }
-  }, [navigate, toast]);
+  }, [location.pathname, fetchNewLeadsCount]);
 
   const mainMenuItems = useMemo(() => [
     { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard", badge: 0 },
@@ -231,16 +227,16 @@ export function AppSidebar() {
   ], [marketplaceEnquiryCount]);
 
   return (
-    <Sidebar collapsible="icon" className="will-change-transform border-r border-border">
-      <SidebarContent className="bg-sidebar flex flex-col h-full">
+    <Sidebar collapsible="icon" className="will-change-transform border-r border-border overflow-x-hidden">
+      <SidebarContent className="bg-sidebar flex flex-col h-full overflow-x-hidden">
         {/* Logo - Zoho Style */}
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="p-4 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm flex-shrink-0">
               <Car className="h-4 w-4 text-primary-foreground" />
             </div>
             <span
-              className={`text-base font-bold text-sidebar-foreground tracking-tight transition-opacity duration-150
+              className={`text-base font-bold text-sidebar-foreground tracking-tight transition-opacity duration-150 whitespace-nowrap
                 ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"}`}
             >
               VahanHub
@@ -248,33 +244,12 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Scrollable Menu - Zoho Style with invisible scrollbar */}
-        <div className="flex-1 overflow-y-auto scrollbar-invisible py-2">
+        {/* Scrollable Menu - No horizontal scroll */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-invisible py-2">
           <MemoizedMenuGroup label="Main" items={mainMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Transactions" items={transactionMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Marketplace" items={marketplaceMenuItems} isCollapsed={isCollapsed} />
           <MemoizedMenuGroup label="Management" items={managementMenuItems} isCollapsed={isCollapsed} />
-        </div>
-
-        {/* Bottom: Settings & Logout - Zoho Style */}
-        <div className="border-t border-sidebar-border py-2">
-          <SidebarMenu>
-            <MemoizedMenuItem 
-              title="Settings" 
-              icon={Settings} 
-              url="/settings" 
-              isCollapsed={isCollapsed} 
-            />
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={handleLogout}
-                className="text-sidebar-foreground hover:bg-sidebar-accent rounded-lg mx-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="text-sm">Logout</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
         </div>
       </SidebarContent>
     </Sidebar>
