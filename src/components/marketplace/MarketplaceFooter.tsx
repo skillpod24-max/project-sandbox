@@ -51,7 +51,6 @@ const MarketplaceFooter = () => {
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><Link to="/auth" className="hover:text-white transition-colors">Dealer Login</Link></li>
               <li><Link to="/auth" className="hover:text-white transition-colors">Register as Dealer</Link></li>
-              <li><Link to="/bidding" className="hover:text-white transition-colors">Vehicle Auctions</Link></li>
             </ul>
           </div>
 
@@ -71,7 +70,7 @@ const MarketplaceFooter = () => {
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><Link to="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
               <li><Link to="/contact" className="hover:text-white transition-colors">Help Center</Link></li>
-              <li><Link to="/contact" className="hover:text-white transition-colors">Report an Issue</Link></li>
+              <li><Link to="/contact#report" className="hover:text-white transition-colors">Report an Issue</Link></li>
             </ul>
           </div>
         </div>

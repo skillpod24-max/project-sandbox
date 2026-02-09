@@ -587,9 +587,10 @@ const convertLead = async (lead: Lead) => {
                   <TableHead>City</TableHead>
                   <TableHead>Vehicle Interest</TableHead>
                   <TableHead>Source</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Follow Up</TableHead>
+                   <TableHead>Priority</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead>Test Drive</TableHead>
+                   <TableHead>Follow Up</TableHead>
                   
                 </TableRow>
               </TableHeader>
@@ -610,7 +611,27 @@ const convertLead = async (lead: Lead) => {
                     </TableCell>
                     <TableCell>{lead.city || "-"}</TableCell>
                     <TableCell>{lead.vehicle_interest || "-"}</TableCell>
-                    <TableCell className="capitalize">{lead.source.replace("_", " ")}</TableCell>
+                    <TableCell>
+                      {lead.source === "marketplace" ? (
+                        <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">Marketplace</Badge>
+                      ) : lead.source === "website" ? (
+                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Website</Badge>
+                      ) : lead.source === "public_dealer_page" ? (
+                        <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">Catalogue</Badge>
+                      ) : lead.source === "public_vehicle_page" ? (
+                        <Badge className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">Vehicle Page</Badge>
+                      ) : lead.source === "walk_in" ? (
+                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Walk-in</Badge>
+                      ) : lead.source === "referral" ? (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Referral</Badge>
+                      ) : lead.source === "phone" ? (
+                        <Badge className="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">Phone</Badge>
+                      ) : lead.source === "social_media" ? (
+                        <Badge className="bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400">Social</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell><Badge className={getPriorityColor(lead.priority)}>{lead.priority}</Badge></TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
   <Select
@@ -633,6 +654,25 @@ const convertLead = async (lead: Lead) => {
   </Select>
 </TableCell>
 
+                    <TableCell>
+                      {lead.source === "marketplace" ? (
+                        lead.notes?.includes("TEST DRIVE REQUESTED") ? (
+                          <div>
+                            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">Yes</Badge>
+                            {(() => {
+                              const dateMatch = lead.notes?.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
+                              return dateMatch ? (
+                                <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(dateMatch[1]), "dd MMM")}</p>
+                              ) : null;
+                            })()}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No</span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>{lead.follow_up_date ? format(new Date(lead.follow_up_date), "dd MMM") : "-"}</TableCell>
                     
                   </TableRow>

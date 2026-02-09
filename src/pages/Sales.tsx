@@ -598,7 +598,7 @@ generateSaleInvoicePDF(
   }
 
 const isEmiNotConfigured = (sale: Sale) => {
-  return sale.is_emi && !sale.emi_configured;
+  return sale.is_emi === true && sale.emi_configured !== true;
 };
 
 

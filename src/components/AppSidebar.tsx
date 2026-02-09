@@ -12,6 +12,8 @@ import {
   FileText,
   BarChart3,
   CalendarClock,
+  Store,
+  PieChart,
 } from "lucide-react";
 
 import { useSidebar } from "@/components/ui/sidebar";
@@ -116,7 +118,7 @@ const transactionMenuItems = [
 
 const managementMenuItems = [
   { title: "Documents", icon: FileText, url: "/documents" },
-  { title: "Reports", icon: BarChart3, url: "/reports" },
+  { title: "Reports", icon: PieChart, url: "/reports" },
   { title: "Catalogue Analytics", icon: BarChart3, url: "/analytics/public-page" },
 ];
 
@@ -223,7 +225,7 @@ export function AppSidebar() {
   ], [newLeadsCount]);
 
   const marketplaceMenuItems = useMemo(() => [
-    { title: "Marketplace Hub", icon: BarChart3, url: "/marketplace-hub", badge: marketplaceEnquiryCount },
+    { title: "Marketplace Hub", icon: Store, url: "/marketplace-hub", badge: marketplaceEnquiryCount },
   ], [marketplaceEnquiryCount]);
 
   return (

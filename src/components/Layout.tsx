@@ -168,7 +168,6 @@ const Layout = ({ children }: LayoutProps) => {
     { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
     { title: "Vehicles", icon: Car, url: "/vehicles" },
     { title: "Sales", icon: Receipt, url: "/sales" },
-    { title: "Leads", icon: UserPlus, url: "/leads" },
   ];
 
   const moreMenuItems = [
@@ -195,7 +194,7 @@ const Layout = ({ children }: LayoutProps) => {
 
         <div className="flex-1 flex flex-col w-full min-w-0 overflow-x-hidden">
           {/* Zoho-style Top Header */}
-          <header className="h-14 border-b border-border bg-card flex items-center px-3 sm:px-6 sticky top-0 z-[60] shadow-sm">
+          <header className="h-14 border-b border-border bg-card flex items-center px-2 sm:px-4 md:px-6 sticky top-0 z-[60] shadow-sm min-w-0 overflow-x-hidden">
             {!isOnline && (
               <div className="absolute top-14 left-0 right-0 bg-destructive/10 border-b border-destructive/20 text-destructive px-4 py-2 text-sm flex items-center gap-2">
                 <WifiOff className="h-4 w-4" />
@@ -204,51 +203,51 @@ const Layout = ({ children }: LayoutProps) => {
             )}
 
             {/* Desktop: Sidebar trigger */}
-            <div className="hidden md:block">
+            <div className="hidden md:block shrink-0">
               <SidebarTrigger className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-muted active:scale-95 transition-transform" />
             </div>
 
             {/* Mobile: Brand */}
-            <div className="md:hidden flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <Car className="h-4 w-4 text-primary-foreground" />
+            <div className="md:hidden flex items-center gap-2 shrink-0">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                <Car className="h-3.5 w-3.5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-foreground">VahanHub</span>
+              <span className="font-bold text-sm text-foreground">VahanHub</span>
             </div>
 
             {/* Global Search - Zoho Style */}
-            <div className="ml-4 flex-1">
+            <div className="ml-2 sm:ml-4 flex-1 min-w-0">
               <GlobalSearch />
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-1 mx-2 border-l border-r border-border px-3">
+            {/* Quick Actions - hidden on very small screens */}
+            <div className="hidden sm:flex items-center gap-0.5 mx-1 md:mx-2 border-l border-r border-border px-1.5 md:px-3 shrink-0">
               <button
                 onClick={() => setNotesOpen(true)}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors"
                 title="Sticky Notes"
               >
                 <StickyNote className="h-4 w-4 text-muted-foreground" />
               </button>
               <button
                 onClick={() => setInfoOpen(true)}
-                className="p-2 rounded-lg hover:bg-muted transition-colors hidden sm:flex"
+                className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors hidden md:flex"
                 title="Platform Info"
               >
                 <Info className="h-4 w-4 text-muted-foreground" />
               </button>
               <button
                 onClick={() => setEmiCalcOpen(true)}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors"
                 title="EMI Calculator"
               >
                 <Calculator className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
 
-            {/* Online Status */}
+            {/* Online Status - only on large screens */}
             <div
-              className={`hidden lg:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mr-3 ${
+              className={`hidden xl:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mr-2 shrink-0 ${
                 isOnline
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                   : "bg-destructive/10 text-destructive"
@@ -266,7 +265,9 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
 
             {/* User Menu with Settings, Alerts, Logout */}
-            <TopBarUserMenu shopName={shopName} userEmail={user.email} />
+            <div className="shrink-0">
+              <TopBarUserMenu shopName={shopName} userEmail={user.email} />
+            </div>
           </header>
 
           {/* Main Content Area */}
@@ -279,7 +280,7 @@ const Layout = ({ children }: LayoutProps) => {
 
         {/* Mobile Bottom Navigation */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-50">
-          <div className="grid grid-cols-5 h-16">
+          <div className="grid grid-cols-4 h-16">
             {bottomNavItems.map((item) => (
               <Link
                 key={item.url}

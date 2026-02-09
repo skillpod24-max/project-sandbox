@@ -23,7 +23,7 @@ import {
 } from "recharts";
 
 // Tab Types - Only dealer-relevant tabs (removed all-vehicles and dealers)
-type HubTab = "analytics" | "test-drives" | "vehicles-for-sale";
+type HubTab = "analytics" | "vehicles-for-sale";
 
 interface SellRequest {
   id: string;
@@ -289,7 +289,6 @@ const DealerMarketplaceHub = () => {
 
   const tabs: { id: HubTab; label: string; icon: any }[] = [
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "test-drives", label: "Test Drives & Enquiries", icon: Calendar },
     { id: "vehicles-for-sale", label: "Vehicles for Sale", icon: Tag },
   ];
 
@@ -497,149 +496,6 @@ const DealerMarketplaceHub = () => {
         </div>
       )}
 
-      {/* Test Drives & Enquiries Tab */}
-      {activeTab === "test-drives" && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Summary Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Test Drives Pending", value: testDrives.filter(r => r.status === "new" || r.status === "pending").length, color: "text-amber-600 bg-amber-50" },
-              { label: "Test Drives Confirmed", value: testDrives.filter(r => r.status === "confirmed").length, color: "text-blue-600 bg-blue-50" },
-              { label: "Enquiries Pending", value: enquiries.filter(r => r.status === "new").length, color: "text-purple-600 bg-purple-50" },
-              { label: "Total Leads", value: marketplaceLeads.length, color: "text-slate-600 bg-slate-100" },
-            ].map((stat, i) => (
-              <Card key={i} className="border shadow-sm">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Test Drives Section */}
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-purple-600" />
-                Test Drive Requests ({testDrives.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {testDrives.map((req) => (
-                  <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
-                    <div className="flex flex-col sm:flex-row justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{req.customer_name}</span>
-                          <Badge className={statusColors[req.status] || "bg-slate-100"}>
-                            {req.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" /> {req.phone}
-                          </span>
-                          {req.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" /> {req.email}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
-                        {req.testDriveDate && (
-                          <p className="text-sm text-purple-600 font-medium">
-                            <Calendar className="h-3 w-3 inline mr-1" />
-                            {req.testDriveDate} at {req.testDriveTime}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusUpdate(req.id, "confirmed")}
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" /> Confirm
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusUpdate(req.id, "completed")}
-                        >
-                          Complete
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {testDrives.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">No test drive requests yet</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* General Enquiries Section */}
-          <Card className="border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-green-600" />
-                General Enquiries ({enquiries.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {enquiries.slice(0, 20).map((req) => (
-                  <div key={req.id} className="p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
-                    <div className="flex flex-col sm:flex-row justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{req.customer_name}</span>
-                          <Badge className={statusColors[req.status] || "bg-slate-100"}>
-                            {req.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" /> {req.phone}
-                          </span>
-                        </div>
-                        {req.vehicle_interest && (
-                          <p className="text-sm"><strong>Vehicle:</strong> {req.vehicle_interest}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(req.created_at), "MMM dd, yyyy 'at' hh:mm a")}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusUpdate(req.id, "contacted")}
-                        >
-                          Contacted
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {enquiries.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">No enquiries yet</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Vehicles for Sale Tab */}
       {activeTab === "vehicles-for-sale" && (

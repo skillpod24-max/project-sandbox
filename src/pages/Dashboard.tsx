@@ -185,10 +185,14 @@ const Dashboard = () => {
         return eventDate >= todayStart && eventDate <= todayEnd;
       });
 
-      const marketplaceViews = todayEvents.filter(e => e.event_type === 'marketplace_view').length;
-      const marketplaceEnquiries = todayEvents.filter(e => e.event_type === 'marketplace_enquiry').length;
-      const catalogueViews = todayEvents.filter(e => e.event_type === 'page_view').length;
-      const catalogueEnquiries = todayEvents.filter(e => e.event_type === 'enquiry').length;
+      // Separate marketplace vs catalogue events
+      const marketplaceEvents = todayEvents.filter(e => e.public_page_id === 'marketplace');
+      const catalogueEvents = todayEvents.filter(e => e.public_page_id !== 'marketplace');
+
+      const marketplaceViews = marketplaceEvents.filter(e => e.event_type === 'vehicle_view' || e.event_type === 'dealer_view').length;
+      const marketplaceEnquiries = marketplaceEvents.filter(e => e.event_type === 'enquiry_submit').length;
+      const catalogueViews = catalogueEvents.filter(e => e.event_type === 'page_view' || e.event_type === 'vehicle_view').length;
+      const catalogueEnquiries = catalogueEvents.filter(e => e.event_type === 'enquiry' || e.event_type === 'enquiry_submit').length;
 
       setQuickOverview({
         marketplace_views: marketplaceViews,
@@ -197,26 +201,30 @@ const Dashboard = () => {
         catalogue_enquiries: catalogueEnquiries,
       });
 
-      // Top Performing Vehicles
-      const vehicleViewCounts: Record<string, { views: number; enquiries: number }> = {};
+      // Top Performing Vehicles - separate marketplace and catalogue
+      const vehicleViewCounts: Record<string, { views: number; enquiries: number; isMarketplace: boolean }> = {};
       events.forEach(e => {
         if (!e.vehicle_id) return;
-        if (!vehicleViewCounts[e.vehicle_id]) {
-          vehicleViewCounts[e.vehicle_id] = { views: 0, enquiries: 0 };
+        const isMarketplace = e.public_page_id === 'marketplace';
+        const key = `${e.vehicle_id}_${isMarketplace ? 'mp' : 'cat'}`;
+        if (!vehicleViewCounts[key]) {
+          vehicleViewCounts[key] = { views: 0, enquiries: 0, isMarketplace };
         }
         if (e.event_type.includes('view')) {
-          vehicleViewCounts[e.vehicle_id].views++;
+          vehicleViewCounts[key].views++;
         }
         if (e.event_type.includes('enquiry')) {
-          vehicleViewCounts[e.vehicle_id].enquiries++;
+          vehicleViewCounts[key].enquiries++;
         }
       });
 
-      const sortedByViews = Object.entries(vehicleViewCounts)
+      // Top marketplace vehicle
+      const marketplaceSorted = Object.entries(vehicleViewCounts)
+        .filter(([, v]) => v.isMarketplace)
         .sort(([, a], [, b]) => (b.views + b.enquiries) - (a.views + a.enquiries));
 
-      if (sortedByViews.length > 0) {
-        const topVehicleId = sortedByViews[0][0];
+      if (marketplaceSorted.length > 0) {
+        const topVehicleId = marketplaceSorted[0][0].split('_')[0];
         const topVehicle = vehicles.find(v => v.id === topVehicleId);
         const vehicleImage = images.find(i => i.vehicle_id === topVehicleId);
         if (topVehicle) {
@@ -225,27 +233,33 @@ const Dashboard = () => {
             brand: topVehicle.brand,
             model: topVehicle.model,
             image_url: vehicleImage?.image_url,
-            views: vehicleViewCounts[topVehicleId].views,
-            enquiries: vehicleViewCounts[topVehicleId].enquiries,
+            views: vehicleViewCounts[`${topVehicleId}_mp`]?.views || 0,
+            enquiries: vehicleViewCounts[`${topVehicleId}_mp`]?.enquiries || 0,
             selling_price: topVehicle.selling_price,
           });
         }
       }
 
-      // Top catalogue vehicle (public vehicles)
-      const publicVehicles = vehicles.filter(v => v.is_public);
-      if (publicVehicles.length > 0) {
-        const topPublic = publicVehicles[0];
-        const vehicleImage = images.find(i => i.vehicle_id === topPublic.id);
-        setTopCatalogueVehicle({
-          id: topPublic.id,
-          brand: topPublic.brand,
-          model: topPublic.model,
-          image_url: vehicleImage?.image_url,
-          views: vehicleViewCounts[topPublic.id]?.views || 0,
-          enquiries: vehicleViewCounts[topPublic.id]?.enquiries || 0,
-          selling_price: topPublic.selling_price,
-        });
+      // Top catalogue vehicle
+      const catalogueSorted = Object.entries(vehicleViewCounts)
+        .filter(([, v]) => !v.isMarketplace)
+        .sort(([, a], [, b]) => (b.views + b.enquiries) - (a.views + a.enquiries));
+
+      if (catalogueSorted.length > 0) {
+        const topVehicleId = catalogueSorted[0][0].split('_')[0];
+        const topVehicle = vehicles.find(v => v.id === topVehicleId);
+        const vehicleImage = images.find(i => i.vehicle_id === topVehicleId);
+        if (topVehicle) {
+          setTopCatalogueVehicle({
+            id: topVehicle.id,
+            brand: topVehicle.brand,
+            model: topVehicle.model,
+            image_url: vehicleImage?.image_url,
+            views: vehicleViewCounts[`${topVehicleId}_cat`]?.views || 0,
+            enquiries: vehicleViewCounts[`${topVehicleId}_cat`]?.enquiries || 0,
+            selling_price: topVehicle.selling_price,
+          });
+        }
       }
 
       // Outstanding Payments
