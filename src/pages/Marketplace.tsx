@@ -196,7 +196,7 @@ const Marketplace = () => {
 
   const getDealerRating = useCallback((userId: string) => {
     const dealerTestimonials = testimonials.filter(t => t.user_id === userId);
-    if (dealerTestimonials.length === 0) return 4.5;
+    if (dealerTestimonials.length === 0) return 0;
     return dealerTestimonials.reduce((sum, t) => sum + t.rating, 0) / dealerTestimonials.length;
   }, [testimonials]);
 

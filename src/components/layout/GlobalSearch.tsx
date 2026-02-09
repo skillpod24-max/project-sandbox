@@ -118,6 +118,37 @@ const GlobalSearch = () => {
     setIsOpen(false);
   };
 
+  // Search dealers
+  useEffect(() => {
+    const searchDealers = async () => {
+      if (query.length < 2) return;
+      
+      const { data: dealers } = await supabase
+        .from("settings")
+        .select("user_id, dealer_name, dealer_address")
+        .ilike("dealer_name", `%${query}%`)
+        .eq("marketplace_enabled", true)
+        .limit(3);
+
+      if (dealers && dealers.length > 0) {
+        setResults(prev => [
+          ...prev,
+          ...dealers.map(d => ({
+            type: "page" as const,
+            id: d.user_id,
+            title: d.dealer_name || "Dealer",
+            subtitle: d.dealer_address || undefined,
+            url: `/marketplace/dealer/${d.user_id}`,
+          })),
+        ]);
+      }
+    };
+    
+    if (query.length >= 2) {
+      searchDealers();
+    }
+  }, [query]);
+
   const getIcon = (type: string) => {
     switch (type) {
       case "vehicle": return Car;

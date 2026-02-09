@@ -70,29 +70,8 @@ const FAQPage = () => {
           answer: "Access your dealer dashboard to add, edit, or remove vehicle listings. You can also track enquiries, view analytics, and manage your profile from the dashboard."
         },
         {
-          question: "Can I participate in auctions?",
-          answer: "Yes! Once verified, you can participate in our real-time vehicle auctions. You'll receive notifications for new auctions matching your interests."
-        },
-        {
           question: "How do I get more visibility for my listings?",
           answer: "Ensure complete and accurate listings with high-quality photos. Featured listings appear at the top and get more views. You can also earn badges through good performance."
-        },
-      ]
-    },
-    {
-      title: "About Auctions",
-      faqs: [
-        {
-          question: "How do vehicle auctions work?",
-          answer: "Vehicles are listed with a starting price and auction duration. Dealers can place bids in real-time. The highest bidder at the end wins. After winning, there's a post-bid confirmation process."
-        },
-        {
-          question: "What happens after I win an auction?",
-          answer: "After winning, both the seller and buyer go through a confirmation process. Once confirmed, payment is collected and the vehicle handover process begins."
-        },
-        {
-          question: "Can I cancel my bid?",
-          answer: "Bids cannot be cancelled once placed. Please bid responsibly. Repeated bid cancellations may affect your dealer rating."
         },
       ]
     },
@@ -104,12 +83,16 @@ const FAQPage = () => {
           answer: "Yes, we use industry-standard encryption and security measures to protect your data. We never share your personal information without your consent."
         },
         {
+          question: "How do payments work on VahanHub?",
+          answer: "VahanHub is a vehicle discovery and marketplace platform that connects buyers with verified dealers. All payment transactions, pricing negotiations, EMI arrangements, and financial terms are handled directly between the buyer and the respective dealer. VahanHub does not process or facilitate any payments."
+        },
+        {
           question: "What payment methods are accepted?",
-          answer: "For vehicle purchases, dealers accept bank transfers, cheques, and cash. EMI options are available through partner banks."
+          answer: "Payment methods depend on the individual dealer. Most dealers accept bank transfers, cheques, UPI, and cash. For EMI options, please contact the dealer directly — they can connect you with their partner banks and financing institutions."
         },
         {
           question: "What if I face issues with a dealer?",
-          answer: "Contact our support team with details of the issue. We investigate all complaints and take action against dealers who violate our policies."
+          answer: "Contact our support team with details of the issue. We investigate all complaints and take action against dealers who violate our policies. You can report an issue via the Contact page."
         },
       ]
     },

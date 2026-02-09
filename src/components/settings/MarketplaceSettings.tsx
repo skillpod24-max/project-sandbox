@@ -155,7 +155,7 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
             </CardContent>
           </Card>
 
-          {/* Premium Features Card */}
+          {/* Premium Features Info */}
           <Card className="border-0 shadow-sm ring-1 ring-amber-200/50 dark:ring-amber-900/50 bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10">
             <CardHeader>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -164,20 +164,10 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
               </CardTitle>
               <CardDescription>Boost your marketplace visibility</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-white/60 dark:bg-card/60 border border-amber-200/30 dark:border-amber-900/30">
-                <div className="space-y-0.5">
-                  <Label className="font-medium">Featured Dealer</Label>
-                  <p className="text-xs text-muted-foreground">Show in top dealers section</p>
-                </div>
-                <Switch 
-                  checked={settings.marketplace_featured || false} 
-                  onCheckedChange={(v) => setSettings({ ...settings, marketplace_featured: v })} 
-                />
-              </div>
-              
-              <p className="text-xs text-muted-foreground text-center">
-                Featured status may require admin approval
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Featured dealer status and premium placements are managed by marketplace admins. 
+                Contact support to request featured status for your dealership.
               </p>
             </CardContent>
           </Card>
