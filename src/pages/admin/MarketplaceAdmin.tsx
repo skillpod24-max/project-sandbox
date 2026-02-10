@@ -14,7 +14,7 @@ import {
   Shield, Users, Car, Star, CheckCircle, XCircle, AlertTriangle,
   Sparkles, Building2, Search, MoreVertical, Eye, Ban,
   Award, TrendingUp, Calendar, Image, Upload, Settings,
-  Crown, DollarSign, MessageSquare, CreditCard, Clock
+  Crown, DollarSign, MessageSquare, CreditCard, Clock, Ticket
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -47,6 +47,7 @@ const MarketplaceAdmin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   
   const [dealers, setDealers] = useState<any[]>([]);
+  const [supportTickets, setSupportTickets] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [auctions, setAuctions] = useState<any[]>([]);
   const [bids, setBids] = useState<any[]>([]);
@@ -171,6 +172,13 @@ const MarketplaceAdmin = () => {
       const savedMobile = localStorage.getItem('marketplace_banner_mobile');
       if (savedDesktop) setBannerDesktopUrl(savedDesktop);
       if (savedMobile) setBannerMobileUrl(savedMobile);
+
+      // Fetch support tickets
+      const { data: ticketsData } = await supabase
+        .from("support_tickets" as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+      setSupportTickets(ticketsData || []);
     } catch (error) {
       console.error("Error fetching admin data:", error);
     } finally {
@@ -485,6 +493,9 @@ const MarketplaceAdmin = () => {
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" /> Settings
+            </TabsTrigger>
+            <TabsTrigger value="tickets" className="gap-2">
+              <Ticket className="h-4 w-4" /> Support Tickets
             </TabsTrigger>
           </TabsList>
 
@@ -831,6 +842,58 @@ const MarketplaceAdmin = () => {
                   </div>
                 </div>
                 <Button>Save Settings</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Support Tickets Tab */}
+          <TabsContent value="tickets">
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle>Support Tickets</CardTitle>
+                <CardDescription>Issue reports and contact form submissions</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Message</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {supportTickets.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                          No support tickets yet
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      supportTickets.map((ticket: any) => (
+                        <TableRow key={ticket.id}>
+                          <TableCell className="text-sm whitespace-nowrap">
+                            {new Date(ticket.created_at).toLocaleDateString("en-IN")}
+                          </TableCell>
+                          <TableCell className="font-medium">{ticket.name}</TableCell>
+                          <TableCell className="text-sm">{ticket.email}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs capitalize">{ticket.subject || "general"}</Badge>
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate text-sm text-slate-600">{ticket.message}</TableCell>
+                          <TableCell>
+                            <Badge className={ticket.status === "open" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}>
+                              {ticket.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>

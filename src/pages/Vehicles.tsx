@@ -922,6 +922,10 @@ setVehicleImages(prev => ({
                     <Label>Manufacturing Year *</Label>
                     <Input type="number" value={formData.manufacturing_year || ""} onChange={(e) => setFormData({ ...formData, manufacturing_year: parseInt(e.target.value) })} required />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Registration Year</Label>
+                    <Input type="number" placeholder="e.g., 2023" value={(formData as any).registration_year || ""} onChange={(e) => setFormData({ ...formData, registration_year: parseInt(e.target.value) || null } as any)} />
+                  </div>
                   
                   <div className="space-y-2">
                     <Label>Color</Label>
@@ -1863,7 +1867,8 @@ setVehicleImages(prev => ({
                         </svg>
                       </summary>
                       <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
-                        <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Year</p><p className="font-medium text-sm truncate">{selectedVehicle.manufacturing_year}</p></div>
+                        <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Mfg Year</p><p className="font-medium text-sm truncate">{selectedVehicle.manufacturing_year}</p></div>
+                        {(selectedVehicle as any).registration_year && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Reg Year</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).registration_year}</p></div>}
                         {selectedVehicle.registration_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Reg No</p><p className="font-medium text-sm truncate">{selectedVehicle.registration_number}</p></div>}
                         {selectedVehicle.variant && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Variant</p><p className="font-medium text-sm truncate">{selectedVehicle.variant}</p></div>}
                         {selectedVehicle.engine_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Engine No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.engine_number}</p></div>}

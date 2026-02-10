@@ -227,7 +227,13 @@ const MarketplaceVehicleCard = memo(({
               </div>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
-                {dealer.dealer_address?.split(",").slice(-2, -1).join("").trim() || "India"}
+                {(() => {
+                  const parts = (dealer.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+                  // Try to extract city (usually second-to-last part before state/pincode)
+                  if (parts.length >= 3) return parts[parts.length - 3] || parts[parts.length - 2];
+                  if (parts.length >= 2) return parts[parts.length - 2];
+                  return parts[0] || "India";
+                })()}
               </span>
             </div>
           )}

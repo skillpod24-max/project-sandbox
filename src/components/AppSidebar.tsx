@@ -229,7 +229,7 @@ export function AppSidebar() {
   ], [marketplaceEnquiryCount]);
 
   return (
-    <Sidebar collapsible="icon" className="will-change-transform border-r border-border overflow-x-hidden">
+    <Sidebar collapsible="icon" className="will-change-transform border-r border-border/30 overflow-x-hidden opacity-[0.15] hover:opacity-100 transition-opacity duration-300">
       <SidebarContent className="bg-sidebar flex flex-col h-full overflow-x-hidden">
         {/* Logo - Zoho Style */}
         <div className="p-4 border-b border-sidebar-border flex-shrink-0">

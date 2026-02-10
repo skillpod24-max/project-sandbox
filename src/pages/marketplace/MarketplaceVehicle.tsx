@@ -360,7 +360,7 @@ const MarketplaceVehicle = () => {
   // Overview data for Cars24 style
   const overviewData = [
     { label: "Make Year", value: vehicle.manufacturing_year, icon: Calendar },
-    { label: "Registration Year", value: vehicle.manufacturing_year, icon: FileText },
+    { label: "Reg Year", value: vehicle.registration_year || vehicle.manufacturing_year, icon: FileText },
     { label: "Fuel Type", value: vehicle.fuel_type, icon: Fuel },
     { label: "KM Driven", value: vehicle.odometer_reading ? `${formatIndianNumber(vehicle.odometer_reading)} km` : "N/A", icon: Gauge },
     { label: "Transmission", value: vehicle.transmission, icon: Settings },
@@ -675,11 +675,16 @@ const MarketplaceVehicle = () => {
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="flex items-center gap-1">
                           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                          <span className="text-xs text-slate-600 font-medium">4.5</span>
+                          <span className="text-xs text-slate-600 font-medium">{dealer.show_ratings ? "4.5" : "New"}</span>
                         </div>
                         <span className="text-slate-300">•</span>
                         <span className="text-xs text-slate-500 truncate">
-                          {dealer.dealer_address?.split(",").slice(-2, -1).join("").trim() || "India"}
+                          {(() => {
+                            const parts = (dealer.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+                            if (parts.length >= 3) return parts[parts.length - 3] || parts[parts.length - 2];
+                            if (parts.length >= 2) return parts[parts.length - 2];
+                            return parts[0] || "India";
+                          })()}
                         </span>
                       </div>
                     </div>
