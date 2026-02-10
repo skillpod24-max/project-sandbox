@@ -177,6 +177,7 @@ const Layout = ({ children }: LayoutProps) => {
     { title: "EMI", icon: CalendarClock, url: "/emi" },
     { title: "Documents", icon: FileText, url: "/documents" },
     { title: "Reports", icon: BarChart3, url: "/reports" },
+    { title: "Catalogue Analytics", icon: BarChart3, url: "/analytics/public-page" },
     { title: "Marketplace Hub", icon: BarChart3, url: "/marketplace-hub" },
     { title: "Alerts", icon: Bell, url: "/alerts" },
     { title: "Settings", icon: Settings, url: "/settings" },

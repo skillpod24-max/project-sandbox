@@ -1085,6 +1085,42 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          phone?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          phone?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1276,6 +1312,7 @@ export type Database = {
           purchase_price: number
           purchase_status: string | null
           registration_number: string | null
+          registration_year: number | null
           road_tax_expiry: string | null
           seating_capacity: number | null
           selling_price: number
@@ -1329,6 +1366,7 @@ export type Database = {
           purchase_price?: number
           purchase_status?: string | null
           registration_number?: string | null
+          registration_year?: number | null
           road_tax_expiry?: string | null
           seating_capacity?: number | null
           selling_price?: number
@@ -1382,6 +1420,7 @@ export type Database = {
           purchase_price?: number
           purchase_status?: string | null
           registration_number?: string | null
+          registration_year?: number | null
           road_tax_expiry?: string | null
           seating_capacity?: number | null
           selling_price?: number
