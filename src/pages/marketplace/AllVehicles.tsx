@@ -2,37 +2,33 @@ import { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Car, MapPin, Search, SlidersHorizontal, Sparkles, X, RefreshCw } from "lucide-react";
+import { ArrowLeft, Car, MapPin, Search, Sparkles, X, RefreshCw, SlidersHorizontal, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MarketplaceSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceVehicleCard from "@/components/marketplace/MarketplaceVehicleCard";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
 import useWishlist from "@/hooks/useWishlist";
 import useComparison from "@/hooks/useComparison";
 import CompareBar from "@/components/marketplace/CompareBar";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 
 const AllVehicles = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [vehicleType, setVehicleType] = useState("all");
   const [fuelType, setFuelType] = useState("all");
-  const [priceRange, setPriceRange] = useState("all");
+  const [priceRange, setPriceRange] = useState<[number, number]>([50000, 7500000]);
   const [sortBy, setSortBy] = useState("newest");
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [transmissionFilter, setTransmissionFilter] = useState("all");
 
   const { isInWishlist, toggleWishlist } = useWishlist();
   const { compareList, isInCompare, toggleCompare, removeFromCompare, clearCompare } = useComparison();
 
-  // Fetch all marketplace vehicles
   const { data, isLoading } = useQuery({
     queryKey: ['all-vehicles'],
     queryFn: async () => {
@@ -85,44 +81,62 @@ const AllVehicles = () => {
   const getDealerCity = useCallback((userId: string) => {
     const dealer = dealers.find(d => d.user_id === userId);
     if (!dealer?.dealer_address) return null;
-    const parts = dealer.dealer_address.split(",");
-    return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+    const parts = dealer.dealer_address.split(",").map((s: string) => s.trim()).filter(Boolean);
+    if (parts.length >= 3) return parts[parts.length - 3];
+    if (parts.length >= 2) return parts[parts.length - 2];
+    return parts[0] || null;
   }, [dealers]);
 
   const availableCities = useMemo(() => {
     const cities = dealers
       .map(d => {
-        const parts = (d.dealer_address || "").split(",");
-        return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+        const parts = (d.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+        if (parts.length >= 3) return parts[parts.length - 3];
+        if (parts.length >= 2) return parts[parts.length - 2];
+        return null;
       })
       .filter(Boolean);
     return [...new Set(cities)] as string[];
   }, [dealers]);
+
+  // Get unique brands with counts
+  const brandCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    vehicles.forEach(v => {
+      counts[v.brand] = (counts[v.brand] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [vehicles]);
+
+  const toggleBrand = (brand: string) => {
+    setSelectedBrands(prev =>
+      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
+    );
+  };
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (cityFilter !== "all") count++;
     if (vehicleType !== "all") count++;
     if (fuelType !== "all") count++;
-    if (priceRange !== "all") count++;
+    if (transmissionFilter !== "all") count++;
+    if (priceRange[0] !== 50000 || priceRange[1] !== 7500000) count++;
+    if (selectedBrands.length > 0) count++;
     return count;
-  }, [cityFilter, vehicleType, fuelType, priceRange]);
+  }, [cityFilter, vehicleType, fuelType, priceRange, selectedBrands, transmissionFilter]);
 
   const filteredVehicles = useMemo(() => {
     let result = vehicles.filter(v => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         `${v.brand} ${v.model} ${v.variant || ""}`.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = vehicleType === "all" || v.vehicle_type === vehicleType;
       const matchesFuel = fuelType === "all" || v.fuel_type === fuelType;
       const matchesCity = cityFilter === "all" || getDealerCity(v.user_id) === cityFilter;
-      
-      let matchesPrice = true;
-      if (priceRange !== "all") {
-        const [min, max] = priceRange.split("-").map(Number);
-        matchesPrice = v.selling_price >= min && (!max || v.selling_price <= max);
-      }
-      
-      return matchesSearch && matchesType && matchesFuel && matchesPrice && matchesCity;
+      const matchesPrice = v.selling_price >= priceRange[0] && v.selling_price <= priceRange[1];
+      const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(v.brand);
+      const matchesTransmission = transmissionFilter === "all" || v.transmission === transmissionFilter;
+
+      return matchesSearch && matchesType && matchesFuel && matchesPrice && matchesCity && matchesBrand && matchesTransmission;
     });
 
     switch (sortBy) {
@@ -143,7 +157,7 @@ const AllVehicles = () => {
     }
 
     return result;
-  }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, cityFilter, sortBy, getDealerCity]);
+  }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, cityFilter, sortBy, getDealerCity, selectedBrands, transmissionFilter]);
 
   const compareVehicles = useMemo(() => {
     return vehicles.filter(v => compareList.includes(v.id));
@@ -154,18 +168,147 @@ const AllVehicles = () => {
     setCityFilter("all");
     setVehicleType("all");
     setFuelType("all");
-    setPriceRange("all");
+    setPriceRange([50000, 7500000]);
     setSortBy("newest");
+    setSelectedBrands([]);
+    setTransmissionFilter("all");
+  };
+
+  const formatBudget = (val: number) => {
+    if (val >= 100000) return `₹${(val / 100000).toFixed(val % 100000 === 0 ? 0 : 1)}L`;
+    return `₹${(val / 1000).toFixed(0)}K`;
   };
 
   if (isLoading) return <MarketplaceSkeleton />;
 
+  // Sidebar filter panel component
+  const FilterPanel = ({ className = "" }: { className?: string }) => (
+    <div className={`space-y-6 ${className}`}>
+      {/* Budget Range Slider */}
+      <div>
+        <h3 className="font-semibold text-foreground mb-3">Budget</h3>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-blue-600">{formatBudget(priceRange[0])}</span>
+          <span className="text-sm font-medium text-blue-600">{formatBudget(priceRange[1])}</span>
+        </div>
+        <Slider
+          value={priceRange}
+          onValueChange={(val) => setPriceRange(val as [number, number])}
+          min={50000}
+          max={7500000}
+          step={50000}
+          className="my-4"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Minimum</span>
+          <span>Maximum</span>
+        </div>
+      </div>
+
+      {/* Make & Model Search */}
+      <div>
+        <h3 className="font-semibold text-foreground mb-3">Make & Model</h3>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search a brand or model"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-10 rounded-lg border-border"
+          />
+        </div>
+        {/* Brand Checkboxes */}
+        <div className="space-y-2 max-h-48 overflow-y-auto smooth-scroll">
+          {brandCounts.map(([brand, count]) => (
+            <label key={brand} className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedBrands.includes(brand)}
+                  onCheckedChange={() => toggleBrand(brand)}
+                />
+                <span className="text-sm text-foreground">{brand}</span>
+              </div>
+              <span className="text-xs text-muted-foreground">({count})</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Vehicle Type */}
+      <div>
+        <h3 className="font-semibold text-foreground mb-3">Vehicle Type</h3>
+        <Select value={vehicleType} onValueChange={setVehicleType}>
+          <SelectTrigger className="rounded-lg h-10"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="car">Cars</SelectItem>
+            <SelectItem value="bike">Bikes</SelectItem>
+            <SelectItem value="commercial">Commercial</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Fuel Type */}
+      <div>
+        <h3 className="font-semibold text-foreground mb-3">Fuel Type</h3>
+        <Select value={fuelType} onValueChange={setFuelType}>
+          <SelectTrigger className="rounded-lg h-10"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Fuel</SelectItem>
+            <SelectItem value="petrol">Petrol</SelectItem>
+            <SelectItem value="diesel">Diesel</SelectItem>
+            <SelectItem value="electric">Electric</SelectItem>
+            <SelectItem value="cng">CNG</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Transmission */}
+      <div>
+        <h3 className="font-semibold text-foreground mb-3">Transmission</h3>
+        <Select value={transmissionFilter} onValueChange={setTransmissionFilter}>
+          <SelectTrigger className="rounded-lg h-10"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="manual">Manual</SelectItem>
+            <SelectItem value="automatic">Automatic</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* City */}
+      <div>
+        <h3 className="font-semibold text-foreground mb-3">Location</h3>
+        <Select value={cityFilter} onValueChange={setCityFilter}>
+          <SelectTrigger className="rounded-lg h-10">
+            <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+            <SelectValue placeholder="All Cities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Cities</SelectItem>
+            {availableCities.map(city => (
+              <SelectItem key={city} value={city}>{city}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Clear Filters */}
+      {activeFiltersCount > 0 && (
+        <Button variant="outline" onClick={clearFilters} className="w-full gap-2 rounded-lg">
+          <RefreshCw className="h-4 w-4" />
+          Clear All Filters ({activeFiltersCount})
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
-      {/* Enhanced Header */}
+      {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="h-16 flex items-center gap-4">
+          <div className="h-14 flex items-center gap-4">
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
                 <ArrowLeft className="h-5 w-5" />
@@ -173,118 +316,15 @@ const AllVehicles = () => {
             </Link>
             <div className="flex-1">
               <h1 className="font-bold text-lg text-foreground flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
+                <Sparkles className="h-5 w-5 text-blue-600" />
                 All Vehicles
               </h1>
               <p className="text-xs text-muted-foreground">{filteredVehicles.length} vehicles available</p>
             </div>
-            
-            {/* Mobile Filter Button */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="md:hidden gap-2 rounded-xl relative">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filters
-                  {activeFiltersCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-primary">
-                      {activeFiltersCount}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
-                <SheetHeader className="pb-4 border-b border-border">
-                  <SheetTitle className="flex items-center justify-between">
-                    <span>Filters</span>
-                    {activeFiltersCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearFilters} className="text-primary">
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        Clear All
-                      </Button>
-                    )}
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="space-y-5 mt-6 overflow-y-auto">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">City</label>
-                    <Select value={cityFilter} onValueChange={setCityFilter}>
-                      <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="All Cities" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Cities</SelectItem>
-                        {availableCities.map(city => (
-                          <SelectItem key={city} value={city}>{city}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Vehicle Type</label>
-                    <Select value={vehicleType} onValueChange={setVehicleType}>
-                      <SelectTrigger className="rounded-xl h-12"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="car">Cars</SelectItem>
-                        <SelectItem value="bike">Bikes</SelectItem>
-                        <SelectItem value="commercial">Commercial</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Fuel Type</label>
-                    <Select value={fuelType} onValueChange={setFuelType}>
-                      <SelectTrigger className="rounded-xl h-12"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Fuel</SelectItem>
-                        <SelectItem value="petrol">Petrol</SelectItem>
-                        <SelectItem value="diesel">Diesel</SelectItem>
-                        <SelectItem value="electric">Electric</SelectItem>
-                        <SelectItem value="cng">CNG</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Budget</label>
-                    <Select value={priceRange} onValueChange={setPriceRange}>
-                      <SelectTrigger className="rounded-xl h-12"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Any Budget</SelectItem>
-                        <SelectItem value="0-300000">Under ₹3 Lakh</SelectItem>
-                        <SelectItem value="300000-500000">₹3-5 Lakh</SelectItem>
-                        <SelectItem value="500000-1000000">₹5-10 Lakh</SelectItem>
-                        <SelectItem value="1000000-99999999">Above ₹10 Lakh</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Search & Desktop Filters */}
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by brand, model..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-11 h-12 rounded-xl border-border bg-muted/30 focus:bg-background transition-colors"
-              />
-              {searchTerm && (
-                <button 
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
+            {/* Sort dropdown */}
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-44 h-12 rounded-xl">
+              <SelectTrigger className="w-40 h-9 rounded-lg text-sm">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -296,133 +336,101 @@ const AllVehicles = () => {
               </SelectContent>
             </Select>
           </div>
-          
-          {/* Desktop Filters */}
-          <div className="hidden md:flex gap-2 flex-wrap items-center">
-            <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-40 rounded-xl">
-                <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                <SelectValue placeholder="All Cities" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cities</SelectItem>
-                {availableCities.map(city => (
-                  <SelectItem key={city} value={city}>{city}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={vehicleType} onValueChange={setVehicleType}>
-              <SelectTrigger className="w-32 rounded-xl"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="car">Cars</SelectItem>
-                <SelectItem value="bike">Bikes</SelectItem>
-                <SelectItem value="commercial">Commercial</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={fuelType} onValueChange={setFuelType}>
-              <SelectTrigger className="w-28 rounded-xl"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Fuel</SelectItem>
-                <SelectItem value="petrol">Petrol</SelectItem>
-                <SelectItem value="diesel">Diesel</SelectItem>
-                <SelectItem value="electric">Electric</SelectItem>
-                <SelectItem value="cng">CNG</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={priceRange} onValueChange={setPriceRange}>
-              <SelectTrigger className="w-40 rounded-xl"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Any Budget</SelectItem>
-                <SelectItem value="0-300000">Under ₹3 Lakh</SelectItem>
-                <SelectItem value="300000-500000">₹3-5 Lakh</SelectItem>
-                <SelectItem value="500000-1000000">₹5-10 Lakh</SelectItem>
-                <SelectItem value="1000000-99999999">Above ₹10 Lakh</SelectItem>
-              </SelectContent>
-            </Select>
+        </div>
+      </header>
+
+      {/* Main Content - Sidebar + Grid Layout */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex gap-6">
+          {/* Left Sidebar Filters - Desktop Only */}
+          <aside className="hidden lg:block w-[280px] shrink-0">
+            <div className="sticky top-20 bg-card rounded-2xl border border-border p-5 shadow-sm max-h-[calc(100vh-100px)] overflow-y-auto smooth-scroll">
+              <FilterPanel />
+            </div>
+          </aside>
+
+          {/* Right Content Grid */}
+          <div className="flex-1 min-w-0">
+            {/* Active Filter Pills */}
             {activeFiltersCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-primary gap-1">
-                <RefreshCw className="h-4 w-4" />
-                Clear ({activeFiltersCount})
-              </Button>
+              <div className="flex gap-2 flex-wrap mb-4">
+                {cityFilter !== "all" && (
+                  <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1">
+                    {cityFilter}
+                    <button onClick={() => setCityFilter("all")} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                )}
+                {vehicleType !== "all" && (
+                  <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1 capitalize">
+                    {vehicleType}
+                    <button onClick={() => setVehicleType("all")} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                )}
+                {fuelType !== "all" && (
+                  <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1 capitalize">
+                    {fuelType}
+                    <button onClick={() => setFuelType("all")} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                )}
+                {transmissionFilter !== "all" && (
+                  <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1 capitalize">
+                    {transmissionFilter}
+                    <button onClick={() => setTransmissionFilter("all")} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                )}
+                {selectedBrands.length > 0 && selectedBrands.map(brand => (
+                  <Badge key={brand} variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1">
+                    {brand}
+                    <button onClick={() => toggleBrand(brand)} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                ))}
+                {(priceRange[0] !== 50000 || priceRange[1] !== 7500000) && (
+                  <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1">
+                    {formatBudget(priceRange[0])} - {formatBudget(priceRange[1])}
+                    <button onClick={() => setPriceRange([50000, 7500000])} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Vehicle Grid - 3 columns */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredVehicles.map((vehicle, index) => (
+                <div
+                  key={vehicle.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${Math.min(index, 8) * 50}ms` }}
+                >
+                  <MarketplaceVehicleCard
+                    vehicle={vehicle}
+                    dealer={getDealerForVehicle(vehicle.user_id)}
+                    isInWishlist={isInWishlist(vehicle.id)}
+                    isInCompare={isInCompare(vehicle.id)}
+                    onWishlistToggle={toggleWishlist}
+                    onCompareToggle={toggleCompare}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {filteredVehicles.length === 0 && (
+              <div className="text-center py-20">
+                <div className="h-24 w-24 rounded-full bg-muted/50 mx-auto flex items-center justify-center mb-6">
+                  <Car className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">No vehicles found</h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  We couldn't find any vehicles matching your criteria. Try adjusting your filters.
+                </p>
+                <Button onClick={clearFilters} variant="outline" className="rounded-xl gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Clear All Filters
+                </Button>
+              </div>
             )}
           </div>
-
-          {/* Active Filter Pills */}
-          {activeFiltersCount > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {cityFilter !== "all" && (
-                <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1">
-                  {cityFilter}
-                  <button onClick={() => setCityFilter("all")} className="ml-1 hover:bg-muted rounded-full p-0.5">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-              {vehicleType !== "all" && (
-                <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1 capitalize">
-                  {vehicleType}
-                  <button onClick={() => setVehicleType("all")} className="ml-1 hover:bg-muted rounded-full p-0.5">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-              {fuelType !== "all" && (
-                <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1 capitalize">
-                  {fuelType}
-                  <button onClick={() => setFuelType("all")} className="ml-1 hover:bg-muted rounded-full p-0.5">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-              {priceRange !== "all" && (
-                <Badge variant="secondary" className="rounded-full pl-3 pr-2 py-1 gap-1">
-                  {priceRange === "0-300000" ? "Under ₹3L" : priceRange === "300000-500000" ? "₹3-5L" : priceRange === "500000-1000000" ? "₹5-10L" : "₹10L+"}
-                  <button onClick={() => setPriceRange("all")} className="ml-1 hover:bg-muted rounded-full p-0.5">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-            </div>
-          )}
         </div>
-
-        {/* Vehicles Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {filteredVehicles.map((vehicle, index) => (
-            <div 
-              key={vehicle.id} 
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <MarketplaceVehicleCard
-                vehicle={vehicle}
-                dealer={getDealerForVehicle(vehicle.user_id)}
-                isInWishlist={isInWishlist(vehicle.id)}
-                isInCompare={isInCompare(vehicle.id)}
-                onWishlistToggle={toggleWishlist}
-                onCompareToggle={toggleCompare}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Enhanced Empty State */}
-        {filteredVehicles.length === 0 && (
-          <div className="text-center py-20">
-            <div className="h-24 w-24 rounded-full bg-muted/50 mx-auto flex items-center justify-center mb-6">
-              <Car className="h-12 w-12 text-muted-foreground/50" />
-            </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">No vehicles found</h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              We couldn't find any vehicles matching your criteria. Try adjusting your filters.
-            </p>
-            <Button onClick={clearFilters} variant="outline" className="rounded-xl gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Clear All Filters
-            </Button>
-          </div>
-        )}
       </div>
 
       <CompareBar

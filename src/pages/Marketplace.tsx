@@ -317,8 +317,8 @@ const Marketplace = () => {
           {/* Main Header Row */}
           <div className="h-14 md:h-16 flex items-center justify-between gap-3">
             <Link to="/" className="flex items-center gap-2 shrink-0">
-              <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
-                <Car className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
+              <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Car className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
               <span className="text-lg md:text-xl font-bold text-foreground hidden xs:inline">VahanHub</span>
             </Link>
@@ -587,11 +587,7 @@ const Marketplace = () => {
         onClear={clearRecentlyViewed}
       />
 
-      {/* Offers & Deals Section */}
-      <OffersDealsSection 
-        vehicles={vehicles}
-        getDealerForVehicle={getDealerForVehicle}
-      />
+      {/* Offers section removed */}
 
       {/* Features Strip - Mobile Optimized */}
       <section className="bg-background border-y border-border py-3 md:py-4 overflow-hidden">
@@ -788,12 +784,12 @@ const Marketplace = () => {
 
       {/* Mobile Bottom Navigation - Professional App Style */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border z-50">
-        <div className="grid grid-cols-4 h-16">
+        <div className="grid grid-cols-3 h-16">
           <button 
             onClick={() => document.getElementById('vehicles')?.scrollIntoView({ behavior: 'smooth' })}
-            className="flex flex-col items-center justify-center gap-0.5 text-primary"
+            className="flex flex-col items-center justify-center gap-0.5 text-blue-600"
           >
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
               <Car className="h-4 w-4" />
             </div>
             <span className="text-[10px] font-medium">Buy</span>
@@ -821,15 +817,6 @@ const Marketplace = () => {
             </div>
             <span className="text-[10px] font-medium">Wishlist</span>
           </Link>
-          <button 
-            onClick={() => navigate("/auth")}
-            className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
-          >
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-              <Users className="h-4 w-4" />
-            </div>
-            <span className="text-[10px] font-medium">Account</span>
-          </button>
         </div>
       </div>
 
