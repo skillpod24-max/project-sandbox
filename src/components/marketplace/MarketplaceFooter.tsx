@@ -4,7 +4,6 @@ import { Car, Facebook, Twitter, Instagram, Youtube } from "lucide-react";
 const MarketplaceFooter = () => {
   return (
     <footer className="bg-slate-900 text-white">
-      {/* Main Footer */}
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
           {/* Brand */}
@@ -38,7 +37,8 @@ const MarketplaceFooter = () => {
           <div>
             <h4 className="font-semibold mb-4 text-white">For Buyers</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
-              <li><Link to="/" className="hover:text-white transition-colors">Browse Vehicles</Link></li>
+              <li><Link to="/marketplace/vehicles" className="hover:text-white transition-colors">Browse All Vehicles</Link></li>
+              <li><Link to="/marketplace/dealers" className="hover:text-white transition-colors">Browse Dealers</Link></li>
               <li><Link to="/marketplace/compare" className="hover:text-white transition-colors">Compare Cars</Link></li>
               <li><Link to="/how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
               <li><Link to="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
@@ -51,13 +51,15 @@ const MarketplaceFooter = () => {
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><Link to="/auth" className="hover:text-white transition-colors">Dealer Login</Link></li>
               <li><Link to="/auth" className="hover:text-white transition-colors">Register as Dealer</Link></li>
+              <li><Link to="/sell-vehicle" className="hover:text-white transition-colors">List Your Vehicle</Link></li>
             </ul>
           </div>
 
-          {/* Quick Links */}
+          {/* Resources */}
           <div>
-            <h4 className="font-semibold mb-4 text-white">Company</h4>
+            <h4 className="font-semibold mb-4 text-white">Resources</h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
+              <li><Link to="/blog" className="hover:text-white transition-colors">Blog & Guides</Link></li>
               <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
               <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
               <li><Link to="/how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
@@ -71,6 +73,8 @@ const MarketplaceFooter = () => {
               <li><Link to="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
               <li><Link to="/contact" className="hover:text-white transition-colors">Help Center</Link></li>
               <li><Link to="/contact#report" className="hover:text-white transition-colors">Report an Issue</Link></li>
+              <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
         </div>
@@ -86,6 +90,7 @@ const MarketplaceFooter = () => {
             <div className="flex flex-wrap justify-center gap-4 text-sm text-slate-400">
               <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
               <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+              <Link to="/blog" className="hover:text-white transition-colors">Blog</Link>
               <Link to="/contact" className="hover:text-white transition-colors">Contact</Link>
             </div>
           </div>

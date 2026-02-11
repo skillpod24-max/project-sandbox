@@ -23,9 +23,9 @@ const MarketplaceDealerCard = memo(({ dealer, vehicleCount, rating }: Props) => 
 
   return (
     <Link to={`/marketplace/dealer/${dealer.user_id}`} className="block">
-      <Card className="p-5 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border-0 shadow-md bg-card rounded-2xl min-w-[300px] md:min-w-[340px] group overflow-hidden relative">
+      <Card className="p-5 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border-0 shadow-md bg-card hover:bg-blue-50 rounded-2xl min-w-[300px] md:min-w-[340px] group overflow-hidden relative">
         {/* Decorative gradient background */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 via-transparent to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-500/10 via-transparent to-transparent rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
         
         <div className="flex items-start gap-4 relative">
           {/* Logo with ring animation on hover */}

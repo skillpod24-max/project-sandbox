@@ -51,6 +51,7 @@ import ContactPage from "./pages/footer/ContactPage";
 import FAQPage from "./pages/footer/FAQPage";
 import TermsPage from "./pages/footer/TermsPage";
 import PrivacyPage from "./pages/footer/PrivacyPage";
+import BlogPage from "./pages/footer/BlogPage";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/blog" element={<BlogPage />} />
           
           {/* ---------- Public Pages (Separate from Marketplace) ---------- */}
           <Route path="/auth" element={<Auth />} />

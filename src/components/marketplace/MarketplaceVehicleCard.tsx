@@ -152,7 +152,7 @@ const MarketplaceVehicleCard = memo(({
                   {formatCurrency(vehicle.strikeout_price)}
                 </p>
               )}
-              <p className={`font-bold text-primary ${compact ? 'text-base' : 'text-lg'}`}>
+              <p className={`font-bold text-blue-600 ${compact ? 'text-base' : 'text-lg'}`}>
                 {formatCurrency(vehicle.selling_price)}
               </p>
               {!compact && (
