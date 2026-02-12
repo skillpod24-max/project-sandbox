@@ -52,7 +52,7 @@ const MarketplaceVehicleCard = memo(({
 
   return (
     <Link to={`/marketplace/vehicle/${vehicle.id}`} className="group block">
-      <Card className={`overflow-hidden border-0 shadow-sm hover:shadow-xl transition-all duration-500 bg-card group-hover:-translate-y-1 ${compact ? 'rounded-xl' : 'rounded-2xl'}`}>
+      <Card className={`overflow-hidden border-0 shadow-sm md:hover:shadow-xl transition-all duration-500 bg-card md:group-hover:-translate-y-1 ${compact ? 'rounded-xl' : 'rounded-2xl'}`}>
         {/* Image Container with Gradient Overlay */}
         <div className={`relative ${compact ? 'aspect-[4/3]' : 'aspect-[16/10]'} bg-gradient-to-br from-muted to-muted/50 overflow-hidden`}>
           {vehicle.image_url ? (
@@ -60,11 +60,11 @@ const MarketplaceVehicleCard = memo(({
               <img
                 src={vehicle.image_url}
                 alt={`${vehicle.brand} ${vehicle.model}`}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                className="w-full h-full object-cover md:group-hover:scale-110 transition-transform duration-700 ease-out"
                 loading="lazy"
               />
               {/* Gradient overlay for better text visibility */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />
             </>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/30">
@@ -109,7 +109,7 @@ const MarketplaceVehicleCard = memo(({
 
           {/* Bottom Gradient Info Bar - Shows on Hover */}
           {!compact && (
-            <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full md:group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/80 to-transparent">
               <div className="flex items-center gap-3 text-xs text-white/90">
                 <span className="flex items-center gap-1">
                   <Gauge className="h-3.5 w-3.5" />
