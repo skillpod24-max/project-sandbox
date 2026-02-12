@@ -308,23 +308,23 @@ const AllVehicles = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="h-14 flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
+          <div className="h-14 flex items-center gap-3">
+            <Link to="/" className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
+              <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center">
                 <ArrowLeft className="h-5 w-5" />
               </div>
             </Link>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="font-bold text-lg text-foreground flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                All Vehicles
+                <Sparkles className="h-5 w-5 text-blue-600 shrink-0" />
+                <span className="truncate">All Vehicles</span>
               </h1>
               <p className="text-xs text-muted-foreground">{filteredVehicles.length} vehicles available</p>
             </div>
 
-            {/* Sort dropdown */}
+            {/* Sort dropdown - hidden on small mobile */}
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40 h-9 rounded-lg text-sm">
+              <SelectTrigger className="w-28 md:w-40 h-9 rounded-lg text-sm shrink-0">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -335,6 +335,62 @@ const AllVehicles = () => {
                 <SelectItem value="km-low">KM: Lowest</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        {/* Mobile horizontal filter chips */}
+        <div className="lg:hidden overflow-x-auto scrollbar-invisible border-t border-border">
+          <div className="flex items-center gap-2 px-4 py-2 min-w-max">
+            <Select value={fuelType} onValueChange={setFuelType}>
+              <SelectTrigger className="h-8 text-xs rounded-full border-border w-auto min-w-[80px]">
+                <SelectValue placeholder="Fuel" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Fuel</SelectItem>
+                <SelectItem value="petrol">Petrol</SelectItem>
+                <SelectItem value="diesel">Diesel</SelectItem>
+                <SelectItem value="electric">Electric</SelectItem>
+                <SelectItem value="cng">CNG</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={transmissionFilter} onValueChange={setTransmissionFilter}>
+              <SelectTrigger className="h-8 text-xs rounded-full border-border w-auto min-w-[100px]">
+                <SelectValue placeholder="Transmission" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="manual">Manual</SelectItem>
+                <SelectItem value="automatic">Automatic</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={vehicleType} onValueChange={setVehicleType}>
+              <SelectTrigger className="h-8 text-xs rounded-full border-border w-auto min-w-[80px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="car">Cars</SelectItem>
+                <SelectItem value="bike">Bikes</SelectItem>
+                <SelectItem value="commercial">Commercial</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={cityFilter} onValueChange={setCityFilter}>
+              <SelectTrigger className="h-8 text-xs rounded-full border-border w-auto min-w-[90px]">
+                <MapPin className="h-3 w-3 mr-1" />
+                <SelectValue placeholder="Location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cities</SelectItem>
+                {availableCities.map(city => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs rounded-full text-destructive shrink-0">
+                <X className="h-3 w-3 mr-1" /> Clear
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -394,7 +450,7 @@ const AllVehicles = () => {
             )}
 
             {/* Vehicle Grid - 3 columns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredVehicles.map((vehicle, index) => (
                 <div
                   key={vehicle.id}
