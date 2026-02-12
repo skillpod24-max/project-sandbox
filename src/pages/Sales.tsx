@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye, FileText, Download } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/formatters";
@@ -47,6 +49,7 @@ const saleStatuses = ["inquiry", "reserved", "completed", "cancelled"] as const;
 
 const Sales = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("sales");
   const [sales, setSales] = useState<Sale[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -618,13 +621,17 @@ const isEmiNotConfigured = (sale: Sale) => {
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>Sales List ({filteredSales.length})</CardTitle>
-            <div className="relative max-w-xs">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search sales..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            <div className="flex items-center gap-2">
+              <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search sales..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -636,112 +643,82 @@ const isEmiNotConfigured = (sale: Sale) => {
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Payment</TableHead>
-
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSales.map((sale) => (
                   <TableRow key={sale.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(sale)}>
                     <TableCell className="space-y-1">
-  <div className="font-mono text-sm">
-    {sale.sale_number}
-  </div>
-
-  {/* ⚠️ EMI CONFIG WARNING */}
-  {isEmiNotConfigured(sale) && (
-    <div
-      className="
-        inline-flex items-center gap-1
-        px-2 py-0.5
-        rounded-md
-        text-[11px] font-medium
-        bg-yellow-100 text-yellow-800
-        animate-soft-pulse
-        cursor-pointer
-        w-fit
-      "
-      onClick={(e) => {
-        e.stopPropagation();
-        openDetailDialog(sale); // or navigate to EMI setup
-      }}
-    >
-      ⚠ Configure EMI
-    </div>
-  )}
-</TableCell>
-
+                      <div className="font-mono text-sm">{sale.sale_number}</div>
+                      {isEmiNotConfigured(sale) && (
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-yellow-100 text-yellow-800 animate-soft-pulse cursor-pointer w-fit" onClick={(e) => { e.stopPropagation(); openDetailDialog(sale); }}>
+                          ⚠ Configure EMI
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>{format(new Date(sale.sale_date), "dd MMM yyyy")}</TableCell>
                     <TableCell>{getVehicleName(sale.vehicle_id)}</TableCell>
                     <TableCell>{getCustomerName(sale.customer_id)}</TableCell>
                     <TableCell>{formatCurrency(sale.total_amount)}</TableCell>
+                    <TableCell><Badge className={getStatusColor(sale.status)}>{sale.status}</Badge></TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(sale.status)}>{sale.status}</Badge>
+                      <div className="flex flex-col gap-1 max-w-[160px]">
+                        {getEffectiveBalance(sale.balance_amount) > 0 ? (
+                          <div className="text-sm font-semibold text-destructive">{formatCurrency(getEffectiveBalance(sale.balance_amount))} Due</div>
+                        ) : (
+                          <div className="text-sm font-semibold text-green-600">Paid</div>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className={sale.amount_paid === 0 ? "text-destructive" : getEffectiveBalance(sale.balance_amount) > 0 ? "text-yellow-600" : "text-green-600"}>
+                            {sale.amount_paid === 0 ? "Not Paid" : getEffectiveBalance(sale.balance_amount) > 0 ? "Partially Paid" : "Paid"}
+                          </span>
+                          <span>•</span>
+                          <span className={sale.is_emi ? "text-purple-600 font-medium" : "text-muted-foreground"}>
+                            {sale.is_emi ? "EMI" : "Non-EMI"}
+                          </span>
+                        </div>
+                      </div>
                     </TableCell>
-
-                    <TableCell>
-  <div className="flex flex-col gap-1 max-w-[160px]">
-    
-    {/* BALANCE (PRIMARY) */}
-    {getEffectiveBalance(sale.balance_amount) > 0 ? (
-  <div className="text-sm font-semibold text-destructive">
-    {formatCurrency(getEffectiveBalance(sale.balance_amount))} Due
-  </div>
-) : (
-  <div className="text-sm font-semibold text-green-600">
-    Paid
-  </div>
-)}
-
-
-    {/* SECONDARY META ROW */}
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      
-      {/* PAYMENT STATUS */}
-      <span
-  className={
-    sale.amount_paid === 0
-      ? "text-destructive"
-      : getEffectiveBalance(sale.balance_amount) > 0
-      ? "text-yellow-600"
-      : "text-green-600"
-  }
->
-  {sale.amount_paid === 0
-    ? "Not Paid"
-    : getEffectiveBalance(sale.balance_amount) > 0
-    ? "Partially Paid"
-    : "Paid"}
-</span>
-
-
-      <span>•</span>
-
-      {/* EMI */}
-      <span
-        className={
-          sale.is_emi
-            ? "text-purple-600 font-medium"
-            : "text-muted-foreground"
-        }
-      >
-        {sale.is_emi ? "EMI" : "Non-EMI"}
-      </span>
-
-    </div>
-  </div>
-</TableCell>
-
-
-                    
                   </TableRow>
                 ))}
                 {filteredSales.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No sales found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No sales found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredSales.map((sale) => (
+              <Card key={sale.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(sale)}>
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-muted-foreground">{sale.sale_number}</span>
+                    <Badge className={getStatusColor(sale.status) + " text-xs"}>{sale.status}</Badge>
+                  </div>
+                  <p className="font-semibold text-foreground truncate">{getVehicleName(sale.vehicle_id)}</p>
+                  <p className="text-sm text-muted-foreground">{getCustomerName(sale.customer_id)}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-primary">{formatCurrency(sale.total_amount)}</span>
+                    {getEffectiveBalance(sale.balance_amount) > 0 ? (
+                      <span className="text-xs text-destructive font-medium">{formatCurrency(getEffectiveBalance(sale.balance_amount))} Due</span>
+                    ) : (
+                      <span className="text-xs text-green-600 font-medium">Paid</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{format(new Date(sale.sale_date), "dd MMM yyyy")}</span>
+                    <span>•</span>
+                    <span className={sale.is_emi ? "text-purple-600 font-medium" : ""}>{sale.is_emi ? "EMI" : "Cash"}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredSales.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No sales found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 

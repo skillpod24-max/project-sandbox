@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye, Package, Wrench, FileText, Car } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatters";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -79,6 +81,7 @@ const commonServices = [
 
 const Services = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("services");
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -427,13 +430,17 @@ const Services = () => {
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Search services..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Button onClick={() => { resetServiceForm(); setServiceDialogOpen(true); }} className="gap-2">
-              <Plus className="h-4 w-4" /> New Service
-            </Button>
+            <div className="flex items-center gap-2">
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
+              <Button onClick={() => { resetServiceForm(); setServiceDialogOpen(true); }} className="gap-2">
+                <Plus className="h-4 w-4" /> New Service
+              </Button>
+            </div>
           </div>
 
           <Card className="border border-border">
             <CardContent className="p-0">
+              {viewMode === "list" ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -473,6 +480,29 @@ const Services = () => {
                   )}
                 </TableBody>
               </Table>
+              ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
+                {services.filter(s => `${s.service_number} ${s.vehicle_name} ${s.customer_name}`.toLowerCase().includes(searchTerm.toLowerCase())).map((service) => (
+                  <Card key={service.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => { setSelectedService(service); setDetailDialogOpen(true); }}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-muted-foreground">{service.service_number}</span>
+                        <Badge className={getStatusColor(service.status) + " text-xs"}>{service.status.replace("_", " ")}</Badge>
+                      </div>
+                      <p className="font-semibold text-foreground truncate">{service.vehicle_name}</p>
+                      <p className="text-sm text-muted-foreground">{service.customer_name}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-primary">{formatCurrency(service.total_cost)}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{service.service_type.replace("_", " ")}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {services.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-muted-foreground">No services found</div>
+                )}
+              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Eye } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
@@ -23,6 +25,7 @@ const paymentTypes = ["customer_payment", "vendor_payment", "emi_payment", "expe
 
 const Payments = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("payments");
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -188,8 +191,14 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
       </div>
       <Card>
-        <CardHeader><CardTitle>Payment List ({filteredPayments.length})</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Payment List ({filteredPayments.length})</CardTitle>
+            <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
+          </div>
+        </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <Table>
             <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Mode</TableHead><TableHead>Amount</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
             <TableBody>
@@ -198,34 +207,44 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
                   <TableCell className="font-mono">{p.payment_number}</TableCell>
                   <TableCell>{format(new Date(p.payment_date), "dd MMM yyyy")}</TableCell>
                   <TableCell className="space-y-1">
-  <Badge className={getPaymentTypeBadge(p.payment_type)}>
-  {p.payment_type.replace("_", " ")}
-</Badge>
-
-
-  {p.payment_purpose && (
-    <div className="text-[11px] text-muted-foreground capitalize">
-      {p.payment_purpose.replace("_", " ")}
-    </div>
-  )}
-</TableCell>
-
+                    <Badge className={getPaymentTypeBadge(p.payment_type)}>{p.payment_type.replace("_", " ")}</Badge>
+                    {p.payment_purpose && (
+                      <div className="text-[11px] text-muted-foreground capitalize">{p.payment_purpose.replace("_", " ")}</div>
+                    )}
+                  </TableCell>
                   <TableCell className="capitalize">{p.payment_mode.replace("_", " ")}</TableCell>
                   <TableCell className="font-bold">₹{p.amount.toLocaleString()}</TableCell>
                   <TableCell>
-  <Button
-    size="icon"
-    variant="ghost"
-    onClick={() => setSelectedPayment(p)}
-  >
-    <Eye className="h-4 w-4" />
-  </Button>
-</TableCell>
-
+                    <Button size="icon" variant="ghost" onClick={() => setSelectedPayment(p)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredPayments.map((p) => (
+              <Card key={p.id} className="border border-border hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPayment(p)}>
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-muted-foreground">{p.payment_number}</span>
+                    <Badge className={getPaymentTypeBadge(p.payment_type) + " text-xs"}>{p.payment_type.replace("_", " ")}</Badge>
+                  </div>
+                  <p className="font-bold text-lg">₹{p.amount.toLocaleString()}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="capitalize">{p.payment_mode.replace("_", " ")}</span>
+                    <span>{format(new Date(p.payment_date), "dd MMM yyyy")}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredPayments.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No payments found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

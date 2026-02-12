@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye, ChevronLeft, ChevronRight, Upload, X, Image, FileText, Download, ExternalLink, Globe, Copy, Link, Printer } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -115,6 +117,7 @@ const documentTypes: { value: DocumentType; label: string }[] = [
 
 const Vehicles = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("vehicles");
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleImages, setVehicleImages] = useState<Record<string, VehicleImage[]>>({});
   const [vehicleDocs, setVehicleDocs] = useState<Record<string, Document[]>>({});
@@ -766,13 +769,17 @@ setVehicleImages(prev => ({
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>Vehicle Inventory ({filteredVehicles.length})</CardTitle>
-            <div className="relative max-w-xs">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search vehicles..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            <div className="flex items-center gap-2">
+              <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search vehicles..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -785,7 +792,6 @@ setVehicleImages(prev => ({
                   <TableHead>Status</TableHead>
                   <TableHead>Public</TableHead>
                   <TableHead>Selling Price</TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -816,7 +822,6 @@ setVehicleImages(prev => ({
                         )}
                       </TableCell>
                       <TableCell>{formatCurrency(vehicle.selling_price)}</TableCell>
-                      
                     </TableRow>
                   );
                 })}
@@ -826,6 +831,46 @@ setVehicleImages(prev => ({
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredVehicles.map((vehicle) => {
+              const images = vehicleImages[vehicle.id] || [];
+              const primaryImage = images.find((i) => i.is_primary) || images[0];
+              return (
+                <Card key={vehicle.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border overflow-hidden" onClick={() => openDetailDialog(vehicle)}>
+                  <div className="aspect-video bg-muted relative">
+                    {primaryImage ? (
+                      <img src={primaryImage.image_url} alt={vehicle.brand} className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center"><Image className="h-10 w-10 text-muted-foreground" /></div>
+                    )}
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <Badge className={getStatusColor(vehicle.status) + " text-xs"}>{vehicle.status.replace("_", " ")}</Badge>
+                    </div>
+                    {vehicle.is_public && (
+                      <div className="absolute top-2 left-2">
+                        <Badge variant="outline" className="gap-1 text-xs bg-background/80 text-green-600 border-green-600">
+                          <Globe className="h-3 w-3" /> Public
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                  <CardContent className="p-3 space-y-1">
+                    <p className="font-semibold text-foreground">{vehicle.brand} {vehicle.model}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground font-mono">{vehicle.code}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{vehicle.vehicle_type} · {vehicle.manufacturing_year}</span>
+                    </div>
+                    <p className="text-primary font-bold">{formatCurrency(vehicle.selling_price)}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {filteredVehicles.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No vehicles found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 

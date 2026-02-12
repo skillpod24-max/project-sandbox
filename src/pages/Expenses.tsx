@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Receipt, TrendingUp, IndianRupee } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -49,6 +51,7 @@ const paymentModes = ["cash", "bank_transfer", "cheque", "upi", "card"] as const
 
 const Expenses = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("expenses");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -499,79 +502,47 @@ const visibleCategories = showAllCategories
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>Expenses ({filteredExpenses.length})</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <div className="relative max-w-xs">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search expenses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
-              <div className="flex gap-2 items-center">
-  {/* Date Filter */}
-  <Popover>
-    <PopoverTrigger asChild>
-      <Button
-        variant="outline"
-        className="gap-2 text-muted-foreground"
-      >
-        <CalendarIcon className="h-4 w-4" />
-        {dateFilter?.from
-  ? dateFilter.to
-    ? `${format(dateFilter.from, "dd MMM")} - ${format(dateFilter.to, "dd MMM")}`
-    : format(dateFilter.from, "dd MMM yyyy")
-  : "All Dates"}
-
-      </Button>
-    </PopoverTrigger>
-
-    <PopoverContent
-  className="w-auto p-3 z-[100]"
-  align="start"
->
-  {/* Calendar Header */}
-  <div className="flex items-center justify-between mb-2">
-    <span className="text-sm font-medium">Select date range</span>
-
-    {dateFilter?.from && (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setDateFilter(undefined)}
-        className="h-7 px-2 text-xs"
-      >
-        Clear
-      </Button>
-    )}
-  </div>
-
-  <DatePickerCalendar
-    mode="range"
-    selected={dateFilter}
-    onSelect={setDateFilter}
-    initialFocus
-  />
-</PopoverContent>
-
-  </Popover>
-
-  {/* Category Filter */}
-  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-    <SelectTrigger className="w-40">
-      <SelectValue />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="all">All Categories</SelectItem>
-      {expenseCategories.map(c => (
-        <SelectItem key={c.value} value={c.value}>
-          {c.icon} {c.label}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
-
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2 text-muted-foreground">
+                    <CalendarIcon className="h-4 w-4" />
+                    {dateFilter?.from
+                      ? dateFilter.to
+                        ? `${format(dateFilter.from, "dd MMM")} - ${format(dateFilter.to, "dd MMM")}`
+                        : format(dateFilter.from, "dd MMM yyyy")
+                      : "All Dates"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3 z-[100]" align="start">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Select date range</span>
+                    {dateFilter?.from && (
+                      <Button variant="ghost" size="sm" onClick={() => setDateFilter(undefined)} className="h-7 px-2 text-xs">Clear</Button>
+                    )}
+                  </div>
+                  <DatePickerCalendar mode="range" selected={dateFilter} onSelect={setDateFilter} initialFocus />
+                </PopoverContent>
+              </Popover>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {expenseCategories.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.icon} {c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -582,18 +553,13 @@ const visibleCategories = showAllCategories
                   <TableHead>Description</TableHead>
                   <TableHead>Payment Mode</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredExpenses.map((expense) => {
                   const cat = getCategoryInfo(expense.category);
                   return (
-                    <TableRow
-  key={expense.id}
-  className="cursor-pointer hover:bg-muted/50"
-  onClick={() => openExpenseDetailDialog(expense)}
->
+                    <TableRow key={expense.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openExpenseDetailDialog(expense)}>
                       <TableCell className="font-mono text-sm">{expense.expense_number}</TableCell>
                       <TableCell>{format(new Date(expense.expense_date), "dd MMM yyyy")}</TableCell>
                       <TableCell>
@@ -604,16 +570,43 @@ const visibleCategories = showAllCategories
                       <TableCell className="max-w-xs truncate">{expense.description}</TableCell>
                       <TableCell className="capitalize">{expense.payment_mode.replace("_", " ")}</TableCell>
                       <TableCell className="text-right font-bold text-destructive">₹{formatIndianNumber(expense.amount)}</TableCell>
-                      
                     </TableRow>
                   );
                 })}
                 {filteredExpenses.length === 0 && (
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No expenses found</TableCell>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No expenses found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredExpenses.map((expense) => {
+              const cat = getCategoryInfo(expense.category);
+              return (
+                <Card key={expense.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openExpenseDetailDialog(expense)}>
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <span>{cat.icon}</span> {cat.label}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{format(new Date(expense.expense_date), "dd MMM")}</span>
+                    </div>
+                    <p className="text-sm text-foreground truncate">{expense.description}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-destructive">₹{formatIndianNumber(expense.amount)}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{expense.payment_mode.replace("_", " ")}</span>
+                    </div>
+                    <p className="font-mono text-xs text-muted-foreground">{expense.expense_number}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {filteredExpenses.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No expenses found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 

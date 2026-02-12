@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -38,6 +40,7 @@ const paymentModes = ["cash", "bank_transfer", "cheque", "upi", "card"] as const
 
 const Purchases = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("purchases");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -380,13 +383,17 @@ const eligibleVehicles = vehicles.filter(v =>
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>Purchase List ({filteredPurchases.length})</CardTitle>
-            <div className="relative max-w-xs">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search purchases..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            <div className="flex items-center gap-2">
+              <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search purchases..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -397,7 +404,6 @@ const eligibleVehicles = vehicles.filter(v =>
                   <TableHead>Vendor</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Balance</TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -413,15 +419,39 @@ const eligibleVehicles = vehicles.filter(v =>
                         ₹{purchase.balance_amount.toLocaleString()}
                       </Badge>
                     </TableCell>
-                    
                   </TableRow>
                 ))}
                 {filteredPurchases.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No purchases found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No purchases found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredPurchases.map((purchase) => (
+              <Card key={purchase.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(purchase)}>
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-muted-foreground">{purchase.purchase_number}</span>
+                    <Badge className={purchase.balance_amount > 0 ? "bg-chart-3 text-white text-xs" : "bg-chart-2 text-white text-xs"}>
+                      {purchase.balance_amount > 0 ? `₹${purchase.balance_amount.toLocaleString()} Due` : "Paid"}
+                    </Badge>
+                  </div>
+                  <p className="font-semibold text-foreground truncate">{getVehicleName(purchase.vehicle_id)}</p>
+                  <p className="text-sm text-muted-foreground">{getVendorName(purchase.vendor_id)}</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-bold text-primary">₹{purchase.purchase_price.toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">{format(new Date(purchase.purchase_date), "dd MMM yyyy")}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredPurchases.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No purchases found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 
