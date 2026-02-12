@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, User, Car, MapPin } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -77,6 +79,7 @@ const leadPriorities = ["low", "medium", "high", "urgent"] as const;
 
 const Leads = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("leads");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -561,7 +564,7 @@ const convertLead = async (lead: Lead) => {
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>All Leads ({filteredLeads.length})</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <div className="relative max-w-xs">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
@@ -573,10 +576,12 @@ const convertLead = async (lead: Lead) => {
                   {leadStatuses.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -591,7 +596,6 @@ const convertLead = async (lead: Lead) => {
                    <TableHead>Status</TableHead>
                    <TableHead>Test Drive</TableHead>
                    <TableHead>Follow Up</TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -634,26 +638,19 @@ const convertLead = async (lead: Lead) => {
                     </TableCell>
                     <TableCell><Badge className={getPriorityColor(lead.priority)}>{lead.priority}</Badge></TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-  <Select
-    value={lead.status}
-    onValueChange={(v) => handleStatusChange(lead.id, v)}
-  >
-    <SelectTrigger className="w-[130px] p-0 border-0 bg-transparent">
-      <Badge className={getStatusColor(lead.status)}>
-        {lead.status}
-      </Badge>
-    </SelectTrigger>
-
-    <SelectContent>
-      {leadStatuses.map((s) => (
-        <SelectItem key={s} value={s} className="capitalize">
-          <Badge className={getStatusColor(s)}>{s}</Badge>
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</TableCell>
-
+                      <Select value={lead.status} onValueChange={(v) => handleStatusChange(lead.id, v)}>
+                        <SelectTrigger className="w-[130px] p-0 border-0 bg-transparent">
+                          <Badge className={getStatusColor(lead.status)}>{lead.status}</Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {leadStatuses.map((s) => (
+                            <SelectItem key={s} value={s} className="capitalize">
+                              <Badge className={getStatusColor(s)}>{s}</Badge>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                     <TableCell>
                       {lead.source === "marketplace" ? (
                         lead.notes?.includes("TEST DRIVE REQUESTED") ? (
@@ -674,7 +671,6 @@ const convertLead = async (lead: Lead) => {
                       )}
                     </TableCell>
                     <TableCell>{lead.follow_up_date ? format(new Date(lead.follow_up_date), "dd MMM") : "-"}</TableCell>
-                    
                   </TableRow>
                 ))}
                 {filteredLeads.length === 0 && (
@@ -683,6 +679,51 @@ const convertLead = async (lead: Lead) => {
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredLeads.map((lead) => (
+              <Card key={lead.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(lead)}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-foreground truncate">{lead.customer_name}</p>
+                    <Badge className={getPriorityColor(lead.priority) + " text-xs"}>{lead.priority}</Badge>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      <span>{lead.phone}</span>
+                    </div>
+                    {lead.vehicle_interest && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Car className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{lead.vehicle_interest}</span>
+                      </div>
+                    )}
+                    {lead.city && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span>{lead.city}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={getStatusColor(lead.status) + " text-xs"}>{lead.status}</Badge>
+                    <Badge className={getLeadTypeColor(lead.lead_type) + " text-xs"}>
+                      {lead.lead_type === "selling" ? "Selling" : "Buying"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-mono">{lead.lead_number}</span>
+                    {lead.follow_up_date && <span>Follow: {format(new Date(lead.follow_up_date), "dd MMM")}</span>}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredLeads.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No leads found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 

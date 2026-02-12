@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, Download, ExternalLink, FileText } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -45,6 +47,7 @@ const documentTypeMeta: Record<
 
 
 const Documents = () => {
+  const { viewMode, setViewMode } = useViewMode("documents");
   const [documents, setDocuments] = useState<Document[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,16 +148,20 @@ const Documents = () => {
 
       <Card className="border border-border">
         <CardHeader>
-          <CardTitle>
-            Document List ({filteredDocuments.length})
-            {selectedVehicle !== "all" && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                - Filtered by: {getVehicleName(selectedVehicle)}
-              </span>
-            )}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              Document List ({filteredDocuments.length})
+              {selectedVehicle !== "all" && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  - Filtered by: {getVehicleName(selectedVehicle)}
+                </span>
+              )}
+            </CardTitle>
+            <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
+          </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -162,19 +169,12 @@ const Documents = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Vehicle</TableHead>
-                  
                   <TableHead>Status</TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredDocuments.map((d) => (
-                  <TableRow
-  key={d.id}
-  className="cursor-pointer hover:bg-muted/50"
-  onClick={() => openDocViewer(d)}
->
-
+                  <TableRow key={d.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDocViewer(d)}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
@@ -182,22 +182,14 @@ const Documents = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-  <span
-    className={`inline-block px-2 py-0.5 rounded text-xs border ${
-      documentTypeMeta[d.document_type as DocumentType]?.className
-    }`}
-  >
-    {documentTypeMeta[d.document_type as DocumentType]?.label || d.document_type}
-  </span>
-</TableCell>
-
-
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs border ${documentTypeMeta[d.document_type as DocumentType]?.className}`}>
+                        {documentTypeMeta[d.document_type as DocumentType]?.label || d.document_type}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {d.reference_type === "vehicle" ? getVehicleName(d.reference_id) : d.reference_type}
                     </TableCell>
-                    
                     <TableCell><Badge className={getStatusColor(d.status)}>{d.status}</Badge></TableCell>
-                    
                   </TableRow>
                 ))}
                 {filteredDocuments.length === 0 && (
@@ -210,6 +202,32 @@ const Documents = () => {
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredDocuments.map((d) => (
+              <Card key={d.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDocViewer(d)}>
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <p className="font-medium text-foreground truncate">{d.document_name}</p>
+                  </div>
+                  <span className={`inline-block px-2 py-0.5 rounded text-xs border ${documentTypeMeta[d.document_type as DocumentType]?.className}`}>
+                    {documentTypeMeta[d.document_type as DocumentType]?.label || d.document_type}
+                  </span>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {d.reference_type === "vehicle" ? getVehicleName(d.reference_id) : d.reference_type}
+                  </p>
+                  <Badge className={getStatusColor(d.status) + " text-xs"}>{d.status}</Badge>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredDocuments.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">
+                {selectedVehicle === "all" ? "No documents found" : "No documents found for this vehicle"}
+              </div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 

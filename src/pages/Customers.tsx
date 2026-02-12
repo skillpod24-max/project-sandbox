@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, MapPin } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
@@ -22,6 +24,7 @@ const idProofTypes = ["Aadhar", "Passport", "Voter ID", "Driving License", "PAN 
 
 const Customers = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("customers");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -242,13 +245,17 @@ const Customers = () => {
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>Customer List ({filteredCustomers.length})</CardTitle>
-            <div className="relative max-w-xs">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search customers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            <div className="flex items-center gap-2">
+              <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search customers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -258,12 +265,9 @@ const Customers = () => {
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
-                
-
                 {filteredCustomers.map((customer) => (
                   <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(customer)}>
                     <TableCell className="font-mono text-sm">{customer.code}</TableCell>
@@ -271,36 +275,68 @@ const Customers = () => {
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell>{customer.email || "-"}</TableCell>
                     <TableCell>
-  <div className="flex items-center gap-2">
-    <Badge className={customer.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
-      {customer.is_active ? "Active" : "Inactive"}
-    </Badge>
-
-    {customer.converted_from_lead && (
-  <Badge className="bg-purple-500/10 text-purple-600">
-    Lead
-  </Badge>
-)}
-
-{needsUpdate(customer) && (
-  <Badge className="bg-amber-500/10 text-amber-600 animate-pulse-fade">
-    Update Needed
-  </Badge>
-)}
-
-  </div>
-</TableCell>
-
-                    
+                      <div className="flex items-center gap-2">
+                        <Badge className={customer.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
+                          {customer.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                        {customer.converted_from_lead && (
+                          <Badge className="bg-purple-500/10 text-purple-600">Lead</Badge>
+                        )}
+                        {needsUpdate(customer) && (
+                          <Badge className="bg-amber-500/10 text-amber-600 animate-pulse-fade">Update Needed</Badge>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
-                  
                 ))}
                 {filteredCustomers.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No customers found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No customers found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredCustomers.map((customer) => (
+              <Card key={customer.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(customer)}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                      {customer.full_name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground truncate">{customer.full_name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{customer.code}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{customer.phone}</span>
+                    </div>
+                    {customer.email && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{customer.email}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={customer.is_active ? "bg-chart-2 text-white text-xs" : "bg-muted text-xs"}>
+                      {customer.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                    {customer.converted_from_lead && (
+                      <Badge className="bg-purple-500/10 text-purple-600 text-xs">Lead</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredCustomers.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No customers found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -387,6 +423,7 @@ const Customers = () => {
       <Button
         variant="ghost"
         size="icon"
+        tabIndex={-1}
         onClick={() => {
           setDetailDialogOpen(false);
           openEditDialog(selectedCustomer);
@@ -398,6 +435,7 @@ const Customers = () => {
       <Button
         variant="ghost"
         size="icon"
+        tabIndex={-1}
         onClick={() => {
           setDetailDialogOpen(false);
           openDeleteDialog(selectedCustomer.id);

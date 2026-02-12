@@ -11,6 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, MapPin, Building, User, History, Car, IndianRupee } from "lucide-react";
+import ViewToggle from "@/components/ViewToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
@@ -27,6 +29,7 @@ type VendorType = "company" | "individual";
 
 const Vendors = () => {
   const { toast } = useToast();
+  const { viewMode, setViewMode } = useViewMode("vendors");
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [purchases, setPurchases] = useState<VehiclePurchase[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -251,13 +254,17 @@ if (!user) {
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <CardTitle>Vendor List ({filteredVendors.length})</CardTitle>
-            <div className="relative max-w-xs">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search vendors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            <div className="flex items-center gap-2">
+              <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search vendors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
+              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
         </CardHeader>
         <CardContent>
+          {viewMode === "list" ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -269,7 +276,6 @@ if (!user) {
                   <TableHead>Phone</TableHead>
                   <TableHead>GST</TableHead>
                   <TableHead>Status</TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -290,34 +296,68 @@ if (!user) {
                       <TableCell className="font-mono text-sm">{vendor.gst_number || "-"}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-  <Badge className={vendor.is_active ? "bg-chart-2 text-white" : "bg-muted text-muted-foreground"}>
-    {vendor.is_active ? "Active" : "Inactive"}
-  </Badge>
-
-  {vendor.converted_from_lead && (
-    <Badge className="bg-purple-500/10 text-purple-600">
-      Lead
-    </Badge>
-  )}
-
-  {needsUpdateVendor(vendor) && (
-    <Badge className="bg-amber-500/10 text-amber-600 animate-pulse-fade">
-      Update Needed
-    </Badge>
-  )}
-</div>
-
+                          <Badge className={vendor.is_active ? "bg-chart-2 text-white" : "bg-muted text-muted-foreground"}>
+                            {vendor.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                          {vendor.converted_from_lead && (
+                            <Badge className="bg-purple-500/10 text-purple-600">Lead</Badge>
+                          )}
+                          {needsUpdateVendor(vendor) && (
+                            <Badge className="bg-amber-500/10 text-amber-600 animate-pulse-fade">Update Needed</Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      
                     </TableRow>
                   );
                 })}
                 {filteredVendors.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No vendors found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No vendors found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredVendors.map((vendor) => {
+              const type = vendor.vendor_type as VendorType;
+              return (
+                <Card key={vendor.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(vendor)}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        {type === "company" ? <Building className="h-5 w-5 text-primary" /> : <User className="h-5 w-5 text-primary" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-foreground truncate">{vendor.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{vendor.code}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      {vendor.phone && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span>{vendor.phone}</span>
+                        </div>
+                      )}
+                      {vendor.contact_person && (
+                        <p className="text-xs text-muted-foreground">Contact: {vendor.contact_person}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={vendor.is_active ? "bg-chart-2 text-white text-xs" : "bg-muted text-xs"}>
+                        {vendor.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      <span className="capitalize text-xs text-muted-foreground">{type}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {filteredVendors.length === 0 && (
+              <div className="col-span-full text-center py-8 text-muted-foreground">No vendors found</div>
+            )}
+          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -502,6 +542,7 @@ if (!user) {
     <Button
       variant="ghost"
       size="icon"
+      tabIndex={-1}
       onClick={() => {
         setDetailDialogOpen(false);
         openEditDialog(selectedVendor);
@@ -513,6 +554,7 @@ if (!user) {
     <Button
       variant="ghost"
       size="icon"
+      tabIndex={-1}
       onClick={() => {
         setDetailDialogOpen(false);
         openDeleteDialog(selectedVendor.id);
