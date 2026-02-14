@@ -213,7 +213,8 @@ const PublicPageAnalytics = () => {
     const { data } = await supabase
       .from("public_page_events")
       .select("event_type, session_id")
-      .eq("dealer_user_id", dealerId);
+      .eq("dealer_user_id", dealerId)
+      .neq("public_page_id", "marketplace");
 
     if (!data) return;
 
@@ -252,6 +253,7 @@ const PublicPageAnalytics = () => {
       .from("public_page_events")
       .select("event_type, created_at")
       .eq("dealer_user_id", dealerId)
+      .neq("public_page_id", "marketplace")
       .gte("created_at", from);
 
     if (!data) return;
@@ -278,7 +280,8 @@ const PublicPageAnalytics = () => {
     const { data: events } = await supabase
       .from("public_page_events")
       .select("event_type, vehicle_id, session_id")
-      .eq("dealer_user_id", dealerId);
+      .eq("dealer_user_id", dealerId)
+      .neq("public_page_id", "marketplace");
 
     const map: Record<string, VehicleStat> = {};
 
@@ -327,7 +330,8 @@ const PublicPageAnalytics = () => {
     const { data } = await supabase
       .from("public_page_events")
       .select("created_at")
-      .eq("dealer_user_id", dealerId);
+      .eq("dealer_user_id", dealerId)
+      .neq("public_page_id", "marketplace");
 
     if (!data) return;
 
@@ -344,7 +348,8 @@ const PublicPageAnalytics = () => {
     const { data } = await supabase
       .from("public_page_events")
       .select("event_type")
-      .eq("dealer_user_id", dealerId);
+      .eq("dealer_user_id", dealerId)
+      .neq("public_page_id", "marketplace");
 
     if (!data) return;
 
@@ -363,12 +368,14 @@ const PublicPageAnalytics = () => {
       .from("public_page_events")
       .select("event_type")
       .eq("dealer_user_id", dealerId)
+      .neq("public_page_id", "marketplace")
       .gte("created_at", currFrom);
 
     const { data: prev } = await supabase
       .from("public_page_events")
       .select("event_type")
       .eq("dealer_user_id", dealerId)
+      .neq("public_page_id", "marketplace")
       .gte("created_at", prevFrom)
       .lt("created_at", currFrom);
 

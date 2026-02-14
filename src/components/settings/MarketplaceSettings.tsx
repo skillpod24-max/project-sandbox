@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Globe, Building, Star, Clock, RefreshCw, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -141,16 +142,87 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   Working Hours
                 </Label>
-                <Input
-                  value={settings.marketplace_working_hours || ""}
-                  onChange={(e) => setSettings({ ...settings, marketplace_working_hours: e.target.value })}
-                  placeholder="e.g., Mon-Sat 9AM-8PM"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Days</Label>
+                    <Select
+                      value={(() => {
+                        const h = settings.marketplace_working_hours || "";
+                        if (h.includes("Mon-Sat")) return "mon-sat";
+                        if (h.includes("Mon-Fri")) return "mon-fri";
+                        if (h.includes("All Days")) return "all";
+                        return "mon-sat";
+                      })()}
+                      onValueChange={(v) => {
+                        const dayMap: Record<string, string> = { "mon-sat": "Mon-Sat", "mon-fri": "Mon-Fri", "all": "All Days" };
+                        const timeMatch = (settings.marketplace_working_hours || "").match(/\d{1,2}:\d{2}\s*[AP]M\s*-\s*\d{1,2}:\d{2}\s*[AP]M/i);
+                        const time = timeMatch ? timeMatch[0] : "9:00 AM - 8:00 PM";
+                        setSettings({ ...settings, marketplace_working_hours: `${dayMap[v]} ${time}` });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mon-sat">Mon - Sat</SelectItem>
+                        <SelectItem value="mon-fri">Mon - Fri</SelectItem>
+                        <SelectItem value="all">All Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Open Time</Label>
+                    <Select
+                      value={(() => {
+                        const match = (settings.marketplace_working_hours || "").match(/(\d{1,2}:\d{2}\s*[AP]M)/i);
+                        return match ? match[1].trim() : "9:00 AM";
+                      })()}
+                      onValueChange={(v) => {
+                        const h = settings.marketplace_working_hours || "Mon-Sat 9:00 AM - 8:00 PM";
+                        const parts = h.split("-").map((s: string) => s.trim());
+                        const dayPart = parts[0].replace(/\d{1,2}:\d{2}\s*[AP]M/i, "").trim();
+                        const closeTime = parts.length > 1 ? parts[parts.length - 1].trim() : "8:00 PM";
+                        setSettings({ ...settings, marketplace_working_hours: `${dayPart} ${v} - ${closeTime}` });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM"].map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Close Time</Label>
+                    <Select
+                      value={(() => {
+                        const matches = (settings.marketplace_working_hours || "").match(/(\d{1,2}:\d{2}\s*[AP]M)/gi);
+                        return matches && matches.length > 1 ? matches[1].trim() : "8:00 PM";
+                      })()}
+                      onValueChange={(v) => {
+                        const h = settings.marketplace_working_hours || "Mon-Sat 9:00 AM - 8:00 PM";
+                        const firstTimeMatch = h.match(/(\d{1,2}:\d{2}\s*[AP]M)/i);
+                        const dayPart = h.split(/\d{1,2}:\d{2}\s*[AP]M/i)[0].trim();
+                        const openTime = firstTimeMatch ? firstTimeMatch[1] : "9:00 AM";
+                        setSettings({ ...settings, marketplace_working_hours: `${dayPart} ${openTime} - ${v}` });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM"].map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Current: {settings.marketplace_working_hours || "Not set"}
+                </p>
               </div>
             </CardContent>
           </Card>

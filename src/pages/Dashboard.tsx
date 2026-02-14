@@ -370,7 +370,7 @@ const Dashboard = () => {
         </Button>
         
         {showAllCards && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mt-4 animate-fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 animate-fade-in">
             {secondaryCards.map((stat, index) => (
               <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer border border-border bg-card rounded-xl">
                 <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3 px-3">

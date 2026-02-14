@@ -680,13 +680,30 @@ const convertLead = async (lead: Lead) => {
             </Table>
           </div>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredLeads.map((lead) => (
               <Card key={lead.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(lead)}>
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-foreground truncate">{lead.customer_name}</p>
-                    <Badge className={getPriorityColor(lead.priority) + " text-xs"}>{lead.priority}</Badge>
+                    <div className="flex items-center gap-1">
+                      {lead.source === "marketplace" ? (
+                        <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 text-[10px]">Marketplace</Badge>
+                      ) : lead.source === "public_dealer_page" ? (
+                        <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 text-[10px]">Catalogue</Badge>
+                      ) : lead.source === "walk_in" ? (
+                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">Walk-in</Badge>
+                      ) : lead.source === "referral" ? (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]">Referral</Badge>
+                      ) : lead.source === "phone" ? (
+                        <Badge className="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 text-[10px]">Phone</Badge>
+                      ) : lead.source === "social_media" ? (
+                        <Badge className="bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 text-[10px]">Social</Badge>
+                      ) : lead.source === "website" ? (
+                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px]">Website</Badge>
+                      ) : null}
+                      <Badge className={getPriorityColor(lead.priority) + " text-[10px]"}>{lead.priority}</Badge>
+                    </div>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -836,6 +853,26 @@ const convertLead = async (lead: Lead) => {
               <div className="space-y-2">
                 <Label>Follow Up Date</Label>
                 <Input type="date" value={formData.follow_up_date?.split("T")[0] || ""} onChange={(e) => setFormData({ ...formData, follow_up_date: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Test Drive Requested</Label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.notes?.includes("TEST DRIVE REQUESTED") || false}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({ ...formData, notes: `${formData.notes || ""}\nTEST DRIVE REQUESTED: ${new Date().toISOString().split("T")[0]}` });
+                      } else {
+                        setFormData({ ...formData, notes: (formData.notes || "").replace(/\nTEST DRIVE REQUESTED:.*/, "") });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Customer wants a test drive</span>
+                </label>
               </div>
             </div>
             <div className="space-y-2">
