@@ -259,7 +259,12 @@ const MarketplaceDealer = () => {
                     <div className="min-w-0">
                       <p className="text-xs text-slate-500">Location</p>
                       <p className="text-sm font-medium text-slate-900 truncate">
-                        {dealer.dealer_address.split(",").slice(-2, -1).join("").trim()}
+                        {(() => {
+                          const parts = dealer.dealer_address.split(",").map((s: string) => s.trim()).filter(Boolean);
+                          // Show city + state (last 2-3 parts before postal code)
+                          const cityParts = parts.filter((p: string) => !/^\d+$/.test(p)).slice(-2);
+                          return cityParts.join(", ") || dealer.dealer_address;
+                        })()}
                       </p>
                     </div>
                   </div>

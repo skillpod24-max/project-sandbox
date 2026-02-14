@@ -18,6 +18,7 @@ import StickyNotesPanel from "@/components/StickyNotesPanel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import GlobalSearch from "@/components/layout/GlobalSearch";
 import TopBarUserMenu from "@/components/layout/TopBarUserMenu";
+import TopBarCalendar from "@/components/layout/TopBarCalendar";
 
 const applyThemeByIndex = (index: number) => {
   const themeColors = [
@@ -223,6 +224,7 @@ const Layout = ({ children }: LayoutProps) => {
 
             {/* Quick Actions - hidden on very small screens */}
             <div className="hidden sm:flex items-center gap-0.5 mx-1 md:mx-2 border-l border-r border-border px-1.5 md:px-3 shrink-0">
+              <TopBarCalendar />
               <button
                 onClick={() => setNotesOpen(true)}
                 className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors"

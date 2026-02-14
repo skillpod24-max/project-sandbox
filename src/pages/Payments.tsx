@@ -224,7 +224,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
             </TableBody>
           </Table>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredPayments.map((p) => (
               <Card key={p.id} className="border border-border hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPayment(p)}>
                 <CardContent className="p-4 space-y-2">
@@ -270,16 +270,46 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     {selectedPayment && (
       <div className="space-y-3 text-sm">
         <div className="flex justify-between">
-          <span>Total Amount</span>
-          <span className="font-bold">₹{selectedPayment.amount.toLocaleString()}</span>
+          <span className="text-muted-foreground">Payment Number</span>
+          <span className="font-mono font-medium">{selectedPayment.payment_number}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Total Amount</span>
+          <span className="font-bold text-lg">₹{selectedPayment.amount.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Payment Type</span>
+          <Badge className={getPaymentTypeBadge(selectedPayment.payment_type)}>{selectedPayment.payment_type.replace("_", " ")}</Badge>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Payment Mode</span>
+          <span className="capitalize font-medium">{selectedPayment.payment_mode.replace("_", " ")}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Date & Time</span>
+          <span className="font-medium">{format(new Date(selectedPayment.payment_date), "dd MMM yyyy, hh:mm a")}</span>
         </div>
 
         {selectedPayment.payment_purpose && (
-  <div className="text-xs text-muted-foreground capitalize">
-    Purpose: {selectedPayment.payment_purpose.replace("_", " ")}
-  </div>
-)}
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Purpose</span>
+            <span className="capitalize font-medium">{selectedPayment.payment_purpose.replace("_", " ")}</span>
+          </div>
+        )}
 
+        {selectedPayment.description && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Description</span>
+            <span className="font-medium text-right max-w-[60%]">{selectedPayment.description}</span>
+          </div>
+        )}
+
+        {selectedPayment.reference_type && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Linked To</span>
+            <span className="capitalize font-medium">{selectedPayment.reference_type.replace("_", " ")}</span>
+          </div>
+        )}
 
         {selectedPayment.principal_amount > 0 && (
           <div className="flex justify-between text-blue-600">
@@ -302,11 +332,15 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           </div>
         )}
 
-        <div className="pt-2 border-t text-muted-foreground">
-          Effective On:{" "}
-          {selectedPayment.effective_date
-            ? format(new Date(selectedPayment.effective_date), "dd MMM yyyy")
-            : "—"}
+        <div className="pt-2 border-t">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Effective On</span>
+            <span>{selectedPayment.effective_date ? format(new Date(selectedPayment.effective_date), "dd MMM yyyy") : "—"}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground mt-1">
+            <span>Recorded At</span>
+            <span>{format(new Date(selectedPayment.created_at), "dd MMM yyyy, hh:mm a")}</span>
+          </div>
         </div>
       </div>
     )}

@@ -87,6 +87,16 @@ const Settings = () => {
     postalCode: "",
   });
 
+  // Parse existing address from settings on load
+  useEffect(() => {
+    if (settings.dealer_address && !dealerAddress.street && !dealerAddress.city) {
+      const savedAddress = localStorage.getItem('dealer_address');
+      if (savedAddress) {
+        setDealerAddress(JSON.parse(savedAddress));
+      }
+    }
+  }, [settings.dealer_address]);
+
   useEffect(() => {
     fetchSettings();
     fetchTestimonials();
