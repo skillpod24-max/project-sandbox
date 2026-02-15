@@ -286,8 +286,12 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           <span className="capitalize font-medium">{selectedPayment.payment_mode.replace("_", " ")}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Date & Time</span>
-          <span className="font-medium">{format(new Date(selectedPayment.payment_date), "dd MMM yyyy, hh:mm a")}</span>
+          <span className="text-muted-foreground">Payment Date</span>
+          <span className="font-medium">{format(new Date(selectedPayment.payment_date), "dd MMM yyyy")}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Recorded At</span>
+          <span className="font-medium">{new Date(selectedPayment.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}</span>
         </div>
 
         {selectedPayment.payment_purpose && (
@@ -336,10 +340,6 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           <div className="flex justify-between text-muted-foreground">
             <span>Effective On</span>
             <span>{selectedPayment.effective_date ? format(new Date(selectedPayment.effective_date), "dd MMM yyyy") : "—"}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground mt-1">
-            <span>Recorded At</span>
-            <span>{format(new Date(selectedPayment.created_at), "dd MMM yyyy, hh:mm a")}</span>
           </div>
         </div>
       </div>

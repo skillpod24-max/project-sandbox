@@ -413,10 +413,10 @@ const eligibleVehicles = vehicles.filter(v =>
                     <TableCell>{format(new Date(purchase.purchase_date), "dd MMM yyyy")}</TableCell>
                     <TableCell>{getVehicleName(purchase.vehicle_id)}</TableCell>
                     <TableCell>{getVendorName(purchase.vendor_id)}</TableCell>
-                    <TableCell>₹{purchase.purchase_price.toLocaleString()}</TableCell>
+                    <TableCell>₹{purchase.purchase_price.toLocaleString("en-IN")}</TableCell>
                     <TableCell>
                       <Badge className={purchase.balance_amount > 0 ? "bg-chart-3 text-white" : "bg-chart-2 text-white"}>
-                        ₹{purchase.balance_amount.toLocaleString()}
+                        ₹{purchase.balance_amount.toLocaleString("en-IN")}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -441,7 +441,7 @@ const eligibleVehicles = vehicles.filter(v =>
                   <p className="font-semibold text-foreground truncate">{getVehicleName(purchase.vehicle_id)}</p>
                   <p className="text-sm text-muted-foreground">{getVendorName(purchase.vendor_id)}</p>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold text-primary">₹{purchase.purchase_price.toLocaleString()}</span>
+                    <span className="font-bold text-primary">₹{purchase.purchase_price.toLocaleString("en-IN")}</span>
                     <span className="text-xs text-muted-foreground">{format(new Date(purchase.purchase_date), "dd MMM yyyy")}</span>
                   </div>
                 </CardContent>
@@ -641,20 +641,20 @@ const eligibleVehicles = vehicles.filter(v =>
                 <div className="relative grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
   <div>
     <p className="text-sm text-muted-foreground">Purchase Price</p>
-    <p className="text-xl font-bold">₹{selectedPurchase.purchase_price.toLocaleString()}</p>
+    <p className="text-xl font-bold">₹{selectedPurchase.purchase_price.toLocaleString("en-IN")}</p>
   </div>
 
   <div>
     <p className="text-sm text-muted-foreground">Amount Paid</p>
     <p className="text-xl font-bold text-chart-2">
-      ₹{selectedPurchase.amount_paid.toLocaleString()}
+      ₹{selectedPurchase.amount_paid.toLocaleString("en-IN")}
     </p>
   </div>
 
   <div>
     <p className="text-sm text-muted-foreground">Balance</p>
     <p className="text-xl font-bold text-chart-3">
-      ₹{selectedPurchase.balance_amount.toLocaleString()}
+      ₹{selectedPurchase.balance_amount.toLocaleString("en-IN")}
     </p>
   </div>
 

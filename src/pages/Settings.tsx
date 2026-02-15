@@ -57,6 +57,7 @@ const Settings = () => {
   }>>({});
   const [loading, setLoading] = useState(true);
   const [selectedTheme, setSelectedTheme] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   
@@ -87,15 +88,25 @@ const Settings = () => {
     postalCode: "",
   });
 
-  // Parse existing address from settings on load
+  // Parse existing address from settings on load - user-scoped
   useEffect(() => {
-    if (settings.dealer_address && !dealerAddress.street && !dealerAddress.city) {
-      const savedAddress = localStorage.getItem('dealer_address');
-      if (savedAddress) {
+    if (!userId) return;
+    const key = `dealer_address_${userId}`;
+    const savedAddress = localStorage.getItem(key);
+    if (savedAddress) {
+      try {
         setDealerAddress(JSON.parse(savedAddress));
-      }
+      } catch {}
+    } else if (settings.dealer_address) {
+      const parts = settings.dealer_address.split(',').map(s => s.trim());
+      setDealerAddress({
+        street: parts[0] || "",
+        city: parts[1] || "",
+        state: parts[2] || "",
+        postalCode: parts[3] || "",
+      });
     }
-  }, [settings.dealer_address]);
+  }, [settings.dealer_address, userId]);
 
   useEffect(() => {
     fetchSettings();
@@ -107,17 +118,16 @@ const Settings = () => {
     const savedNotifications = localStorage.getItem('dealer_notifications');
     if (savedNotifications) setNotifications(JSON.parse(savedNotifications));
     
-    const savedAddress = localStorage.getItem('dealer_address');
-    if (savedAddress) setDealerAddress(JSON.parse(savedAddress));
+    // Address loaded in user-scoped useEffect above
   }, []);
 
   const fetchSettings = async () => {
-    // Get current user for explicit filtering
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
       return;
     }
+    setUserId(user.id);
 
     const { data } = await supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle();
     setSettings(data || {});
@@ -232,7 +242,7 @@ const Settings = () => {
     }
 
     localStorage.setItem("dealer_notifications", JSON.stringify(notifications));
-    localStorage.setItem("dealer_address", JSON.stringify(dealerAddress));
+    if (userId) localStorage.setItem(`dealer_address_${userId}`, JSON.stringify(dealerAddress));
 
     toast({ title: "Settings saved successfully" });
     fetchSettings();

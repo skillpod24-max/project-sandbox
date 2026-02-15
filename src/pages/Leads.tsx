@@ -173,6 +173,15 @@ const [isConverting, setIsConverting] = useState(false);
         if (error) throw error;
         toast({ title: "Lead updated successfully" });
       } else {
+        // Build notes with test drive info if requested
+        let finalNotes = formData.notes || "";
+        const fd = formData as any;
+        if (fd.__testDriveRequested) {
+          const tdDate = fd.__testDriveDate || new Date().toISOString().split("T")[0];
+          const tdTime = fd.__testDriveTime || "";
+          finalNotes = `${finalNotes}\nTEST DRIVE REQUESTED: ${tdDate}${tdTime ? ` at ${tdTime}` : ""}`.trim();
+        }
+
         const { error } = await supabase
           .from("leads")
           .insert([{
@@ -188,8 +197,8 @@ const [isConverting, setIsConverting] = useState(false);
             status: formData.status || "new",
             priority: formData.priority || "medium",
             assigned_to: formData.assigned_to || null,
-            follow_up_date: formData.follow_up_date || null,
-            notes: formData.notes || null,
+            follow_up_date: fd.__testDriveRequested ? (fd.__testDriveDate || formData.follow_up_date || null) : (formData.follow_up_date || null),
+            notes: finalNotes || null,
             city: formData.city || null,
             lead_type: formData.lead_type || "buying",
           }]);
@@ -473,12 +482,13 @@ const convertLead = async (lead: Lead) => {
     fetchLeads();
 
   } catch (err: any) {
-    setIsConverting(false);
     toast({
       title: "Conversion failed",
       description: err.message,
       variant: "destructive",
     });
+  } finally {
+    setIsConverting(false);
   }
 };
 
@@ -856,24 +866,32 @@ const convertLead = async (lead: Lead) => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Test Drive Requested</Label>
+              <Label>Test Drive</Label>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={formData.notes?.includes("TEST DRIVE REQUESTED") || false}
+                    checked={formData.follow_up_date ? (formData as any).__testDriveRequested || false : false}
                     onChange={(e) => {
-                      if (e.target.checked) {
-                        setFormData({ ...formData, notes: `${formData.notes || ""}\nTEST DRIVE REQUESTED: ${new Date().toISOString().split("T")[0]}` });
-                      } else {
-                        setFormData({ ...formData, notes: (formData.notes || "").replace(/\nTEST DRIVE REQUESTED:.*/, "") });
-                      }
+                      setFormData({ ...formData, __testDriveRequested: e.target.checked } as any);
                     }}
                     className="rounded"
                   />
                   <span className="text-sm">Customer wants a test drive</span>
                 </label>
               </div>
+              {(formData as any).__testDriveRequested && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Test Drive Date</Label>
+                    <Input type="date" value={(formData as any).__testDriveDate || ""} onChange={(e) => setFormData({ ...formData, __testDriveDate: e.target.value } as any)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Preferred Time</Label>
+                    <Input type="time" value={(formData as any).__testDriveTime || ""} onChange={(e) => setFormData({ ...formData, __testDriveTime: e.target.value } as any)} />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Notes</Label>

@@ -43,6 +43,7 @@ import Wishlist from "./pages/marketplace/Wishlist";
 import AllDealers from "./pages/marketplace/AllDealers";
 import AllVehicles from "./pages/marketplace/AllVehicles";
 import DealerMarketplaceHub from "./pages/DealerMarketplaceHub";
+import CalendarPage from "./pages/CalendarPage";
 
 // Footer Pages
 import AboutPage from "./pages/footer/AboutPage";
@@ -235,6 +236,10 @@ const App = () => (
                 <Settings />
               </Layout>
             }
+          />
+          <Route
+            path="/calendar"
+            element={<Layout><CalendarPage /></Layout>}
           />
           {/* Removed individual routes - now consolidated in Marketplace Hub */}
           <Route path="/inspection/:vehicleId" element={<VehicleInspection />} />
