@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, Clock, Car, CreditCard, UserPlus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format, isToday, isTomorrow, addDays, startOfDay, endOfDay } from "date-fns";
 
 interface CalendarEvent {
@@ -14,6 +16,7 @@ interface CalendarEvent {
 }
 
 const TopBarCalendar = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -118,9 +121,14 @@ const TopBarCalendar = () => {
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="p-3 border-b border-border">
-          <h3 className="font-semibold text-sm">Upcoming Schedule</h3>
-          <p className="text-xs text-muted-foreground">Next 7 days</p>
+        <div className="p-3 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-sm">Upcoming Schedule</h3>
+            <p className="text-xs text-muted-foreground">Next 7 days</p>
+          </div>
+          <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setOpen(false); navigate("/calendar"); }}>
+            View All
+          </Button>
         </div>
         <div className="max-h-80 overflow-y-auto p-2 space-y-1">
           {events.length === 0 ? (

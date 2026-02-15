@@ -141,7 +141,7 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
     setUploading(true);
 
     const fileExt = file.name.split(".").pop();
-    const filePath = `emi/${selectedSaleId}/${Date.now()}.${fileExt}`;
+    const filePath = `${user.id}/${selectedSaleId}/${Date.now()}.${fileExt}`;
 
     // 1️⃣ Upload to bucket
     const { error: uploadError } = await supabase.storage

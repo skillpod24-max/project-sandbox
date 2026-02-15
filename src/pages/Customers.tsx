@@ -136,15 +136,15 @@ const Customers = () => {
   const needsUpdate = (customer: Customer) => {
   if (!customer.converted_from_lead) return false;
 
-  const requiredFields = [
+  // Only check essential fields for lead-converted customers
+  const essentialFields = [
     customer.address,
     customer.id_proof_type,
     customer.id_proof_number,
-    customer.driving_license_number,
   ];
 
-  // if ANY field is empty → update needed
-  return requiredFields.some(
+  // All essential fields must be empty for "update needed"
+  return essentialFields.every(
     (field) => !field || field.trim?.() === ""
   );
 };
@@ -386,8 +386,41 @@ const Customers = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Address</Label>
-              <Textarea value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows={2} />
+              <Label>Street Address</Label>
+              <Textarea value={(formData.address || "").split("||")[0] || ""} onChange={(e) => {
+                const parts = (formData.address || "").split("||");
+                parts[0] = e.target.value;
+                setFormData({ ...formData, address: parts.join("||") });
+              }} rows={2} placeholder="Street address, area, landmark" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>City</Label>
+                <Input value={(formData.address || "").split("||")[1] || ""} onChange={(e) => {
+                  const parts = (formData.address || "").split("||");
+                  while (parts.length < 4) parts.push("");
+                  parts[1] = e.target.value;
+                  setFormData({ ...formData, address: parts.join("||") });
+                }} placeholder="City" />
+              </div>
+              <div className="space-y-2">
+                <Label>State</Label>
+                <Input value={(formData.address || "").split("||")[2] || ""} onChange={(e) => {
+                  const parts = (formData.address || "").split("||");
+                  while (parts.length < 4) parts.push("");
+                  parts[2] = e.target.value;
+                  setFormData({ ...formData, address: parts.join("||") });
+                }} placeholder="State" />
+              </div>
+              <div className="space-y-2">
+                <Label>Pincode</Label>
+                <Input value={(formData.address || "").split("||")[3] || ""} onChange={(e) => {
+                  const parts = (formData.address || "").split("||");
+                  while (parts.length < 4) parts.push("");
+                  parts[3] = e.target.value;
+                  setFormData({ ...formData, address: parts.join("||") });
+                }} placeholder="Pincode" maxLength={6} />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Notes</Label>
@@ -473,7 +506,7 @@ const Customers = () => {
                   {selectedCustomer.address && (
                     <div className="flex items-start gap-2 md:col-span-2">
                       <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                      <span>{selectedCustomer.address}</span>
+                      <span>{selectedCustomer.address.includes("||") ? selectedCustomer.address.split("||").filter(Boolean).join(", ") : selectedCustomer.address}</span>
                     </div>
                   )}
                 </div>
