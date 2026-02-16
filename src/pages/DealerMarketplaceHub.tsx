@@ -209,15 +209,21 @@ const DealerMarketplaceHub = () => {
 
       const vehicleIds = Object.keys(vehicleMap);
       if (vehicleIds.length > 0) {
-        const { data: vehiclesData } = await supabase
-          .from("vehicles")
-          .select("id, brand, model, manufacturing_year, selling_price")
-          .in("id", vehicleIds);
+        const [{ data: vehiclesData }, { data: imagesData }] = await Promise.all([
+          supabase.from("vehicles").select("id, brand, model, manufacturing_year, selling_price").in("id", vehicleIds),
+          supabase.from("vehicle_images").select("vehicle_id, image_url, is_primary").in("vehicle_id", vehicleIds),
+        ]);
+
+        const imageMap: Record<string, string> = {};
+        (imagesData || []).forEach(img => {
+          if (!imageMap[img.vehicle_id] || img.is_primary) imageMap[img.vehicle_id] = img.image_url;
+        });
 
         const enriched = (vehiclesData || []).map(v => ({
           ...v,
           ...vehicleMap[v.id],
           name: `${v.manufacturing_year} ${v.brand} ${v.model}`,
+          image_url: imageMap[v.id] || null,
         })).sort((a, b) => b.views - a.views);
 
         setVehicleStats(enriched.slice(0, 10));
@@ -458,37 +464,40 @@ const DealerMarketplaceHub = () => {
             </Card>
           </div>
 
-          {/* Top Performing Vehicles */}
+          {/* Top Performing Vehicles - Grid Cards with Images */}
           <Card className="border shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
               <CardDescription>Individual vehicle analytics</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {vehicleStats.map((v, i) => (
-                  <div key={v.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-primary w-6">#{i + 1}</span>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{v.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatCurrency(v.selling_price)}</p>
+                  <Card key={v.id} className="overflow-hidden border hover:shadow-md transition-shadow">
+                    <div className="aspect-video bg-muted relative">
+                      {v.image_url ? (
+                        <img src={v.image_url} alt={v.name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Car className="h-10 w-10 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 left-2">
+                        <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded">#{i + 1}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="flex items-center gap-1 text-blue-600">
-                        <Eye className="h-3 w-3" /> {v.views}
-                      </span>
-                      <span className="flex items-center gap-1 text-green-600">
-                        <MessageSquare className="h-3 w-3" /> {v.enquiries}
-                      </span>
-                    </div>
-                  </div>
+                    <CardContent className="p-3 space-y-2">
+                      <p className="text-sm font-semibold text-foreground truncate">{v.name}</p>
+                      <p className="text-xs text-primary font-bold">{formatCurrency(v.selling_price)}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1 text-blue-600"><Eye className="h-3 w-3" /> {v.views}</span>
+                        <span className="flex items-center gap-1 text-green-600"><MessageSquare className="h-3 w-3" /> {v.enquiries}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
                 {vehicleStats.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No vehicle data available
-                  </p>
+                  <p className="col-span-full text-center text-muted-foreground py-8">No vehicle data available</p>
                 )}
               </div>
             </CardContent>

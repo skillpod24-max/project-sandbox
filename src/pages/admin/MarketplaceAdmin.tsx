@@ -657,7 +657,7 @@ const MarketplaceAdmin = () => {
                         <TableHead>Vehicle</TableHead>
                         <TableHead>Details</TableHead>
                         <TableHead>Expected Price</TableHead>
-                        <TableHead>City</TableHead>
+                        <TableHead>Location</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -672,12 +672,22 @@ const MarketplaceAdmin = () => {
                               <p className="text-sm">{req.phone}</p>
                               {req.email && <p className="text-xs text-slate-500">{req.email}</p>}
                             </TableCell>
-                            <TableCell className="font-medium">{req.vehicle_interest}</TableCell>
+                            <TableCell>
+                              <p className="font-medium">{req.vehicle_interest}</p>
+                              {details?.variant && <p className="text-xs text-slate-500">{details.variant}</p>}
+                            </TableCell>
                             <TableCell>
                               {details ? (
                                 <div className="text-xs space-y-0.5">
                                   <p>{details.fuelType} · {details.transmission}</p>
-                                  <p>{details.kmDriven ? `${details.kmDriven} km` : ''} · {details.owners ? `${details.owners} owner` : ''}</p>
+                                  <p>{details.kmDriven ? `${details.kmDriven} km` : ''}{details.owners ? ` · ${details.owners} owner` : ''}</p>
+                                  {details.color && <p>Color: {details.color}</p>}
+                                  {details.registrationNumber && <p>Reg: {details.registrationNumber}</p>}
+                                  {details.condition && <p>Condition: <span className="capitalize">{details.condition}</span></p>}
+                                  {details.accidentHistory && details.accidentHistory !== "no" && (
+                                    <Badge variant="outline" className="text-xs mt-0.5 border-red-300 text-red-600">Accident: {details.accidentHistory}</Badge>
+                                  )}
+                                  {details.insuranceValid && <p>Insurance: {details.insuranceValid}</p>}
                                   {details.images?.length > 0 && (
                                     <Badge variant="outline" className="text-xs mt-1"><Image className="h-3 w-3 mr-1" />{details.images.length} photos</Badge>
                                   )}
@@ -687,7 +697,12 @@ const MarketplaceAdmin = () => {
                             <TableCell className="font-semibold text-blue-600">
                               {req.budget_min ? formatCurrency(req.budget_min) : '—'}
                             </TableCell>
-                            <TableCell>{req.city || '—'}</TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {req.city || '—'}
+                                {details?.state && <p className="text-xs text-slate-500">{details.state}</p>}
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <Badge className={req.status === 'new' ? 'bg-amber-100 text-amber-700 border-0' : 'bg-emerald-100 text-emerald-700 border-0'}>
                                 {req.status}
