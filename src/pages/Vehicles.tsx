@@ -1020,7 +1020,7 @@ setVehicleImages(prev => ({
                     <Input type="number" value={formData.odometer_reading || ""} onChange={(e) => setFormData({ ...formData, odometer_reading: parseInt(e.target.value) || null })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Purchase Price *</Label>
+                    <Label>Purchase Price {formData.purchase_status === "purchased" && <span className="text-red-500">*</span>}</Label>
                     <Input
   type="text"
   inputMode="numeric"
@@ -1113,8 +1113,8 @@ setVehicleImages(prev => ({
 </div>
 
                   <div className="space-y-2">
-                    <Label>
-  Vendor <span className="text-red-500">*</span>
+                  <Label>
+  Vendor {formData.purchase_status === "purchased" && <span className="text-red-500">*</span>}
 </Label>
 
                     <Select value={formData.vendor_id || ""} onValueChange={(v) => setFormData({ ...formData, vendor_id: v  })}
@@ -1213,23 +1213,23 @@ setVehicleImages(prev => ({
                       </div>
                       <div className="space-y-2">
                         <Label>Ground Clearance (mm)</Label>
-                        <Input type="number" placeholder="e.g., 180" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Ground Clearance: ${e.target.value}mm]` })} />
+                        <Input type="number" placeholder="e.g., 180" value={(formData as any).__ground_clearance || ""} onChange={(e) => setFormData({ ...formData, __ground_clearance: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Engine Displacement (cc)</Label>
-                        <Input type="number" placeholder="e.g., 1498" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Engine: ${e.target.value}cc]` })} />
+                        <Input type="number" placeholder="e.g., 1498" value={(formData as any).__engine_cc || ""} onChange={(e) => setFormData({ ...formData, __engine_cc: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Max Power (bhp)</Label>
-                        <Input type="number" placeholder="e.g., 115" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Power: ${e.target.value}bhp]` })} />
+                        <Input type="number" placeholder="e.g., 115" value={(formData as any).__power_bhp || ""} onChange={(e) => setFormData({ ...formData, __power_bhp: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Max Torque (Nm)</Label>
-                        <Input type="number" placeholder="e.g., 250" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Torque: ${e.target.value}Nm]` })} />
+                        <Input type="number" placeholder="e.g., 250" value={(formData as any).__torque_nm || ""} onChange={(e) => setFormData({ ...formData, __torque_nm: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Airbags</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Airbags: ${v}]` })}>
+                        <Select value={(formData as any).__airbags || ""} onValueChange={(v) => setFormData({ ...formData, __airbags: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="None">None</SelectItem>
@@ -1242,7 +1242,7 @@ setVehicleImages(prev => ({
                       </div>
                       <div className="space-y-2">
                         <Label>Sunroof</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Sunroof: ${v}]` })}>
+                        <Select value={(formData as any).__sunroof || ""} onValueChange={(v) => setFormData({ ...formData, __sunroof: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="No">No Sunroof</SelectItem>
@@ -1609,8 +1609,12 @@ setVehicleImages(prev => ({
                         {(selectedVehicle?.public_page_id || formData.public_page_id) && (
                           <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                             <Globe className="h-5 w-5 text-green-600" />
-                            <code className="flex-1 text-sm">{window.location.origin}/v/{selectedVehicle?.public_page_id || formData.public_page_id}</code>
-                            <Button size="sm" variant="outline" onClick={() => copyPublicLink(selectedVehicle?.public_page_id || formData.public_page_id || "")} className="gap-1">
+                            <code className="flex-1 text-sm">{window.location.origin}/d/{selectedVehicle?.public_page_id || formData.public_page_id}/{selectedVehicle?.id || "new"}</code>
+                            <Button size="sm" variant="outline" onClick={() => {
+                              const url = `${window.location.origin}/d/${selectedVehicle?.public_page_id || formData.public_page_id}/${selectedVehicle?.id || "new"}`;
+                              navigator.clipboard.writeText(url);
+                              toast({ title: "Link copied to clipboard" });
+                            }} className="gap-1">
                               <Copy className="h-4 w-4" /> Copy
                             </Button>
                           </div>
@@ -1935,13 +1939,17 @@ setVehicleImages(prev => ({
                     <div className="flex flex-col sm:flex-row gap-2 p-3 bg-muted rounded-lg">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Globe className="h-5 w-5 text-green-600 shrink-0" />
-                        <code className="text-sm truncate">{window.location.origin}/v/{selectedVehicle.public_page_id}</code>
+                        <code className="text-sm truncate">{window.location.origin}/d/{selectedVehicle.public_page_id}/{selectedVehicle.id}</code>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => copyPublicLink(selectedVehicle.public_page_id!)} className="gap-1">
+                        <Button size="sm" variant="outline" onClick={() => {
+                          const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
+                          navigator.clipboard.writeText(url);
+                          toast({ title: "Link copied to clipboard" });
+                        }} className="gap-1">
                           <Copy className="h-4 w-4" /> Copy
                         </Button>
-                        <a href={`/v/${selectedVehicle.public_page_id}`} target="_blank" rel="noopener noreferrer">
+                        <a href={`/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`} target="_blank" rel="noopener noreferrer">
                           <Button size="sm" variant="outline" className="gap-1">
                             <ExternalLink className="h-4 w-4" /> View
                           </Button>
@@ -1993,12 +2001,51 @@ setVehicleImages(prev => ({
                     </div>
                   )}
 
-                  {selectedVehicle.notes && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase">Notes</p>
-                      <p className="mt-1">{selectedVehicle.notes}</p>
-                    </div>
-                  )}
+                  {/* Parsed specs from notes */}
+                  {selectedVehicle.notes && (() => {
+                    const specPatterns = [
+                      { key: "Ground Clearance", regex: /\[Ground Clearance: (\d+mm)\]/ },
+                      { key: "Engine", regex: /\[Engine: (\d+cc)\]/ },
+                      { key: "Power", regex: /\[Power: (\d+bhp)\]/ },
+                      { key: "Torque", regex: /\[Torque: (\d+Nm)\]/ },
+                      { key: "Airbags", regex: /\[Airbags: ([^\]]+)\]/ },
+                      { key: "Sunroof", regex: /\[Sunroof: ([^\]]+)\]/ },
+                    ];
+                    const parsedSpecs = specPatterns
+                      .map(s => { const m = selectedVehicle.notes?.match(s.regex); return m ? { key: s.key, value: m[1] } : null; })
+                      .filter(Boolean) as { key: string; value: string }[];
+                    const cleanNotes = selectedVehicle.notes
+                      .replace(/\[Ground Clearance: [^\]]+\]/g, "")
+                      .replace(/\[Engine: [^\]]+\]/g, "")
+                      .replace(/\[Power: [^\]]+\]/g, "")
+                      .replace(/\[Torque: [^\]]+\]/g, "")
+                      .replace(/\[Airbags: [^\]]+\]/g, "")
+                      .replace(/\[Sunroof: [^\]]+\]/g, "")
+                      .trim();
+                    return (
+                      <>
+                        {parsedSpecs.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2 text-sm">Additional Specifications</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                              {parsedSpecs.map(s => (
+                                <div key={s.key} className="p-2 bg-muted/50 rounded-lg">
+                                  <p className="text-xs text-muted-foreground uppercase">{s.key}</p>
+                                  <p className="font-medium text-sm">{s.value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {cleanNotes && (
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase">Notes</p>
+                            <p className="mt-1">{cleanNotes}</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   <div className="flex gap-2 pt-2">
                     <Button 
@@ -2043,13 +2090,17 @@ setVehicleImages(prev => ({
     <>
       <Button
         variant="outline"
-        onClick={() => copyPublicLink(selectedVehicle.public_page_id!)}
+        onClick={() => {
+          const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
+          navigator.clipboard.writeText(url);
+          toast({ title: "Link copied to clipboard" });
+        }}
       >
         <Link className="h-4 w-4 mr-2" /> Copy Public Link
       </Button>
 
       <a
-        href={`/v/${selectedVehicle.public_page_id}`}
+        href={`/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`}
         target="_blank"
         rel="noopener noreferrer"
       >

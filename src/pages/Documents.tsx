@@ -50,6 +50,19 @@ const documentTypes: { value: DocumentType; label: string }[] = [
   { value: "driving_license", label: "Driving License" },
 ];
 
+// Extended categories for the add form
+const allDocumentCategories: { value: string; label: string }[] = [
+  ...documentTypes,
+  { value: "invoice", label: "Tax Invoice" },
+  { value: "sale_agreement", label: "Purchase Agreement" },
+  { value: "delivery_note", label: "NOC / Transfer Letter" },
+  { value: "id_proof", label: "GST Certificate" },
+  { value: "id_proof", label: "Trade License" },
+  { value: "id_proof", label: "Company Registration" },
+  { value: "insurance", label: "Road Tax Receipt" },
+  { value: "puc", label: "Fitness Certificate" },
+];
+
 const Documents = () => {
   const { viewMode, setViewMode } = useViewMode("documents");
   const { toast } = useToast();
@@ -113,8 +126,8 @@ const Documents = () => {
   };
 
   const handleAddDocument = async () => {
-    if (!selectedFile || !addForm.vehicleId || !addForm.documentName) {
-      toast({ title: "Please fill required fields and select a file", variant: "destructive" });
+    if (!selectedFile || !addForm.documentName) {
+      toast({ title: "Please fill document name and select a file", variant: "destructive" });
       return;
     }
 
@@ -123,15 +136,16 @@ const Documents = () => {
 
     setUploading(true);
     try {
-      const fileName = `${addForm.vehicleId}/${Date.now()}_${selectedFile.name}`;
+      const refId = addForm.vehicleId || "general";
+      const fileName = `${refId}/${Date.now()}_${selectedFile.name}`;
       const { error: uploadError } = await supabase.storage.from("vehicle-documents").upload(fileName, selectedFile);
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from("vehicle-documents").getPublicUrl(fileName);
 
       const { error } = await supabase.from("documents").insert({
-        reference_id: addForm.vehicleId,
-        reference_type: "vehicle",
+        reference_id: addForm.vehicleId || user.id,
+        reference_type: addForm.vehicleId ? "vehicle" : "general",
         user_id: user.id,
         document_name: addForm.documentName,
         document_type: addForm.documentType,
@@ -281,10 +295,11 @@ const Documents = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Vehicle *</Label>
+              <Label>Link to Vehicle (Optional)</Label>
               <Select value={addForm.vehicleId} onValueChange={(v) => setAddForm({ ...addForm, vehicleId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="No vehicle (general document)" /></SelectTrigger>
                 <SelectContent className="max-h-64">
+                  <SelectItem value="">None (General)</SelectItem>
                   {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.brand} {v.model} ({v.code})</SelectItem>)}
                 </SelectContent>
               </Select>

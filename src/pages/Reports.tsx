@@ -321,15 +321,14 @@ const principalCollected =
 const profitRatio =
   sellingPrice > 0 ? totalProfit / sellingPrice : 0;
 // 🔒 RAW REALISED PROFIT (NO ROUNDING)
-// ✅ PROFIT REALISED (CAPPED)
-const realisedProfitVehicle = Math.min(
-  principalCollected * profitRatio,
-  totalProfit
-);
+// ✅ PROFIT REALISED (CAPPED, PROPERLY ROUNDED)
+const realisedProfitVehicle = Math.round(
+  Math.min(principalCollected * profitRatio, totalProfit) * 100
+) / 100;
 
 // ✅ PROFIT PENDING
 const profitPendingVehicle = getEffectiveBalance(
-  totalProfit - realisedProfitVehicle
+  Math.round((totalProfit - realisedProfitVehicle) * 100) / 100
 );
 
 
@@ -601,11 +600,10 @@ completedSalesAll.forEach((sale) => {
   // 🔹 PROFIT RATIO
   const profitRatio = vehicleProfit / totalExpectedCollection;
 
-  // 🔒 CAP PER SALE (THIS IS THE FIX)
-  const saleProfit = Math.min(
-    cashCollected * profitRatio,
-    vehicleProfit
-  );
+// 🔒 CAP PER SALE (PROPERLY ROUNDED)
+  const saleProfit = Math.round(
+    Math.min(cashCollected * profitRatio, vehicleProfit) * 100
+  ) / 100;
 
   realisedProfit += saleProfit;
 });
@@ -614,8 +612,8 @@ completedSalesAll.forEach((sale) => {
 // ❌ DO NOT subtract expenses here for gross profit
 
 
-const safeRevenue = Math.round(principalRevenue);
-const safeProfit = Math.round(realisedProfit);
+const safeRevenue = Math.round(principalRevenue * 100) / 100;
+const safeProfit = Math.round(realisedProfit * 100) / 100;
 
 const profitMargin =
 safeRevenue > 0

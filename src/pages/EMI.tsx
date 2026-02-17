@@ -47,6 +47,8 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
 
   const [emiDocuments, setEmiDocuments] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [selectedEmiDoc, setSelectedEmiDoc] = useState<string | null>(null);
+  const [emiDocViewerOpen, setEmiDocViewerOpen] = useState(false);
 
 
   
@@ -865,13 +867,31 @@ const needsFinalConfirmation =
             </p>
           </div>
 
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => window.open(doc.document_url, "_blank")}
-          >
-            View
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.document_url);
+                const isPdf = /\.pdf$/i.test(doc.document_url);
+                if (isImage || isPdf) {
+                  setSelectedEmiDoc(doc.document_url);
+                  setEmiDocViewerOpen(true);
+                } else {
+                  window.open(doc.document_url, "_blank");
+                }
+              }}
+            >
+              View
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => window.open(doc.document_url, "_blank")}
+            >
+              ↗
+            </Button>
+          </div>
         </div>
       ))
     )}

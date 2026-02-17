@@ -1,3 +1,5 @@
+// ============= Full file contents =============
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,8 +106,17 @@ const SellVehicleFormPage = () => {
         }
       }
 
+      // ✅ FETCH ADMIN USER ID (Optional but recommended to assign correctly)
+      const { data: adminUser } = await supabase
+        .from("marketplace_admins")
+        .select("user_id")
+        .limit(1)
+        .maybeSingle();
+
+      const targetUserId = adminUser?.user_id || "00000000-0000-0000-0000-000000000000";
+
       const { error } = await supabase.from("leads").insert({
-        user_id: "00000000-0000-0000-0000-000000000000",
+        user_id: targetUserId,
         lead_number: `SELL${Date.now().toString(36).toUpperCase()}`,
         customer_name: form.sellerName,
         phone: form.phone,
@@ -336,31 +347,36 @@ const SellVehicleFormPage = () => {
                 {imagePreviews.map((preview, i) => (
                   <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200">
                     <img src={preview} alt="" className="w-full h-full object-cover" />
-                    <button onClick={() => removeImage(i)} className="absolute top-1 right-1 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center"><X className="h-3 w-3" /></button>
+                    <button onClick={() => removeImage(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"><X className="h-3 w-3" /></button>
                   </div>
                 ))}
                 {images.length < 5 && (
-                  <label className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-colors">
-                    <Upload className="h-6 w-6 text-slate-400" /><span className="text-xs text-slate-500 mt-1">Add</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} multiple />
+                  <label className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 text-slate-500 cursor-pointer hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors">
+                    <Camera className="h-6 w-6" />
+                    <span className="text-xs font-medium">Add Photo</span>
+                    <input type="file" className="hidden" accept="image/*" multiple onChange={handleImageChange} />
                   </label>
                 )}
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Additional Details</Label>
-              <Textarea placeholder="Any modifications, service history, accessories included, reason for selling..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} />
+              <Label>Description (Optional)</Label>
+              <Textarea 
+                placeholder="Any other details about the car? (e.g. Scratches, modifications, accessories)" 
+                value={form.description} 
+                onChange={(e) => setForm({ ...form, description: e.target.value })} 
+                rows={4}
+              />
             </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setCurrentStep(2)} className="flex-1">Back</Button>
               <Button onClick={handleSubmit} disabled={submitting} className="flex-1 bg-emerald-500 hover:bg-emerald-600">
-                {submitting ? "Submitting..." : "Submit Vehicle"}
+                {submitting ? "Submitting..." : "Submit Listing"}
               </Button>
             </div>
           </div>
         )}
       </div>
-      <MarketplaceFooter />
     </div>
   );
 };

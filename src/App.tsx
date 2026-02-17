@@ -91,6 +91,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/v/:pageId" element={<PublicVehicle />} />
           <Route path="/d/:pageId" element={<DealerPublicPage />} />
+          <Route path="/d/:pageId/:vehicleId" element={<PublicVehicle />} />
 
           {/* ---------- Protected / Sidebar Layout ---------- */}
           <Route
