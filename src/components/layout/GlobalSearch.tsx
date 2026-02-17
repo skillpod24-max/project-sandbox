@@ -59,9 +59,9 @@ const GlobalSearch = () => {
       // Search vehicles
       const { data: vehicles } = await supabase
         .from("vehicles")
-        .select("id, brand, model, registration_number, manufacturing_year")
+        .select("id, brand, model, registration_number, manufacturing_year, code, selling_price")
         .eq("user_id", user.id)
-        .or(`brand.ilike.%${query}%,model.ilike.%${query}%,registration_number.ilike.%${query}%`)
+        .or(`brand.ilike.%${query}%,model.ilike.%${query}%,registration_number.ilike.%${query}%,code.ilike.%${query}%`)
         .limit(5);
 
       vehicles?.forEach(v => {
@@ -69,8 +69,44 @@ const GlobalSearch = () => {
           type: "vehicle",
           id: v.id,
           title: `${v.manufacturing_year} ${v.brand} ${v.model}`,
-          subtitle: v.registration_number || undefined,
+          subtitle: v.registration_number || v.code || undefined,
           url: `/vehicles?search=${v.id}`,
+        });
+      });
+
+      // Search leads
+      const { data: leads } = await supabase
+        .from("leads")
+        .select("id, customer_name, phone, lead_number, source")
+        .eq("user_id", user.id)
+        .or(`customer_name.ilike.%${query}%,phone.ilike.%${query}%,lead_number.ilike.%${query}%`)
+        .limit(5);
+
+      leads?.forEach(l => {
+        searchResults.push({
+          type: "customer",
+          id: l.id,
+          title: l.customer_name,
+          subtitle: `${l.lead_number} · ${l.phone}`,
+          url: `/leads?search=${l.id}`,
+        });
+      });
+
+      // Search sales
+      const { data: salesData } = await supabase
+        .from("sales")
+        .select("id, sale_number, total_amount")
+        .eq("user_id", user.id)
+        .ilike("sale_number", `%${query}%`)
+        .limit(3);
+
+      salesData?.forEach(s => {
+        searchResults.push({
+          type: "sale",
+          id: s.id,
+          title: s.sale_number,
+          subtitle: `₹${Number(s.total_amount).toLocaleString("en-IN")}`,
+          url: `/sales?search=${s.id}`,
         });
       });
 

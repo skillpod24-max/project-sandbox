@@ -152,6 +152,37 @@ const CatalogueSettings = ({ settings, setSettings, uploadingLogo, setUploadingL
                 />
                 <p className="text-xs text-muted-foreground">Badge displayed on your catalogue page</p>
               </div>
+
+              <div className="space-y-2">
+                <Label>Primary Accent Color</Label>
+                <p className="text-xs text-muted-foreground mb-2">This color will be used as the accent for your catalogue page</p>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { name: "Emerald", value: "emerald", preview: "#10b981" },
+                    { name: "Blue", value: "blue", preview: "#3b82f6" },
+                    { name: "Rose", value: "rose", preview: "#f43f5e" },
+                    { name: "Amber", value: "amber", preview: "#f59e0b" },
+                    { name: "Violet", value: "violet", preview: "#8b5cf6" },
+                    { name: "Cyan", value: "cyan", preview: "#06b6d4" },
+                    { name: "Indigo", value: "indigo", preview: "#6366f1" },
+                    { name: "Orange", value: "orange", preview: "#f97316" },
+                  ].map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => setSettings({ ...settings, public_page_theme: color.value })}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                        (settings.public_page_theme || "emerald") === color.value
+                          ? "border-foreground ring-2 ring-foreground/20 shadow-md"
+                          : "border-border hover:border-muted-foreground"
+                      }`}
+                    >
+                      <div className="h-5 w-5 rounded-full" style={{ backgroundColor: color.preview }} />
+                      <span className="text-sm font-medium">{color.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
 

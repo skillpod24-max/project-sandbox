@@ -93,7 +93,7 @@ const MarketplaceAdmin = () => {
         supabase.from("settings").select("*").eq("marketplace_enabled", true),
         supabase.from("vehicles").select("*").eq("is_public", true),
         supabase.from("support_tickets" as any).select("*").order("created_at", { ascending: false }),
-        supabase.from("leads").select("*").eq("source", "marketplace_sell").order("created_at", { ascending: false }),
+        supabase.from("leads").select("*").in("source", ["marketplace_sell", "marketplace"]).eq("lead_type", "seller").order("created_at", { ascending: false }),
       ]);
 
       setDealers(dealersRes.data || []);
