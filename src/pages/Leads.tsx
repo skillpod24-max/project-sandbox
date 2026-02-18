@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +107,20 @@ const [isConverting, setIsConverting] = useState(false);
 
   useEffect(() => {
     fetchLeads();
+
+    // Realtime subscription for instant updates
+    const channel = supabase
+      .channel("leads-page-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "leads" },
+        () => fetchLeads()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchLeads = async () => {
@@ -662,8 +676,7 @@ const convertLead = async (lead: Lead) => {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      {lead.source === "marketplace" ? (
-                        lead.notes?.includes("TEST DRIVE REQUESTED") ? (
+                      {lead.notes?.includes("TEST DRIVE REQUESTED") ? (
                           <div>
                             <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">Yes</Badge>
                             {(() => {
@@ -675,10 +688,7 @@ const convertLead = async (lead: Lead) => {
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">No</span>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                        )}
                     </TableCell>
                     <TableCell>{lead.follow_up_date ? format(new Date(lead.follow_up_date), "dd MMM") : "-"}</TableCell>
                   </TableRow>
@@ -871,7 +881,7 @@ const convertLead = async (lead: Lead) => {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={formData.follow_up_date ? (formData as any).__testDriveRequested || false : false}
+                    checked={(formData as any).__testDriveRequested || false}
                     onChange={(e) => {
                       setFormData({ ...formData, __testDriveRequested: e.target.checked } as any);
                     }}

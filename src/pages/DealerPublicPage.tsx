@@ -885,12 +885,29 @@ setTheme(selectedTheme);
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-  <DialogContent className="max-w-md">
-    <DealerEnquiryForm
-      dealerInfo={dealerInfo}
-      pageId={pageId!}
-      compact
-    />
+  <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-0">
+    {/* Hero Section */}
+    <div className="bg-gradient-to-br from-emerald-500 via-emerald-600 to-cyan-600 p-6 text-white">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full">
+          <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+          <span className="text-xs font-semibold">Special Offer</span>
+        </div>
+      </div>
+      <h3 className="text-xl font-bold mb-1">
+        Looking for the perfect vehicle?
+      </h3>
+      <p className="text-white/80 text-sm">
+        Share your details and get personalized recommendations from {dealerInfo?.dealer_name || "our expert team"}. Free consultation, no obligations.
+      </p>
+    </div>
+    <div className="p-5">
+      <DealerEnquiryForm
+        dealerInfo={dealerInfo}
+        pageId={pageId!}
+        compact
+      />
+    </div>
   </DialogContent>
 </Dialog>
 

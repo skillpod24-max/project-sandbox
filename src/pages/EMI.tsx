@@ -871,15 +871,10 @@ const needsFinalConfirmation =
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => {
-                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.document_url);
-                const isPdf = /\.pdf$/i.test(doc.document_url);
-                if (isImage || isPdf) {
-                  setSelectedEmiDoc(doc.document_url);
-                  setEmiDocViewerOpen(true);
-                } else {
-                  window.open(doc.document_url, "_blank");
-                }
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedEmiDoc(doc.document_url);
+                setEmiDocViewerOpen(true);
               }}
             >
               View
@@ -954,6 +949,33 @@ const needsFinalConfirmation =
 </Button>
 
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* EMI Document Viewer Dialog */}
+        <Dialog open={emiDocViewerOpen} onOpenChange={setEmiDocViewerOpen}>
+          <DialogContent className="max-w-5xl max-h-[95vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>EMI Document</span>
+                {selectedEmiDoc && (
+                  <a href={selectedEmiDoc} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" className="gap-2">↗ Open</Button>
+                  </a>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedEmiDoc && (
+              <div className="h-[75vh] bg-muted rounded-lg overflow-hidden">
+                {selectedEmiDoc.toLowerCase().endsWith('.pdf') ? (
+                  <iframe src={selectedEmiDoc} className="w-full h-full border-0" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center p-4">
+                    <img src={selectedEmiDoc} alt="EMI Document" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
