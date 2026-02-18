@@ -1822,10 +1822,10 @@ setVehicleImages(prev => ({
                   <DialogTitle>{selectedVehicle.brand} {selectedVehicle.model} - {selectedVehicle.code}</DialogTitle>
                 </DialogHeader>
                 
-                <div className="relative bg-muted">
+                <div className="relative bg-muted flex items-center justify-center">
                   {images.length > 0 ? (
                     <div
-  className={`relative ${
+  className={`relative w-full ${
     selectedVehicle.vehicle_type === "bike"
       ? "h-52 sm:h-64"
       : "h-64 sm:h-80"
@@ -1834,7 +1834,7 @@ setVehicleImages(prev => ({
                       <img 
                         src={currentImage?.image_url} 
                         alt={selectedVehicle.brand} 
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain mx-auto"
                       />
                       {images.length > 1 && (
                         <>
@@ -1884,14 +1884,26 @@ setVehicleImages(prev => ({
                     )}
                   </div>
 
-                  {/* Specs Grid - Mobile Optimized */}
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Type</p><p className="font-medium capitalize text-sm truncate">{selectedVehicle.vehicle_type}</p></div>
-                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Color</p><p className="font-medium text-sm truncate">{selectedVehicle.color || 'N/A'}</p></div>
-                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Transmission</p><p className="font-medium uppercase text-sm truncate">{selectedVehicle.transmission}</p></div>
-                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Odometer</p><p className="font-medium text-sm truncate">{selectedVehicle.odometer_reading ? `${selectedVehicle.odometer_reading.toLocaleString()} km` : 'N/A'}</p></div>
-                    {(selectedVehicle as any).number_of_owners && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Owners</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).number_of_owners}</p></div>}
-                    <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Fuel</p><p className="font-medium capitalize text-sm truncate">{selectedVehicle.fuel_type}</p></div>
+                  {/* Specs Grid - Card Style with Icons */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                    {[
+                      { label: "Type", value: selectedVehicle.vehicle_type, icon: "🚗", capitalize: true },
+                      { label: "Color", value: selectedVehicle.color || "N/A", icon: "🎨" },
+                      { label: "Transmission", value: selectedVehicle.transmission, icon: "⚙️", uppercase: true },
+                      { label: "Odometer", value: selectedVehicle.odometer_reading ? `${selectedVehicle.odometer_reading.toLocaleString()} km` : "N/A", icon: "📏" },
+                      { label: "Owners", value: (selectedVehicle as any).number_of_owners || "N/A", icon: "👤" },
+                      { label: "Fuel", value: selectedVehicle.fuel_type, icon: "⛽", capitalize: true },
+                      { label: "Year", value: selectedVehicle.manufacturing_year, icon: "📅" },
+                      ...(selectedVehicle.variant ? [{ label: "Variant", value: selectedVehicle.variant, icon: "🏷️" }] : []),
+                    ].map((spec, idx) => (
+                      <div key={idx} className="flex items-start gap-2.5 p-2.5 sm:p-3 bg-muted/50 rounded-xl border border-border/50">
+                        <span className="text-base mt-0.5">{spec.icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{spec.label}</p>
+                          <p className={`font-semibold text-sm truncate ${spec.capitalize ? "capitalize" : ""} ${spec.uppercase ? "uppercase" : ""}`}>{spec.value}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Extended Specs - Collapsible on Mobile */}

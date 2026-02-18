@@ -156,8 +156,8 @@ const Settings = () => {
         }
   );
 
-  // 3. Reset dealer address
-  const savedAddress = localStorage.getItem("dealer_address");
+  // 3. Reset dealer address (user-scoped)
+  const savedAddress = userId ? localStorage.getItem(`dealer_address_${userId}`) : null;
   setDealerAddress(
     savedAddress
       ? JSON.parse(savedAddress)

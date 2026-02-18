@@ -261,8 +261,8 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
-  <DialogContent className="max-w-md">
+      <Dialog open={!!selectedPayment} onOpenChange={(open) => { if (!open) setSelectedPayment(null); }}>
+  <DialogContent className="max-w-md rounded-2xl">
     <DialogHeader>
       <DialogTitle>Payment Breakdown</DialogTitle>
     </DialogHeader>

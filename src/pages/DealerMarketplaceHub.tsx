@@ -115,6 +115,20 @@ const DealerMarketplaceHub = () => {
   useEffect(() => {
     if (userId) {
       fetchAllData();
+
+      // Realtime subscription for instant updates
+      const channel = supabase
+        .channel("hub-leads-realtime")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "leads" },
+          () => fetchAllData()
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [userId, period]);
 
@@ -399,11 +413,11 @@ const DealerMarketplaceHub = () => {
               <Card key={i} className="border shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center`}>
+                    <div className={`h-10 w-10 rounded-lg ${stat.color} flex items-center justify-center shrink-0`}>
                       <stat.icon className="h-5 w-5" />
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                    <div className="min-w-0">
+                      <p className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</p>
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   </div>

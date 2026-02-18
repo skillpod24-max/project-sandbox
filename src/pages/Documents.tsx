@@ -296,10 +296,10 @@ const Documents = () => {
             </div>
             <div className="space-y-2">
               <Label>Link to Vehicle (Optional)</Label>
-              <Select value={addForm.vehicleId} onValueChange={(v) => setAddForm({ ...addForm, vehicleId: v })}>
+              <Select value={addForm.vehicleId || "none"} onValueChange={(v) => setAddForm({ ...addForm, vehicleId: v === "none" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="No vehicle (general document)" /></SelectTrigger>
                 <SelectContent className="max-h-64">
-                  <SelectItem value="">None (General)</SelectItem>
+                  <SelectItem value="none">None (General)</SelectItem>
                   {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.brand} {v.model} ({v.code})</SelectItem>)}
                 </SelectContent>
               </Select>
