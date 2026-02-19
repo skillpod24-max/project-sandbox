@@ -106,6 +106,42 @@ const CatalogueSettings = ({ settings, setSettings, uploadingLogo, setUploadingL
 
       {settings.public_page_enabled && (
         <>
+          {/* Catalogue Template Card */}
+          <Card className="border-0 shadow-sm ring-1 ring-border/50">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Catalogue Design Template</CardTitle>
+              <CardDescription>Choose a layout style for your catalogue page</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  { id: "classic", name: "Classic", desc: "Clean grid layout with cards", preview: "🏛️" },
+                  { id: "modern", name: "Modern", desc: "Full-width hero with floating cards", preview: "✨" },
+                  { id: "minimal", name: "Minimal", desc: "List-style compact layout", preview: "📋" },
+                  { id: "premium", name: "Premium", desc: "Dark theme with gradient accents", preview: "💎" },
+                  { id: "showroom", name: "Showroom", desc: "Large images, carousel focus", preview: "🏪" },
+                ].map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => setSettings({ ...settings, catalogue_template: template.id })}
+                    className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                      (settings.catalogue_template || "classic") === template.id
+                        ? "border-foreground ring-2 ring-foreground/20 shadow-md bg-muted/50"
+                        : "border-border hover:border-muted-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    <span className="text-2xl mt-0.5">{template.preview}</span>
+                    <div>
+                      <p className="font-medium text-sm">{template.name}</p>
+                      <p className="text-xs text-muted-foreground">{template.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Branding Card */}
           <Card className="border-0 shadow-sm ring-1 ring-border/50">
             <CardHeader>

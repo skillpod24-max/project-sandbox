@@ -73,6 +73,7 @@ interface DealerMarketplaceHubProps {
 const DealerMarketplaceHub = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [statsLoaded, setStatsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<HubTab>("analytics");
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -192,6 +193,7 @@ const DealerMarketplaceHub = () => {
         publicVehicles: publicVehiclesCount || 0,
         conversionRate: totalViews > 0 ? ((enquiriesCount + calls + whatsapp) / totalViews) * 100 : 0,
       });
+      setStatsLoaded(true);
 
       // Daily breakdown with separate dealer/vehicle views
       const dailyMap: Record<string, { date: string; dealerViews: number; vehicleViews: number; enquiries: number }> = {};
@@ -417,7 +419,11 @@ const DealerMarketplaceHub = () => {
                       <stat.icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</p>
+                      {statsLoaded ? (
+                        <p className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</p>
+                      ) : (
+                        <Skeleton className="h-8 w-16 rounded" />
+                      )}
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   </div>
