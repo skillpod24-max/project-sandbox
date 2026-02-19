@@ -284,6 +284,31 @@ if (
       let vehicleId: string;
       const vehicleData = { ...formData };
 
+      // Merge __ prefixed specs into notes
+      const specFields: [string, string][] = [
+        ["__ground_clearance", "Ground Clearance"],
+        ["__engine_cc", "Engine"],
+        ["__power_bhp", "Power"],
+        ["__torque_nm", "Torque"],
+        ["__airbags", "Airbags"],
+        ["__sunroof", "Sunroof"],
+      ];
+      let notesBase = (vehicleData.notes || "");
+      // Remove old spec tags first
+      specFields.forEach(([, label]) => {
+        notesBase = notesBase.replace(new RegExp(`\\[${label}: [^\\]]+\\]`, "g"), "");
+      });
+      notesBase = notesBase.trim();
+      specFields.forEach(([key, label]) => {
+        const val = (vehicleData as any)[key];
+        if (val) {
+          const unit = key === "__ground_clearance" ? "mm" : key === "__engine_cc" ? "cc" : key === "__power_bhp" ? "bhp" : key === "__torque_nm" ? "Nm" : "";
+          notesBase += ` [${label}: ${val}${unit}]`;
+        }
+        delete (vehicleData as any)[key];
+      });
+      vehicleData.notes = notesBase.trim() || null;
+
       // 🔒 Backend safety: prevent vendor change on edit
 if (
   selectedVehicle &&
@@ -614,7 +639,24 @@ setVehicleImages(prev => ({
   setHighlightsText((vehicle.public_highlights || []).join(", "));
   setFeaturesText((vehicle.public_features || []).join(", "));
 
-  setFormData(vehicle as any);
+  // Parse __ prefixed specs from notes
+  const notes = vehicle.notes || "";
+  const gcMatch = notes.match(/\[Ground Clearance: (\d+)mm\]/);
+  const ecMatch = notes.match(/\[Engine: (\d+)cc\]/);
+  const pwMatch = notes.match(/\[Power: (\d+)bhp\]/);
+  const tqMatch = notes.match(/\[Torque: (\d+)Nm\]/);
+  const abMatch = notes.match(/\[Airbags: ([^\]]+)\]/);
+  const srMatch = notes.match(/\[Sunroof: ([^\]]+)\]/);
+
+  setFormData({
+    ...vehicle as any,
+    __ground_clearance: gcMatch?.[1] || "",
+    __engine_cc: ecMatch?.[1] || "",
+    __power_bhp: pwMatch?.[1] || "",
+    __torque_nm: tqMatch?.[1] || "",
+    __airbags: abMatch?.[1] || "",
+    __sunroof: srMatch?.[1] || "",
+  });
   setPendingImages([]);
   setPendingDocs([]);
   setDialogOpen(true);
@@ -2016,34 +2058,46 @@ setVehicleImages(prev => ({
                   {/* Parsed specs from notes */}
                   {selectedVehicle.notes && (() => {
                     const specPatterns = [
-                      { key: "Ground Clearance", regex: /\[Ground Clearance: (\d+mm)\]/ },
-                      { key: "Engine", regex: /\[Engine: (\d+cc)\]/ },
-                      { key: "Power", regex: /\[Power: (\d+bhp)\]/ },
-                      { key: "Torque", regex: /\[Torque: (\d+Nm)\]/ },
+                      { key: "Ground Clearance", regex: /\[Ground Clearance: ([^\]]+)\]/ },
+                      { key: "Engine", regex: /\[Engine: ([^\]]+)\]/ },
+                      { key: "Power", regex: /\[Power: ([^\]]+)\]/ },
+                      { key: "Torque", regex: /\[Torque: ([^\]]+)\]/ },
                       { key: "Airbags", regex: /\[Airbags: ([^\]]+)\]/ },
                       { key: "Sunroof", regex: /\[Sunroof: ([^\]]+)\]/ },
+                      { key: "Infotainment", regex: /\[Infotainment: ([^\]]+)\]/ },
+                      { key: "Weight", regex: /\[Weight: ([^\]]+)\]/ },
+                      { key: "Seat Height", regex: /\[Seat Height: ([^\]]+)\]/ },
+                      { key: "Tank Capacity", regex: /\[Tank: ([^\]]+)\]/ },
+                      { key: "Top Speed", regex: /\[Top Speed: ([^\]]+)\]/ },
+                      { key: "Brake Type", regex: /\[Brake: ([^\]]+)\]/ },
+                      { key: "ABS", regex: /\[ABS: ([^\]]+)\]/ },
+                      { key: "Bike Type", regex: /\[Type: ([^\]]+)\]/ },
+                      { key: "GVW", regex: /\[GVW: ([^\]]+)\]/ },
+                      { key: "Payload", regex: /\[Payload: ([^\]]+)\]/ },
+                      { key: "Body Type", regex: /\[Body: ([^\]]+)\]/ },
+                      { key: "Permit Type", regex: /\[Permit: ([^\]]+)\]/ },
                     ];
                     const parsedSpecs = specPatterns
                       .map(s => { const m = selectedVehicle.notes?.match(s.regex); return m ? { key: s.key, value: m[1] } : null; })
                       .filter(Boolean) as { key: string; value: string }[];
-                    const cleanNotes = selectedVehicle.notes
-                      .replace(/\[Ground Clearance: [^\]]+\]/g, "")
-                      .replace(/\[Engine: [^\]]+\]/g, "")
-                      .replace(/\[Power: [^\]]+\]/g, "")
-                      .replace(/\[Torque: [^\]]+\]/g, "")
-                      .replace(/\[Airbags: [^\]]+\]/g, "")
-                      .replace(/\[Sunroof: [^\]]+\]/g, "")
-                      .trim();
+                    let cleanNotes = selectedVehicle.notes;
+                    specPatterns.forEach(s => {
+                      cleanNotes = cleanNotes!.replace(s.regex, "");
+                    });
+                    cleanNotes = cleanNotes.trim();
                     return (
                       <>
                         {parsedSpecs.length > 0 && (
                           <div>
                             <h4 className="font-medium mb-2 text-sm">Additional Specifications</h4>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                               {parsedSpecs.map(s => (
-                                <div key={s.key} className="p-2 bg-muted/50 rounded-lg">
-                                  <p className="text-xs text-muted-foreground uppercase">{s.key}</p>
-                                  <p className="font-medium text-sm">{s.value}</p>
+                                <div key={s.key} className="flex items-start gap-2 p-2.5 bg-muted/50 rounded-xl border border-border/50">
+                                  <span className="text-base mt-0.5">🔧</span>
+                                  <div>
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.key}</p>
+                                    <p className="font-semibold text-sm">{s.value}</p>
+                                  </div>
                                 </div>
                               ))}
                             </div>

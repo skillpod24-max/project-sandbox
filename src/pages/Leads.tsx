@@ -84,6 +84,7 @@ const Leads = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -165,6 +166,17 @@ const [isConverting, setIsConverting] = useState(false);
 
     try {
       if (selectedLead) {
+        // Build notes with test drive info for edit too
+        let finalNotes = formData.notes || "";
+        const fd = formData as any;
+        // Remove old test drive info from notes
+        finalNotes = finalNotes.replace(/\nTEST DRIVE REQUESTED:.*$/m, "").replace(/^TEST DRIVE REQUESTED:.*$/m, "").trim();
+        if (fd.__testDriveRequested) {
+          const tdDate = fd.__testDriveDate || new Date().toISOString().split("T")[0];
+          const tdTime = fd.__testDriveTime || "";
+          finalNotes = `${finalNotes}\nTEST DRIVE REQUESTED: ${tdDate}${tdTime ? ` at ${tdTime}` : ""}`.trim();
+        }
+
         const { error } = await supabase
           .from("leads")
           .update({
@@ -178,8 +190,8 @@ const [isConverting, setIsConverting] = useState(false);
             status: formData.status,
             priority: formData.priority,
             assigned_to: formData.assigned_to,
-            follow_up_date: formData.follow_up_date,
-            notes: formData.notes,
+            follow_up_date: fd.__testDriveRequested ? (fd.__testDriveDate || formData.follow_up_date || null) : (formData.follow_up_date || null),
+            notes: finalNotes || null,
             city: formData.city,
             lead_type: formData.lead_type,
           })
@@ -275,14 +287,26 @@ const [isConverting, setIsConverting] = useState(false);
 
   const openEditDialog = (lead: Lead) => {
     setSelectedLead(lead);
-    setFormData(lead);
+    
+    // Parse test drive info from notes
+    const notes = lead.notes || "";
+    const hasTestDrive = notes.includes("TEST DRIVE REQUESTED");
+    const dateMatch = notes.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
+    const timeMatch = notes.match(/at (\d{2}:\d{2})/);
+    
+    setFormData({
+      ...lead,
+      __testDriveRequested: hasTestDrive,
+      __testDriveDate: dateMatch?.[1] || "",
+      __testDriveTime: timeMatch?.[1] || "",
+    } as any);
 
-setBudgetMinInput(
-  lead.budget_min ? formatIndian(String(lead.budget_min)) : ""
-);
-setBudgetMaxInput(
-  lead.budget_max ? formatIndian(String(lead.budget_max)) : ""
-);
+    setBudgetMinInput(
+      lead.budget_min ? formatIndian(String(lead.budget_min)) : ""
+    );
+    setBudgetMaxInput(
+      lead.budget_max ? formatIndian(String(lead.budget_max)) : ""
+    );
 
     setDialogOpen(true);
   };
@@ -322,7 +346,8 @@ setBudgetMaxInput(
   const filteredLeads = leads.filter((l) => {
     const matchesSearch = `${l.customer_name} ${l.phone} ${l.lead_number} ${l.vehicle_interest || ""} ${l.city || ""}`.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || l.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesDate = !dateFilter || l.created_at.startsWith(dateFilter);
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const exportLeads = () => {
@@ -593,6 +618,13 @@ const convertLead = async (lead: Lead) => {
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
+              <Input 
+                type="date" 
+                value={dateFilter} 
+                onChange={(e) => setDateFilter(e.target.value)} 
+                className="w-36"
+                placeholder="Filter by date"
+              />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                 <SelectContent>

@@ -931,6 +931,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          catalogue_template: string | null
           created_at: string
           currency: string | null
           dealer_address: string | null
@@ -970,6 +971,7 @@ export type Database = {
           whatsapp_number: string | null
         }
         Insert: {
+          catalogue_template?: string | null
           created_at?: string
           currency?: string | null
           dealer_address?: string | null
@@ -1009,6 +1011,7 @@ export type Database = {
           whatsapp_number?: string | null
         }
         Update: {
+          catalogue_template?: string | null
           created_at?: string
           currency?: string | null
           dealer_address?: string | null

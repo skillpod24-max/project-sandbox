@@ -27,8 +27,9 @@ interface HighDemandCardProps {
 const HighDemandCard = memo(({ vehicle, dealer }: HighDemandCardProps) => {
   const getCity = () => {
     if (!dealer?.dealer_address) return null;
-    const parts = dealer.dealer_address.split(",");
-    return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+    const parts = dealer.dealer_address.split(",").map((s: string) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) return parts[parts.length - 2];
+    return parts[0] || null;
   };
 
   const hasDiscount = vehicle.strikeout_price && vehicle.strikeout_price > vehicle.selling_price;
