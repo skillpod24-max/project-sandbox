@@ -202,8 +202,27 @@ const MarketplaceDealer = () => {
                   )}
                 </div>
               </div>
-              {dealer.shop_tagline && (
-                <p className="text-white/80 mb-3">{dealer.shop_tagline}</p>
+              {(dealer.marketplace_tagline || dealer.shop_tagline) && (
+                <p className="text-white/80 mb-3">{dealer.marketplace_tagline || dealer.shop_tagline}</p>
+              )}
+              {/* Google Reviews */}
+              {dealer.google_reviews_rating > 0 && (
+                <div className="flex items-center gap-2 mb-3">
+                  {dealer.google_reviews_url ? (
+                    <a href={dealer.google_reviews_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg hover:bg-white/30 transition-colors">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                      <span className="font-semibold text-sm">{dealer.google_reviews_rating}</span>
+                      <span className="text-white/70 text-xs">Google {dealer.google_reviews_count ? `(${dealer.google_reviews_count})` : ""}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                      <span className="font-semibold text-sm">{dealer.google_reviews_rating}</span>
+                      <span className="text-white/70 text-xs">Google {dealer.google_reviews_count ? `(${dealer.google_reviews_count})` : ""}</span>
+                    </div>
+                  )}
+                </div>
               )}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm">
                 {stats.avgRating > 0 && (

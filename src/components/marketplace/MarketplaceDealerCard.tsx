@@ -13,12 +13,12 @@ interface Props {
 const MarketplaceDealerCard = memo(({ dealer, vehicleCount, rating }: Props) => {
   const getLocation = () => {
     const parts = (dealer.dealer_address || "").split(",").map((p: string) => p.trim()).filter(Boolean);
-    if (parts.length >= 2) {
-      const city = parts[parts.length - 2];
-      const state = parts[parts.length - 1];
-      return `${city}, ${state}`;
+    // Show city only (second to last part, skipping postal code)
+    const nonPostal = parts.filter((p: string) => !/^\d+$/.test(p));
+    if (nonPostal.length >= 2) {
+      return nonPostal[nonPostal.length - 2];
     }
-    return parts[parts.length - 1] || "India";
+    return nonPostal[nonPostal.length - 1] || "India";
   };
 
   return (

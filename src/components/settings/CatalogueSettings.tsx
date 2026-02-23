@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Store, Globe, Upload, Copy, ExternalLink, Eye, MessageCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -296,6 +296,56 @@ const CatalogueSettings = ({ settings, setSettings, uploadingLogo, setUploadingL
                   <Switch 
                     checked={settings.enable_auto_lead_popup ?? false} 
                     onCheckedChange={(v) => setSettings({ ...settings, enable_auto_lead_popup: v })} 
+                  />
+                </div>
+              </div>
+
+              <Separator className="my-2" />
+              <p className="text-sm font-medium text-muted-foreground">Dealer Page Controls</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-emerald-500" />
+                    <Label className="text-sm">Show Dealer Page Views</Label>
+                  </div>
+                  <Switch 
+                    checked={settings.show_dealer_page_views ?? true} 
+                    onCheckedChange={(v) => setSettings({ ...settings, show_dealer_page_views: v })} 
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-emerald-500" />
+                    <Label className="text-sm">Show Dealer Page Enquiries</Label>
+                  </div>
+                  <Switch 
+                    checked={settings.show_dealer_page_inquiries ?? true} 
+                    onCheckedChange={(v) => setSettings({ ...settings, show_dealer_page_inquiries: v })} 
+                  />
+                </div>
+              </div>
+
+              <Separator className="my-2" />
+              <p className="text-sm font-medium text-muted-foreground">Vehicle Page Controls</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-violet-500" />
+                    <Label className="text-sm">Show Vehicle Page Views</Label>
+                  </div>
+                  <Switch 
+                    checked={settings.show_vehicle_page_views ?? true} 
+                    onCheckedChange={(v) => setSettings({ ...settings, show_vehicle_page_views: v })} 
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-violet-500" />
+                    <Label className="text-sm">Show Vehicle Page Enquiries</Label>
+                  </div>
+                  <Switch 
+                    checked={settings.show_vehicle_page_enquiries ?? true} 
+                    onCheckedChange={(v) => setSettings({ ...settings, show_vehicle_page_enquiries: v })} 
                   />
                 </div>
               </div>

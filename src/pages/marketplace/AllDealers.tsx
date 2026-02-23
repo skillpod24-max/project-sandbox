@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Building2, Star, MapPin, Car, Search, ShieldCheck, Award, X, RefreshCw, Users } from "lucide-react";
+import { ArrowLeft, Building2, Star, MapPin, Car, Search, ShieldCheck, Award, X, RefreshCw, Users, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -59,7 +59,7 @@ const AllDealers = () => {
           vehicleCount: vehicleCount[d.user_id] || 0,
           rating: ratings[d.user_id] 
             ? ratings[d.user_id].sum / ratings[d.user_id].count 
-            : 4.5,
+            : 0,
           reviewCount: ratings[d.user_id]?.count || 0
         }))
       };
@@ -281,10 +281,18 @@ const AllDealers = () => {
                       </div>
                     </div>
 
+                    {/* Contact */}
+                    {dealer.dealer_phone && (
+                      <div className="flex items-center gap-1.5 mt-3 text-sm text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5" />
+                        <span className="truncate">{dealer.dealer_phone}</span>
+                      </div>
+                    )}
+
                     {/* Location */}
-                    <div className="flex items-center gap-1.5 mt-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
                       <MapPin className="h-3.5 w-3.5" />
-                      <span className="truncate">{location.city}{location.state ? `, ${location.state}` : ''}</span>
+                      <span className="truncate">{location.city}</span>
                     </div>
 
                     {/* CTA Button */}
