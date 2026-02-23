@@ -332,7 +332,6 @@ const MarketplaceAdmin = () => {
 
   const filteredDealers = dealers.filter(d => {
     const matchesSearch = !searchTerm || d.dealer_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || d.marketplace_status === statusFilter;
     // City filter
     if (selectedCities.length > 0) {
       const addr = d.dealer_address || "";
@@ -340,7 +339,7 @@ const MarketplaceAdmin = () => {
       const dealerCity = parts.length > 1 ? parts[parts.length - 2] : parts[0] || "";
       if (!selectedCities.includes(dealerCity)) return false;
     }
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   // Featured vehicles: only in_stock, sorted by marketplace_status=featured first
@@ -378,11 +377,10 @@ const MarketplaceAdmin = () => {
     setSelectedSellRequest((prev: any) => prev ? { ...prev, assigned_to: dealerUserId, status: "contacted" } : prev);
   };
 
-  // Group dealers by city for assignment popup
+  // Group ALL dealers by city for assignment popup (not just approved)
   const getDealersByCity = useMemo(() => {
-    const approvedDealers = dealers.filter(d => d.marketplace_status === 'approved');
     const cityMap: Record<string, any[]> = {};
-    approvedDealers.forEach(d => {
+    dealers.forEach(d => {
       const addr = d.dealer_address || "";
       const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
       const city = parts.length > 1 ? parts[parts.length - 2] : parts[0] || "Other";
@@ -392,6 +390,9 @@ const MarketplaceAdmin = () => {
     return cityMap;
   }, [dealers]);
 
+  // Active sidebar tab
+  const [activeAdminTab, setActiveAdminTab] = useState("analytics");
+
   // Get the sell request city to show matching dealers first
   const getSellRequestCity = (req: any) => {
     return req?.city || "";
@@ -400,115 +401,133 @@ const MarketplaceAdmin = () => {
   if (loading) return <PageSkeleton />;
   if (!isAdmin) return null;
 
+  const adminTabs = [
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "dealers", label: "Dealers", icon: Building2 },
+    { id: "featured", label: "Featured", icon: Sparkles },
+    { id: "sell_requests", label: "Sell Requests", icon: Tag },
+    { id: "tickets", label: "Support", icon: Ticket },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      {/* Professional Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
-        <div className="container mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-background flex">
+      {/* Left Sidebar - Zoho style */}
+      <aside className="hidden md:flex flex-col w-60 border-r border-border bg-card shrink-0 sticky top-0 h-screen">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-slate-900 text-lg">Admin Console</h1>
-              <p className="text-xs text-slate-500">VahanHub Marketplace</p>
+              <h1 className="font-bold text-foreground text-sm">Admin Console</h1>
+              <p className="text-xs text-muted-foreground">VahanHub Marketplace</p>
             </div>
           </div>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-1">
+          {adminTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveAdminTab(tab.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeAdminTab === tab.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-3 border-t border-border space-y-2">
+          <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={() => setBannerDialogOpen(true)}>
+            <Image className="h-3.5 w-3.5" /> Banners
+          </Button>
+          <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => navigate("/")}>
+            Marketplace
+          </Button>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
+        <div className="px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Dialog open={bannerDialogOpen} onOpenChange={setBannerDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
-                  <Image className="h-4 w-4" /> Banners
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Banner Customization</DialogTitle>
-                  <DialogDescription>Upload separate banners for desktop and mobile</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                  {(['desktop', 'mobile'] as const).map(type => (
-                    <div key={type} className="space-y-3">
-                      <h4 className="font-medium text-sm capitalize">{type} Banner</h4>
-                      <Input
-                        placeholder={`Enter ${type} banner URL...`}
-                        value={type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl}
-                        onChange={(e) => type === 'desktop' ? setBannerDesktopUrl(e.target.value) : setBannerMobileUrl(e.target.value)}
-                      />
-                      <input type="file" accept="image/*" className="hidden" id={`${type}-upload`}
-                        onChange={(e) => e.target.files?.[0] && handleUploadBanner(e.target.files[0], type)} />
-                      <Button variant="outline" className="w-full" onClick={() => document.getElementById(`${type}-upload`)?.click()}
-                        disabled={type === 'desktop' ? uploadingDesktop : uploadingMobile}>
-                        <Upload className="h-4 w-4 mr-2" /> {(type === 'desktop' ? uploadingDesktop : uploadingMobile) ? 'Uploading...' : 'Upload'}
-                      </Button>
-                      {(type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl) && (
-                        <div className="rounded-lg overflow-hidden border aspect-video">
-                          <img src={type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl} alt={`${type} preview`} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <Button onClick={handleSaveBanners} className="w-full mt-4">Save Banners</Button>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" size="sm" onClick={() => navigate("/")}>Marketplace</Button>
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+              <Shield className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-bold text-foreground text-sm">Admin</span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setBannerDialogOpen(true)}>Banners</Button>
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => navigate("/")}>Home</Button>
           </div>
         </div>
-      </header>
-
-      <div className="container mx-auto px-4 lg:px-8 py-6">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          {[
-            { label: "Total Dealers", value: stats.totalDealers, icon: Building2, color: "from-blue-500 to-blue-600" },
-            { label: "Active", value: stats.activeDealers, icon: CheckCircle, color: "from-emerald-500 to-emerald-600" },
-            { label: "Pending", value: stats.pendingDealers, icon: AlertTriangle, color: "from-amber-500 to-amber-600" },
-            { label: "Featured", value: stats.featuredDealers, icon: Sparkles, color: "from-purple-500 to-purple-600" },
-            { label: "Vehicles", value: stats.totalVehicles, icon: Car, color: "from-slate-500 to-slate-600" },
-            { label: "Sell Requests", value: stats.totalSellRequests, icon: Tag, color: "from-rose-500 to-rose-600" },
-          ].map((stat, i) => (
-            <Card key={i} className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-sm`}>
-                    <stat.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900 tabular-nums">{stat.value}</p>
-                    <p className="text-xs text-slate-500 font-medium">{stat.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="flex gap-1 px-3 pb-2 overflow-x-auto scrollbar-hide">
+          {adminTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveAdminTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                activeAdminTab === tab.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground bg-muted"
+              }`}
+            >
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </button>
           ))}
         </div>
+      </div>
 
-        <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="bg-white/80 backdrop-blur-sm border border-slate-200/60 shadow-sm p-1 rounded-xl flex-wrap h-auto">
-            <TabsTrigger value="analytics" className="gap-2 rounded-lg"><BarChart3 className="h-4 w-4" /> Analytics</TabsTrigger>
-            <TabsTrigger value="dealers" className="gap-2 rounded-lg"><Building2 className="h-4 w-4" /> Dealers</TabsTrigger>
-            <TabsTrigger value="featured" className="gap-2 rounded-lg"><Sparkles className="h-4 w-4" /> Featured</TabsTrigger>
-            <TabsTrigger value="sell_requests" className="gap-2 rounded-lg"><Tag className="h-4 w-4" /> Sell Requests</TabsTrigger>
-            <TabsTrigger value="tickets" className="gap-2 rounded-lg"><Ticket className="h-4 w-4" /> Support</TabsTrigger>
-          </TabsList>
+      {/* Main Content */}
+      <main className="flex-1 min-w-0 mt-[100px] md:mt-0">
+        <div className="p-4 lg:p-6 space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: "Total Dealers", value: stats.totalDealers, icon: Building2, color: "from-blue-500 to-blue-600" },
+              { label: "Active", value: stats.activeDealers, icon: CheckCircle, color: "from-emerald-500 to-emerald-600" },
+              { label: "Pending", value: stats.pendingDealers, icon: AlertTriangle, color: "from-amber-500 to-amber-600" },
+              { label: "Featured", value: stats.featuredDealers, icon: Sparkles, color: "from-purple-500 to-purple-600" },
+              { label: "Vehicles", value: stats.totalVehicles, icon: Car, color: "from-slate-500 to-slate-600" },
+              { label: "Sell Requests", value: stats.totalSellRequests, icon: Tag, color: "from-rose-500 to-rose-600" },
+            ].map((stat, i) => (
+              <Card key={i} className="border shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-sm`}>
+                      <stat.icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-          {/* ===== ANALYTICS TAB ===== */}
-          <TabsContent value="analytics">
+          {/* ===== ANALYTICS ===== */}
+          {activeAdminTab === "analytics" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-slate-900">Marketplace Analytics</h2>
-                <div className="flex gap-1 p-1 bg-white rounded-xl border shadow-sm">
+                <h2 className="text-xl font-bold text-foreground">Marketplace Analytics</h2>
+                <div className="flex gap-1 p-1 bg-muted rounded-xl">
                   {[{ key: "7d", label: "7D" }, { key: "30d", label: "30D" }, { key: "90d", label: "90D" }].map(p => (
                     <button key={p.key} onClick={() => setAnalyticsPeriod(p.key)}
-                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${analyticsPeriod === p.key ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${analyticsPeriod === p.key ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
                       {p.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Metric Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {[
                   { label: "Total Views", value: analyticsData.totalViews, icon: Eye, color: "text-blue-600 bg-blue-50" },
@@ -518,26 +537,25 @@ const MarketplaceAdmin = () => {
                   { label: "WhatsApp", value: analyticsData.totalWhatsapp, icon: MessageSquare, color: "text-green-600 bg-green-50" },
                   { label: "Conversion", value: `${analyticsData.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: "text-rose-600 bg-rose-50" },
                 ].map((m, i) => (
-                  <Card key={i} className="border-0 shadow-sm">
+                  <Card key={i} className="border shadow-sm">
                     <CardContent className="p-4">
                       <div className={`h-9 w-9 rounded-lg ${m.color} flex items-center justify-center mb-2`}>
                         <m.icon className="h-4 w-4" />
                       </div>
-                      <p className="text-2xl font-bold text-slate-900 tabular-nums">{m.value}</p>
-                      <p className="text-xs text-slate-500">{m.label}</p>
+                      <p className="text-2xl font-bold text-foreground tabular-nums">{m.value}</p>
+                      <p className="text-xs text-muted-foreground">{m.label}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
 
-              {/* Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="border-0 shadow-sm lg:col-span-2">
+                <Card className="border shadow-sm lg:col-span-2">
                   <CardHeader><CardTitle className="text-base">Traffic Trend</CardTitle></CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={280}>
                       <AreaChart data={dailyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
                         <Tooltip />
@@ -548,7 +566,7 @@ const MarketplaceAdmin = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm">
+                <Card className="border shadow-sm">
                   <CardHeader><CardTitle className="text-base">Enquiries by City</CardTitle></CardHeader>
                   <CardContent>
                     {cityData.length > 0 ? (
@@ -561,15 +579,14 @@ const MarketplaceAdmin = () => {
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex items-center justify-center h-[280px] text-slate-400 text-sm">No city data yet</div>
+                      <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">No city data yet</div>
                     )}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Top Vehicles */}
               {topVehicles.length > 0 && (
-                <Card className="border-0 shadow-sm">
+                <Card className="border shadow-sm">
                   <CardHeader><CardTitle className="text-base">Top Performing Vehicles</CardTitle></CardHeader>
                   <CardContent className="p-0">
                     <Table>
@@ -587,14 +604,14 @@ const MarketplaceAdmin = () => {
                           <TableRow key={v.id}>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-400 w-5">#{i + 1}</span>
+                                <span className="text-xs font-bold text-muted-foreground w-5">#{i + 1}</span>
                                 <span className="font-medium">{v.name}</span>
                               </div>
                             </TableCell>
                             <TableCell><Badge variant="outline">{v.views}</Badge></TableCell>
                             <TableCell><Badge className="bg-emerald-50 text-emerald-700 border-0">{v.enquiries}</Badge></TableCell>
                             <TableCell>{v.views > 0 ? `${((v.enquiries / v.views) * 100).toFixed(1)}%` : '0%'}</TableCell>
-                            <TableCell className="font-semibold text-blue-600">{formatCurrency(v.selling_price)}</TableCell>
+                            <TableCell className="font-semibold text-primary">{formatCurrency(v.selling_price)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -603,40 +620,30 @@ const MarketplaceAdmin = () => {
                 </Card>
               )}
             </div>
-          </TabsContent>
+          )}
 
-          {/* ===== DEALERS TAB ===== */}
-          <TabsContent value="dealers">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="border-b border-slate-100">
+          {/* ===== DEALERS ===== */}
+          {activeAdminTab === "dealers" && (
+            <Card className="border shadow-sm">
+              <CardHeader className="border-b border-border">
                 <div className="flex flex-col md:flex-row justify-between gap-4">
                   <div>
                     <CardTitle>Dealer Management</CardTitle>
-                    <CardDescription>Approve, feature (max 5), and view dealer insights</CardDescription>
+                    <CardDescription>Feature (max 5), and view dealer insights</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input placeholder="Search dealers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-64" />
                     </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
-                {/* City Filter Checkboxes */}
                 {allCities.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-1"><MapPin className="h-4 w-4" /> Filter by City</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1"><MapPin className="h-4 w-4" /> Filter by City</p>
                     <div className="flex flex-wrap gap-3">
                       {allCities.map(city => (
-                        <label key={city} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 px-2 py-1 rounded-lg transition-colors">
+                        <label key={city} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted px-2 py-1 rounded-lg transition-colors">
                           <Checkbox
                             checked={selectedCities.includes(city)}
                             onCheckedChange={(checked) => {
@@ -664,66 +671,44 @@ const MarketplaceAdmin = () => {
                       <TableHead>Dealer</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Vehicles</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Featured</TableHead>
-                      <TableHead>Sort Order</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDealers.map((dealer) => (
-                      <TableRow key={dealer.id} className="cursor-pointer hover:bg-slate-50/80" onClick={() => fetchDealerInsights(dealer)}>
+                      <TableRow key={dealer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => fetchDealerInsights(dealer)}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             {dealer.shop_logo_url ? (
                               <img src={dealer.shop_logo_url} alt={dealer.dealer_name} className="h-10 w-10 rounded-lg object-cover" />
                             ) : (
-                              <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                                <Building2 className="h-5 w-5 text-slate-400" />
+                              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                                <Building2 className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
                             <div>
-                              <p className="font-semibold text-slate-900">{dealer.dealer_name}</p>
-                              <p className="text-xs text-slate-500">{dealer.dealer_address?.split(",").slice(-2).join(",").trim() || "—"}</p>
+                              <p className="font-semibold text-foreground">{dealer.dealer_name}</p>
+                              <p className="text-xs text-muted-foreground">{dealer.dealer_address?.split(",").slice(-2).join(",").trim() || "—"}</p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <p className="text-sm">{dealer.dealer_phone}</p>
-                          <p className="text-xs text-slate-500">{dealer.dealer_email}</p>
+                          <p className="text-xs text-muted-foreground">{dealer.dealer_email}</p>
                         </TableCell>
                         <TableCell><Badge variant="outline">{getDealerVehicleCount(dealer.user_id)}</Badge></TableCell>
-                        <TableCell>
-                          <Badge className={`${dealer.marketplace_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : dealer.marketplace_status === 'suspended' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'} border-0`}>
-                            {dealer.marketplace_status || 'pending'}
-                          </Badge>
-                        </TableCell>
                         <TableCell onClick={e => e.stopPropagation()}>
                           <Checkbox
                             checked={dealer.marketplace_featured || false}
                             onCheckedChange={() => handleDealerAction(dealer.id, dealer.marketplace_featured ? 'unfeature' : 'feature')}
                           />
                         </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                              // Move up in sort (swap featured status or just visual)
-                            }}>
-                              <ArrowUp className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                            }}>
-                              <ArrowDown className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
                         <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" className="bg-card">
                               <DropdownMenuItem onClick={() => fetchDealerInsights(dealer)}><Eye className="h-4 w-4 mr-2 text-blue-600" /> View Insights</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'approve')}><CheckCircle className="h-4 w-4 mr-2 text-emerald-600" /> Approve</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'suspend')}><Ban className="h-4 w-4 mr-2 text-red-600" /> Suspend</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'badge_update', 'Trusted Seller')}><Award className="h-4 w-4 mr-2 text-blue-600" /> Trusted Seller</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'badge_update', 'Premium Dealer')}><Award className="h-4 w-4 mr-2 text-purple-600" /> Premium Dealer</DropdownMenuItem>
                             </DropdownMenuContent>
@@ -734,19 +719,19 @@ const MarketplaceAdmin = () => {
                   </TableBody>
                 </Table>
                 {filteredDealers.length === 0 && (
-                  <div className="p-12 text-center text-slate-500"><Building2 className="h-12 w-12 mx-auto mb-4 text-slate-300" /><p>No dealers found</p></div>
+                  <div className="p-12 text-center text-muted-foreground"><Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" /><p>No dealers found</p></div>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          {/* ===== FEATURED TAB (Vehicles only - in_stock only) ===== */}
-          <TabsContent value="featured">
-            <Card className="border-0 shadow-sm">
+          {/* ===== FEATURED TAB ===== */}
+          {activeAdminTab === "featured" && (
+            <Card className="border shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" /> Featured Vehicles</CardTitle>
                 <CardDescription>
-                  Only available (in_stock) vehicles shown. Max 5 featured. 
+                  Only available (in_stock) vehicles shown. Max 5 featured.
                   Currently featured: {vehicles.filter(v => v.marketplace_status === 'featured' && v.status === 'in_stock').length}/5
                 </CardDescription>
               </CardHeader>
@@ -757,9 +742,7 @@ const MarketplaceAdmin = () => {
                       <TableHead>Vehicle</TableHead>
                       <TableHead>Dealer</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Featured</TableHead>
-                      <TableHead>Sort Order</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -767,31 +750,18 @@ const MarketplaceAdmin = () => {
                       const dealer = dealers.find(d => d.user_id === vehicle.user_id);
                       const isFeatured = vehicle.marketplace_status === 'featured';
                       return (
-                        <TableRow key={vehicle.id} className={isFeatured ? "bg-amber-50/50" : ""}>
+                        <TableRow key={vehicle.id} className={isFeatured ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}>
                           <TableCell>
-                            <p className="font-semibold text-slate-900">{vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}</p>
-                            <p className="text-xs text-slate-500">{vehicle.fuel_type} · {vehicle.transmission}</p>
+                            <p className="font-semibold text-foreground">{vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}</p>
+                            <p className="text-xs text-muted-foreground">{vehicle.fuel_type} · {vehicle.transmission}</p>
                           </TableCell>
                           <TableCell>{dealer?.dealer_name || 'Unknown'}</TableCell>
-                          <TableCell className="font-semibold text-blue-600">{formatCurrency(vehicle.selling_price)}</TableCell>
-                          <TableCell>
-                            <Badge className="bg-emerald-50 text-emerald-700 border-0">in_stock</Badge>
-                          </TableCell>
+                          <TableCell className="font-semibold text-primary">{formatCurrency(vehicle.selling_price)}</TableCell>
                           <TableCell>
                             <Checkbox
                               checked={isFeatured}
                               onCheckedChange={() => handleToggleFeaturedVehicle(vehicle.id, isFeatured)}
                             />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <ArrowUp className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <ArrowDown className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -800,18 +770,18 @@ const MarketplaceAdmin = () => {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          {/* ===== SELL REQUESTS TAB (Admin only - no dealer access) ===== */}
-          <TabsContent value="sell_requests">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="border-b border-slate-100">
+          {/* ===== SELL REQUESTS ===== */}
+          {activeAdminTab === "sell_requests" && (
+            <Card className="border shadow-sm">
+              <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2"><Tag className="h-5 w-5 text-rose-500" /> Sell Vehicle Requests</CardTitle>
                 <CardDescription>Admin-only: {sellRequests.length} submissions from "Sell Your Vehicle" form</CardDescription>
               </CardHeader>
               <CardContent>
                 {sellRequests.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500"><Tag className="h-12 w-12 mx-auto mb-4 text-slate-300" /><p>No sell requests yet</p></div>
+                  <div className="p-12 text-center text-muted-foreground"><Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" /><p>No sell requests yet</p></div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {sellRequests.map((req) => {
@@ -820,12 +790,11 @@ const MarketplaceAdmin = () => {
                       return (
                         <Card key={req.id} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                           onClick={() => { setSelectedSellRequest(req); setSellDetailOpen(true); }}>
-                          {/* Image */}
-                          <div className="aspect-video bg-slate-100 relative overflow-hidden">
+                          <div className="aspect-video bg-muted relative overflow-hidden">
                             {primaryImage ? (
                               <img src={primaryImage} alt={req.vehicle_interest} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center"><Car className="h-12 w-12 text-slate-300" /></div>
+                              <div className="w-full h-full flex items-center justify-center"><Car className="h-12 w-12 text-muted-foreground/30" /></div>
                             )}
                             {details?.images?.length > 1 && (
                               <Badge className="absolute bottom-2 right-2 bg-black/60 text-white border-0 text-xs">
@@ -836,22 +805,21 @@ const MarketplaceAdmin = () => {
                               {req.status}
                             </Badge>
                           </div>
-                          {/* Info */}
                           <div className="p-4 space-y-2">
-                            <h3 className="font-semibold text-slate-900 truncate">{req.vehicle_interest}</h3>
-                            {details?.variant && <p className="text-xs text-slate-500">{details.variant}</p>}
+                            <h3 className="font-semibold text-foreground truncate">{req.vehicle_interest}</h3>
+                            {details?.variant && <p className="text-xs text-muted-foreground">{details.variant}</p>}
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-slate-600">{req.customer_name}</span>
-                              {req.budget_min ? <span className="font-bold text-blue-600">{formatCurrency(req.budget_min)}</span> : null}
+                              <span className="text-muted-foreground">{req.customer_name}</span>
+                              {req.budget_min ? <span className="font-bold text-primary">{formatCurrency(req.budget_min)}</span> : null}
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Calendar className="h-3 w-3" />
                               {new Date(req.created_at).toLocaleDateString("en-IN")}
                               {req.city && <><MapPin className="h-3 w-3 ml-2" />{req.city}</>}
                             </div>
                             {req.assigned_to && (
                               <Badge variant="outline" className="text-xs mt-1 border-blue-200 text-blue-600">
-                                Assigned: {req.assigned_to}
+                                Assigned
                               </Badge>
                             )}
                           </div>
@@ -862,12 +830,12 @@ const MarketplaceAdmin = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          {/* ===== SUPPORT TAB ===== */}
-          <TabsContent value="tickets">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="border-b border-slate-100">
+          {/* ===== SUPPORT ===== */}
+          {activeAdminTab === "tickets" && (
+            <Card className="border shadow-sm">
+              <CardHeader className="border-b border-border">
                 <CardTitle>Support Tickets</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -884,14 +852,14 @@ const MarketplaceAdmin = () => {
                   </TableHeader>
                   <TableBody>
                     {supportTickets.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-500">No tickets yet</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No tickets yet</TableCell></TableRow>
                     ) : supportTickets.map((ticket: any) => (
                       <TableRow key={ticket.id}>
                         <TableCell className="text-sm whitespace-nowrap">{new Date(ticket.created_at).toLocaleDateString("en-IN")}</TableCell>
                         <TableCell className="font-medium">{ticket.name}</TableCell>
                         <TableCell className="text-sm">{ticket.email}</TableCell>
                         <TableCell><Badge variant="outline" className="text-xs capitalize">{ticket.subject || "general"}</Badge></TableCell>
-                        <TableCell className="max-w-xs truncate text-sm text-slate-600">{ticket.message}</TableCell>
+                        <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{ticket.message}</TableCell>
                         <TableCell><Badge className={ticket.status === "open" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}>{ticket.status}</Badge></TableCell>
                       </TableRow>
                     ))}
@@ -899,9 +867,9 @@ const MarketplaceAdmin = () => {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+          )}
+        </div>
+      </main>
 
       {/* Dealer Insights Dialog */}
       <Dialog open={dealerInsightsOpen} onOpenChange={setDealerInsightsOpen}>
@@ -1117,9 +1085,43 @@ const MarketplaceAdmin = () => {
               });
             })()}
             {Object.keys(getDealersByCity).length === 0 && (
-              <p className="text-center text-slate-500 py-8">No approved dealers found</p>
+              <p className="text-center text-muted-foreground py-8">No dealers found</p>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Banner Dialog */}
+      <Dialog open={bannerDialogOpen} onOpenChange={setBannerDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Banner Customization</DialogTitle>
+            <DialogDescription>Upload separate banners for desktop and mobile</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            {(['desktop', 'mobile'] as const).map(type => (
+              <div key={type} className="space-y-3">
+                <h4 className="font-medium text-sm capitalize">{type} Banner</h4>
+                <Input
+                  placeholder={`Enter ${type} banner URL...`}
+                  value={type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl}
+                  onChange={(e) => type === 'desktop' ? setBannerDesktopUrl(e.target.value) : setBannerMobileUrl(e.target.value)}
+                />
+                <input type="file" accept="image/*" className="hidden" id={`${type}-upload`}
+                  onChange={(e) => e.target.files?.[0] && handleUploadBanner(e.target.files[0], type)} />
+                <Button variant="outline" className="w-full" onClick={() => document.getElementById(`${type}-upload`)?.click()}
+                  disabled={type === 'desktop' ? uploadingDesktop : uploadingMobile}>
+                  <Upload className="h-4 w-4 mr-2" /> {(type === 'desktop' ? uploadingDesktop : uploadingMobile) ? 'Uploading...' : 'Upload'}
+                </Button>
+                {(type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl) && (
+                  <div className="rounded-lg overflow-hidden border aspect-video">
+                    <img src={type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl} alt={`${type} preview`} className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <Button onClick={handleSaveBanners} className="w-full mt-4">Save Banners</Button>
         </DialogContent>
       </Dialog>
     </div>

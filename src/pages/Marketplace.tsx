@@ -14,7 +14,7 @@ import {
   DollarSign, Tag, Phone, Zap, FileCheck, Headphones, RefreshCw, ThumbsUp,
   ShieldCheck, BadgePercent
 } from "lucide-react";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import { MarketplaceSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceVehicleCard from "@/components/marketplace/MarketplaceVehicleCard";
 import MarketplaceDealerCard from "@/components/marketplace/MarketplaceDealerCard";
@@ -521,7 +521,7 @@ const Marketplace = () => {
         </div>
       </section>
 
-      {/* Featured Vehicles Section - Above Dealers */}
+      {/* Featured Vehicles Section - Compact on mobile */}
       {featuredVehicles.length > 0 && (
         <section className="container mx-auto px-3 md:px-4 py-6 md:py-8">
           <div className="flex items-center justify-between mb-4 md:mb-6">
@@ -538,7 +538,8 @@ const Marketplace = () => {
               </Button>
             </Link>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          {/* Desktop: full cards, Mobile: compact cards */}
+          <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
             {featuredVehicles.map((vehicle) => (
               <MarketplaceVehicleCard
                 key={vehicle.id}
@@ -550,6 +551,62 @@ const Marketplace = () => {
                 onCompareToggle={toggleCompare}
               />
             ))}
+          </div>
+          {/* Mobile: compact grid */}
+          <div className="grid grid-cols-2 gap-2.5 md:hidden">
+            {featuredVehicles.map((vehicle) => {
+              const dealer = getDealerForVehicle(vehicle.user_id);
+              const hasDiscount = vehicle.strikeout_price && vehicle.strikeout_price > vehicle.selling_price;
+              return (
+                <Link key={vehicle.id} to={`/marketplace/vehicle/${vehicle.id}`} className="group block">
+                  <Card className="overflow-hidden border-0 shadow-sm rounded-xl">
+                    <div className="aspect-[4/3] bg-muted overflow-hidden relative">
+                      {vehicle.image_url ? (
+                        <img src={vehicle.image_url} alt={`${vehicle.brand} ${vehicle.model}`} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"><Car className="h-8 w-8 text-muted-foreground/30" /></div>
+                      )}
+                      {vehicle.image_badge_text && (
+                        <Badge className="absolute top-1.5 left-1.5 text-white border-0 text-[10px] px-1.5 py-0.5" style={{ backgroundColor: '#10B981' }}>
+                          {vehicle.image_badge_text.length > 12 ? `${vehicle.image_badge_text.slice(0, 12)}...` : vehicle.image_badge_text}
+                        </Badge>
+                      )}
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(vehicle.id); }}
+                        className={`absolute top-1.5 right-1.5 h-7 w-7 rounded-full backdrop-blur-md flex items-center justify-center ${isInWishlist(vehicle.id) ? 'bg-red-500 text-white' : 'bg-white/80 text-muted-foreground'}`}
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${isInWishlist(vehicle.id) ? 'fill-current' : ''}`} />
+                      </button>
+                    </div>
+                    <div className="p-2.5 space-y-1">
+                      <h3 className="font-semibold text-foreground text-xs leading-tight line-clamp-1">
+                        {vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <span className="capitalize">{vehicle.fuel_type}</span>
+                        <span>·</span>
+                        <span>{vehicle.odometer_reading ? `${formatIndianNumber(vehicle.odometer_reading)} km` : vehicle.transmission}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          {hasDiscount && <span className="text-[10px] text-muted-foreground line-through block">{formatCurrency(vehicle.strikeout_price)}</span>}
+                          <span className="text-sm font-bold text-primary">{formatCurrency(vehicle.selling_price)}</span>
+                        </div>
+                      </div>
+                      {dealer && (
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground pt-0.5">
+                          <MapPin className="h-2.5 w-2.5" />
+                          <span className="truncate">{(() => {
+                            const parts = (dealer.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+                            return parts.length >= 2 ? parts[parts.length - 2] : parts[0] || "";
+                          })()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
