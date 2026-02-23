@@ -243,9 +243,22 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
                 <MapPin className="h-5 w-5 text-blue-500" />
                 Google Reviews
               </CardTitle>
-              <CardDescription>Display your Google Business rating on the marketplace</CardDescription>
+              <CardDescription>Link your Google Business location to display verified ratings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Google Maps Location Link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={settings.google_reviews_url || ""}
+                    onChange={(e) => setSettings({ ...settings, google_reviews_url: e.target.value })}
+                    placeholder="https://maps.google.com/... or https://g.page/..."
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Paste your Google Maps business link. Customers can click to verify your ratings.</p>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Google Rating</Label>
@@ -271,17 +284,9 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Google Maps / Reviews Link</Label>
-                <Input
-                  value={settings.google_reviews_url || ""}
-                  onChange={(e) => setSettings({ ...settings, google_reviews_url: e.target.value })}
-                  placeholder="https://maps.google.com/..."
-                />
-                <p className="text-xs text-muted-foreground">Link to your Google Business page for customers to verify</p>
-              </div>
+
               {settings.google_reviews_rating > 0 && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
                   <div className="flex items-center gap-1">
                     <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
                     <span className="font-bold text-lg">{settings.google_reviews_rating}</span>
@@ -289,6 +294,11 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
                   <span className="text-sm text-muted-foreground">
                     Google Rating {settings.google_reviews_count ? `(${settings.google_reviews_count} reviews)` : ""}
                   </span>
+                  {settings.google_reviews_url && (
+                    <a href={settings.google_reviews_url} target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-primary hover:underline flex items-center gap-1">
+                      Verify <Globe className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
               )}
             </CardContent>

@@ -101,7 +101,7 @@ const AllDealers = () => {
     // Sort
     switch (sortBy) {
       case "rating":
-        result.sort((a, b) => b.rating - a.rating);
+        result.sort((a, b) => (b.google_reviews_rating || b.rating) - (a.google_reviews_rating || a.rating));
         break;
       case "vehicles":
         result.sort((a, b) => b.vehicleCount - a.vehicleCount);
@@ -266,12 +266,20 @@ const AllDealers = () => {
                     {/* Stats Row */}
                     <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border">
                       <div className="flex items-center gap-1.5">
-                        <div className="flex items-center gap-0.5 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
-                          <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                          <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">{dealer.rating?.toFixed(1)}</span>
-                        </div>
-                        {dealer.reviewCount > 0 && (
-                          <span className="text-xs text-muted-foreground">({dealer.reviewCount})</span>
+                        {dealer.google_reviews_rating > 0 ? (
+                          <div className="flex items-center gap-0.5 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-lg">
+                            <MapPin className="h-3 w-3 text-blue-500" />
+                            <Star className="h-3.5 w-3.5 text-blue-500 fill-blue-500" />
+                            <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">{Number(dealer.google_reviews_rating).toFixed(1)}</span>
+                          </div>
+                        ) : dealer.rating > 0 ? (
+                          <div className="flex items-center gap-0.5 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
+                            <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                            <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">{dealer.rating?.toFixed(1)}</span>
+                          </div>
+                        ) : null}
+                        {(dealer.reviewCount > 0 || dealer.google_reviews_count > 0) && (
+                          <span className="text-xs text-muted-foreground">({dealer.google_reviews_count || dealer.reviewCount})</span>
                         )}
                       </div>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
