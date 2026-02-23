@@ -29,6 +29,7 @@ interface VehicleInfo {
   public_description?: string | null;
   public_highlights?: string[] | null;
   public_features?: string[] | null;
+  notes?: string | null;
 }
 
 interface DealerInfo {
@@ -39,7 +40,19 @@ interface DealerInfo {
 }
 
 const formatRupees = (num: number): string => {
-  return 'Rs. ' + formatIndianNumber(num);
+  return '₹ ' + formatIndianNumber(num);
+};
+
+// Parse specs from notes
+const parseNoteSpecs = (notes: string | null | undefined): Record<string, string> => {
+  if (!notes) return {};
+  const specs: Record<string, string> = {};
+  const regex = /\[([^:]+): ([^\]]+)\]/g;
+  let match;
+  while ((match = regex.exec(notes)) !== null) {
+    specs[match[1]] = match[2];
+  }
+  return specs;
 };
 
 export const generateVehicleBrochurePDF = async (
@@ -48,279 +61,261 @@ export const generateVehicleBrochurePDF = async (
   imageUrl?: string
 ): Promise<void> => {
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  
-  let yPos = 0;
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const noteSpecs = parseNoteSpecs(vehicle.notes);
 
-  // Header with gradient effect - Top Banner
-  doc.setFillColor(20, 40, 70);
-  doc.rect(0, 0, pageWidth, 35, 'F');
+  // ──── COLOR PALETTE ────
+  const DARK: [number, number, number] = [20, 30, 48];
+  const ACCENT: [number, number, number] = [220, 53, 69];
+  const WHITE: [number, number, number] = [255, 255, 255];
+  const LIGHT_BG: [number, number, number] = [245, 247, 250];
+  const TEXT_GRAY: [number, number, number] = [80, 90, 100];
 
-  doc.setDrawColor(255, 255, 255);
-doc.setLineWidth(0.5);
-doc.line(20, 36, pageWidth - 20, 36);
+  // ──── TOP BANNER (Dark) ────
+  doc.setFillColor(...DARK);
+  doc.rect(0, 0, W, 28, 'F');
 
-  
-  // Dealer name in header
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
+  // Accent stripe
+  doc.setFillColor(...ACCENT);
+  doc.rect(0, 28, W, 2.5, 'F');
+
+  // Dealer name
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(dealer.dealer_name || 'VahanHub', pageWidth / 2, 15, { align: 'center' });
-  
-  // Dealer contact in header
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  const contactLine = [dealer.dealer_phone, dealer.dealer_email].filter(Boolean).join('  |  ');
-  if (contactLine) {
-    doc.text(contactLine, pageWidth / 2, 25, { align: 'center' });
-  }
-  if (dealer.dealer_address) {
-    doc.setFontSize(8);
-    doc.text(dealer.dealer_address, pageWidth / 2, 31, { align: 'center' });
-  }
-  
-  yPos = 42;
+  doc.text(dealer.dealer_name || 'VahanHub', 15, 12);
 
-  // Add vehicle image if available - Below Header
+  // Dealer contact
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(200, 210, 220);
+  const contactParts = [dealer.dealer_phone, dealer.dealer_email].filter(Boolean);
+  if (contactParts.length) doc.text(contactParts.join('  •  '), 15, 19);
+  if (dealer.dealer_address) doc.text(dealer.dealer_address, 15, 24);
+
+  let y = 35;
+
+  // ──── VEHICLE IMAGE ────
   if (imageUrl) {
     try {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
       await new Promise<void>((resolve) => {
         img.onload = () => {
-          const imgWidth = 140;
-          const imgHeight = (img.height / img.width) * imgWidth;
-          const maxHeight = 100;
-          const finalHeight = Math.min(imgHeight, maxHeight);
-          const finalWidth = (finalHeight / imgHeight) * imgWidth;
-          
-          const x = (pageWidth - finalWidth) / 2;
-          
-          // Image container with border
-          doc.setFillColor(245, 247, 250);
-          doc.roundedRect(x - 5, yPos - 3, finalWidth + 10, finalHeight + 6, 4, 4, 'F');
-          doc.setDrawColor(200, 210, 220);
-          doc.setLineWidth(0.5);
-          doc.roundedRect(x - 5, yPos - 3, finalWidth + 10, finalHeight + 6, 4, 4, 'S');
-          
-          doc.addImage(img, 'JPEG', x, yPos, finalWidth, finalHeight);
-          yPos += finalHeight + 15;
+          const maxW = W - 30;
+          const maxH = 80;
+          const ratio = img.width / img.height;
+          let imgW = maxW;
+          let imgH = imgW / ratio;
+          if (imgH > maxH) { imgH = maxH; imgW = imgH * ratio; }
+          const x = (W - imgW) / 2;
+
+          // Subtle bg
+          doc.setFillColor(...LIGHT_BG);
+          doc.roundedRect(x - 3, y - 2, imgW + 6, imgH + 4, 3, 3, 'F');
+          doc.addImage(img, 'JPEG', x, y, imgW, imgH);
+          y += imgH + 8;
           resolve();
         };
         img.onerror = () => resolve();
         img.src = imageUrl;
       });
-    } catch (e) {
-      // Skip image on error
-    }
+    } catch { /* skip */ }
   }
 
-  // Vehicle Title Section
-  doc.setFillColor(30, 58, 95);
-  doc.roundedRect(15, yPos, pageWidth - 30, 32, 4, 4, 'F');
-  
-  // Vehicle name
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
+  // ──── VEHICLE TITLE BAR ────
+  doc.setFillColor(...DARK);
+  doc.roundedRect(15, y, W - 30, 20, 3, 3, 'F');
+
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  const vehicleName = `${vehicle.brand} ${vehicle.model}`;
-  doc.text(vehicleName, pageWidth / 2, yPos + 12, { align: 'center' });
-  
-  if (vehicle.variant) {
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text(vehicle.variant, pageWidth / 2, yPos + 20, { align: 'center' });
-  }
-  
+  const title = `${vehicle.brand} ${vehicle.model}${vehicle.variant ? ' ' + vehicle.variant : ''}`;
+  doc.text(title, 22, y + 9);
+
   // Price badge
-  doc.setFillColor(22, 163, 74); // modern green
-doc.roundedRect(pageWidth / 2 - 50, yPos + 23, 100, 12, 6, 6, 'F');
-
-doc.setFontSize(12);
-
+  doc.setFillColor(...ACCENT);
+  const priceText = formatRupees(vehicle.selling_price);
+  const priceW = doc.getStringUnitWidth(priceText) * 11 / doc.internal.scaleFactor + 14;
+  doc.roundedRect(W - 15 - priceW, y + 4, priceW, 12, 6, 6, 'F');
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatRupees(vehicle.selling_price), pageWidth / 2, yPos + 30, { align: 'center' });
-  
-  yPos += 42;
-  
-  // Reset text color
-  doc.setTextColor(30, 30, 30);
-  
-  // Quick specs row - 4 boxes
-  const specBoxWidth = (pageWidth - 40) / 4;
-  
+  doc.text(priceText, W - 15 - priceW / 2, y + 12, { align: 'center' });
+
+  y += 26;
+
+  // ──── QUICK SPECS ROW ────
   const quickSpecs = [
-    { label: 'Year', value: vehicle.manufacturing_year.toString() },
-    { label: 'Owners', value: vehicle.number_of_owners?.toString() || '1' },
-    { label: 'Fuel', value: vehicle.fuel_type.toUpperCase() },
-    { label: 'Transmission', value: vehicle.transmission.toUpperCase() },
+    { label: 'YEAR', value: String(vehicle.manufacturing_year) },
+    { label: 'FUEL', value: vehicle.fuel_type.toUpperCase() },
+    { label: 'TRANSMISSION', value: vehicle.transmission.toUpperCase() },
+    { label: 'OWNERS', value: String(vehicle.number_of_owners || 1) },
+    { label: 'KM DRIVEN', value: vehicle.odometer_reading ? formatIndianNumber(vehicle.odometer_reading) : 'N/A' },
   ];
-  
-  quickSpecs.forEach((spec, i) => {
-    const x = 20 + (i * specBoxWidth);
-    doc.setFillColor(240, 245, 252);
-    doc.setDrawColor(200, 215, 235);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(x, yPos, specBoxWidth - 6, 20, 3, 3, 'FD');
-    doc.setFontSize(7);
+  const boxW = (W - 30 - (quickSpecs.length - 1) * 3) / quickSpecs.length;
+  quickSpecs.forEach((s, i) => {
+    const x = 15 + i * (boxW + 3);
+    doc.setFillColor(...LIGHT_BG);
+    doc.roundedRect(x, y, boxW, 16, 2, 2, 'F');
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 110, 120);
-    doc.text(spec.label, x + (specBoxWidth - 6) / 2, yPos + 7, { align: 'center' });
+    doc.setTextColor(140, 150, 160);
+    doc.text(s.label, x + boxW / 2, y + 5.5, { align: 'center' });
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 40, 50);
-    doc.text(spec.value, x + (specBoxWidth - 6) / 2, yPos + 15, { align: 'center' });
+    doc.text(s.value, x + boxW / 2, y + 12.5, { align: 'center' });
   });
-  
-  yPos += 28;
-  
-  // Description
-  if (vehicle.public_description) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 70, 80);
-    doc.setFillColor(248, 250, 252);
-doc.roundedRect(18, yPos - 4, pageWidth - 36, 22, 3, 3, 'F');
+  y += 21;
 
-    const descLines = doc.splitTextToSize(vehicle.public_description, pageWidth - 40);
-    doc.text(descLines, 20, yPos);
-    yPos += descLines.length * 4.5 + 8;
+  // ──── DESCRIPTION ────
+  if (vehicle.public_description) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...TEXT_GRAY);
+    const lines = doc.splitTextToSize(vehicle.public_description, W - 36);
+    const descH = lines.length * 3.8 + 6;
+    doc.setFillColor(252, 253, 255);
+    doc.roundedRect(15, y, W - 30, descH, 2, 2, 'F');
+    doc.text(lines, 20, y + 5);
+    y += descH + 3;
   }
-  
-  // Highlights Section
+
+  // ──── HIGHLIGHTS (Inline badges) ────
   if (vehicle.public_highlights && vehicle.public_highlights.length > 0) {
-    doc.setFillColor(245, 250, 245);
-    doc.setDrawColor(100, 180, 100);
-    doc.setLineWidth(0.5);
-    const highlightBoxHeight = Math.min(vehicle.public_highlights.length * 6 + 12, 40);
-    doc.roundedRect(20, yPos, pageWidth - 40, highlightBoxHeight, 3, 3, 'FD');
-    
-    doc.setFontSize(10);
+    doc.setFillColor(...ACCENT);
+    doc.setTextColor(...WHITE);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(34, 120, 34);
-    doc.text('KEY HIGHLIGHTS', 28, yPos + 8);
-    
-    let hY = yPos + 16;
-    vehicle.public_highlights.slice(0, 4).forEach((highlight) => {
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(40, 80, 40);
-      doc.text('• ' + highlight, 30, hY);
-      hY += 5;
+    let hx = 15;
+    vehicle.public_highlights.slice(0, 6).forEach((h) => {
+      const tw = doc.getStringUnitWidth(h) * 7 / doc.internal.scaleFactor + 8;
+      if (hx + tw > W - 15) { hx = 15; y += 8; }
+      doc.roundedRect(hx, y, tw, 7, 3.5, 3.5, 'F');
+      doc.text(h, hx + tw / 2, y + 5, { align: 'center' });
+      hx += tw + 3;
     });
-    yPos += highlightBoxHeight + 8;
+    y += 12;
   }
-  
-  // Specifications table - Two columns
-  doc.setFontSize(10);
+
+  // ──── SPECIFICATIONS TABLE ────
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 58, 95);
-  doc.text('SPECIFICATIONS', 20, yPos);
-  yPos += 3;
-  
-  const specData = [
-    ['Registration No.', vehicle.registration_number || 'N/A', 'Condition', vehicle.condition.toUpperCase()],
-    ['Color', vehicle.color || 'N/A', 'Odometer', vehicle.odometer_reading ? `${formatIndianNumber(vehicle.odometer_reading)} km` : 'N/A'],
-    ['Mileage', vehicle.mileage ? `${vehicle.mileage} km/l` : 'N/A', 'Owners', vehicle.number_of_owners?.toString() || '1'],
-    ['Tyre Condition', vehicle.tyre_condition || 'N/A', 'Battery Health', vehicle.battery_health || 'N/A'],
+  doc.setTextColor(...DARK);
+  doc.text('VEHICLE SPECIFICATIONS', 15, y + 1);
+
+  // Accent underline
+  doc.setFillColor(...ACCENT);
+  doc.rect(15, y + 2.5, 40, 0.8, 'F');
+  y += 6;
+
+  const specRows: string[][] = [
+    ['Registration', vehicle.registration_number || 'N/A', 'Condition', vehicle.condition.toUpperCase()],
+    ['Color', vehicle.color || 'N/A', 'Mileage', vehicle.mileage ? `${vehicle.mileage} km/l` : 'N/A'],
+    ['Tyre Condition', vehicle.tyre_condition || 'N/A', 'Battery', vehicle.battery_health || 'N/A'],
   ];
 
-  if (vehicle.seating_capacity) {
-    specData.push(['Seating Capacity', vehicle.seating_capacity.toString(), '', '']);
+  if (vehicle.seating_capacity) specRows.push(['Seating', `${vehicle.seating_capacity} Seater`, '', '']);
+
+  // Add parsed note specs
+  const noteEntries = Object.entries(noteSpecs);
+  for (let i = 0; i < noteEntries.length; i += 2) {
+    const [k1, v1] = noteEntries[i];
+    const [k2, v2] = noteEntries[i + 1] || ['', ''];
+    specRows.push([k1, v1, k2, v2]);
   }
-  
+
   autoTable(doc, {
-    startY: yPos,
-    body: specData,
+    startY: y,
+    body: specRows,
     theme: 'plain',
-    styles: { fontSize: 8, cellPadding: 2.5 },
+    styles: { fontSize: 7.5, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 } },
     columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 40, textColor: [80, 90, 100] },
-      1: { cellWidth: 45 },
-      2: { fontStyle: 'bold', cellWidth: 40, textColor: [80, 90, 100] },
-      3: { cellWidth: 45 },
+      0: { fontStyle: 'bold', cellWidth: 35, textColor: TEXT_GRAY },
+      1: { cellWidth: 50, textColor: [30, 30, 30] },
+      2: { fontStyle: 'bold', cellWidth: 35, textColor: TEXT_GRAY },
+      3: { cellWidth: 50, textColor: [30, 30, 30] },
     },
-    alternateRowStyles: { fillColor: [248, 250, 252] },
-    margin: { left: 20, right: 20 },
+    alternateRowStyles: { fillColor: [250, 251, 253] },
+    margin: { left: 15, right: 15 },
   });
-  
-  yPos = (doc as any).lastAutoTable.finalY + 6;
-  
-  // Features - Compact grid
-  if (vehicle.public_features && vehicle.public_features.length > 0) {
-    doc.setFontSize(10);
+
+  y = (doc as any).lastAutoTable.finalY + 5;
+
+  // ──── FEATURES GRID ────
+  if (vehicle.public_features && vehicle.public_features.length > 0 && y < H - 50) {
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 58, 95);
-    doc.text('FEATURES', 20, yPos);
-    yPos += 5;
-    
-    const featuresPerRow = 3;
-    const featureWidth = (pageWidth - 50) / featuresPerRow;
-    
-    vehicle.public_features.slice(0, 9).forEach((feature, i) => {
-      const col = i % featuresPerRow;
-      const row = Math.floor(i / featuresPerRow);
-      const x = 22 + (col * featureWidth);
-      const y = yPos + (row * 6);
-      
-      doc.setFillColor(30, 58, 95);
-      doc.circle(x + 2, y, 1, 'F');
-      doc.setFontSize(8);
+    doc.setTextColor(...DARK);
+    doc.text('FEATURES', 15, y + 1);
+    doc.setFillColor(...ACCENT);
+    doc.rect(15, y + 2.5, 20, 0.8, 'F');
+    y += 7;
+
+    const cols = 3;
+    const colW = (W - 34) / cols;
+    vehicle.public_features.slice(0, 12).forEach((f, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const fx = 17 + col * colW;
+      const fy = y + row * 5.5;
+
+      doc.setFillColor(...ACCENT);
+      doc.circle(fx + 1.5, fy + 0.5, 1, 'F');
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(50, 60, 70);
-      doc.text(feature, x + 6, y + 1);
+      doc.text(f, fx + 5, fy + 1);
     });
-    yPos += Math.ceil(Math.min(vehicle.public_features.length, 9) / featuresPerRow) * 5 + 8;
+    y += Math.ceil(Math.min(vehicle.public_features.length, 12) / cols) * 5.5 + 5;
   }
-  
-  // Validity info - compact table
-  const validities = [];
+
+  // ──── VALIDITY TABLE ────
+  const validities: string[][] = [];
   if (vehicle.insurance_expiry) validities.push(['Insurance', new Date(vehicle.insurance_expiry).toLocaleDateString('en-IN')]);
   if (vehicle.puc_expiry) validities.push(['PUC', new Date(vehicle.puc_expiry).toLocaleDateString('en-IN')]);
   if (vehicle.fitness_expiry) validities.push(['Fitness', new Date(vehicle.fitness_expiry).toLocaleDateString('en-IN')]);
-  
-  if (validities.length > 0) {
-    doc.setFontSize(10);
+
+  if (validities.length > 0 && y < H - 40) {
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 58, 95);
-    doc.text('DOCUMENT VALIDITY', 20, yPos);
-    yPos += 3;
-    
+    doc.setTextColor(...DARK);
+    doc.text('DOCUMENT VALIDITY', 15, y + 1);
+    doc.setFillColor(...ACCENT);
+    doc.rect(15, y + 2.5, 32, 0.8, 'F');
+    y += 6;
+
     autoTable(doc, {
-      startY: yPos,
+      startY: y,
       body: validities,
       theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2.5 },
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 35 },
-        1: { cellWidth: 40 },
-      },
-      headStyles: { fillColor: [230, 126, 34], fontSize: 8 },
-      margin: { left: 20, right: pageWidth - 100 },
+      styles: { fontSize: 7.5, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 }, 1: { cellWidth: 35 } },
+      headStyles: { fillColor: ACCENT as any, fontSize: 7.5 },
+      margin: { left: 15, right: W - 85 },
     });
   }
-  
-  // Footer with branding
-  const footerY = pageHeight - 20;
-  doc.setFillColor(20, 40, 70);
-  doc.rect(0, footerY - 5, pageWidth, 25, 'F');
-  
-  doc.setFontSize(10);
+
+  // ──── FOOTER ────
+  const footerH = 18;
+  const footerY = H - footerH;
+  doc.setFillColor(...DARK);
+  doc.rect(0, footerY, W, footerH, 'F');
+  doc.setFillColor(...ACCENT);
+  doc.rect(0, footerY, W, 1.5, 'F');
+
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text(dealer.dealer_name || 'VahanHub', pageWidth / 2, footerY + 3, { align: 'center' });
-  
-  doc.setFontSize(7);
+  doc.text(dealer.dealer_name || 'VahanHub', W / 2, footerY + 7, { align: 'center' });
+
+  doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(180, 190, 200);
-  doc.text('Thank you for your interest! Contact us for test drive and more details.', pageWidth / 2, footerY + 10, { align: 'center' });
-  
-  doc.setFontSize(6);
-  doc.text('Generated by VahanHub', pageWidth / 2, footerY + 15, { align: 'center' });
-  
-  // Save the PDF
+  doc.text('Contact us for test drive & best deals  •  Generated by VahanHub', W / 2, footerY + 13, { align: 'center' });
+
+  // Save
   const fileName = `${vehicle.brand}_${vehicle.model}_${vehicle.manufacturing_year}_Brochure.pdf`;
   doc.save(fileName.replace(/\s+/g, '_'));
 };

@@ -292,6 +292,20 @@ if (
         ["__torque_nm", "Torque"],
         ["__airbags", "Airbags"],
         ["__sunroof", "Sunroof"],
+        ["__infotainment", "Infotainment"],
+        // Bike
+        ["__weight", "Weight"],
+        ["__seat_height", "Seat Height"],
+        ["__tank", "Tank"],
+        ["__top_speed", "Top Speed"],
+        ["__brake", "Brake"],
+        ["__abs", "ABS"],
+        ["__bike_type", "Type"],
+        // Commercial
+        ["__gvw", "GVW"],
+        ["__payload", "Payload"],
+        ["__body_type", "Body"],
+        ["__permit_type", "Permit"],
       ];
       let notesBase = (vehicleData.notes || "");
       // Remove old spec tags first
@@ -302,7 +316,11 @@ if (
       specFields.forEach(([key, label]) => {
         const val = (vehicleData as any)[key];
         if (val) {
-          const unit = key === "__ground_clearance" ? "mm" : key === "__engine_cc" ? "cc" : key === "__power_bhp" ? "bhp" : key === "__torque_nm" ? "Nm" : "";
+          const unitMap: Record<string, string> = {
+            "__ground_clearance": "mm", "__engine_cc": "cc", "__power_bhp": "bhp", "__torque_nm": "Nm",
+            "__weight": "kg", "__seat_height": "mm", "__tank": "L", "__top_speed": "km/h", "__gvw": "kg", "__payload": "kg",
+          };
+          const unit = unitMap[key] || "";
           notesBase += ` [${label}: ${val}${unit}]`;
         }
         delete (vehicleData as any)[key];
@@ -641,21 +659,35 @@ setVehicleImages(prev => ({
 
   // Parse __ prefixed specs from notes
   const notes = vehicle.notes || "";
-  const gcMatch = notes.match(/\[Ground Clearance: (\d+)mm\]/);
-  const ecMatch = notes.match(/\[Engine: (\d+)cc\]/);
-  const pwMatch = notes.match(/\[Power: (\d+)bhp\]/);
-  const tqMatch = notes.match(/\[Torque: (\d+)Nm\]/);
-  const abMatch = notes.match(/\[Airbags: ([^\]]+)\]/);
-  const srMatch = notes.match(/\[Sunroof: ([^\]]+)\]/);
+  const parseSpec = (label: string) => {
+    const match = notes.match(new RegExp(`\\[${label}: ([^\\]]+)\\]`));
+    return match?.[1]?.replace(/mm$|cc$|bhp$|Nm$|PS$|kg$|mm$|L$|km\/h$/, "") || "";
+  };
+  const parseSpecRaw = (label: string) => {
+    const match = notes.match(new RegExp(`\\[${label}: ([^\\]]+)\\]`));
+    return match?.[1] || "";
+  };
 
   setFormData({
     ...vehicle as any,
-    __ground_clearance: gcMatch?.[1] || "",
-    __engine_cc: ecMatch?.[1] || "",
-    __power_bhp: pwMatch?.[1] || "",
-    __torque_nm: tqMatch?.[1] || "",
-    __airbags: abMatch?.[1] || "",
-    __sunroof: srMatch?.[1] || "",
+    __ground_clearance: parseSpec("Ground Clearance"),
+    __engine_cc: parseSpec("Engine"),
+    __power_bhp: parseSpec("Power"),
+    __torque_nm: parseSpec("Torque"),
+    __airbags: parseSpecRaw("Airbags"),
+    __sunroof: parseSpecRaw("Sunroof"),
+    __infotainment: parseSpecRaw("Infotainment"),
+    __weight: parseSpec("Weight"),
+    __seat_height: parseSpec("Seat Height"),
+    __tank: parseSpec("Tank"),
+    __top_speed: parseSpec("Top Speed"),
+    __brake: parseSpecRaw("Brake"),
+    __abs: parseSpecRaw("ABS"),
+    __bike_type: parseSpecRaw("Type"),
+    __gvw: parseSpec("GVW"),
+    __payload: parseSpec("Payload"),
+    __body_type: parseSpecRaw("Body"),
+    __permit_type: parseSpecRaw("Permit"),
   });
   setPendingImages([]);
   setPendingDocs([]);
@@ -1295,7 +1327,7 @@ setVehicleImages(prev => ({
                       </div>
                       <div className="space-y-2">
                         <Label>Infotainment</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Infotainment: ${v}]` })}>
+                        <Select value={(formData as any).__infotainment || ""} onValueChange={(v) => setFormData({ ...formData, __infotainment: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Basic Audio">Basic Audio</SelectItem>
@@ -1313,31 +1345,31 @@ setVehicleImages(prev => ({
                     <>
                       <div className="space-y-2">
                         <Label>Engine Displacement (cc)</Label>
-                        <Input type="number" placeholder="e.g., 150, 350, 650" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Engine: ${e.target.value}cc]` })} />
+                        <Input type="number" placeholder="e.g., 150, 350, 650" value={(formData as any).__engine_cc || ""} onChange={(e) => setFormData({ ...formData, __engine_cc: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Max Power (PS)</Label>
-                        <Input type="number" placeholder="e.g., 13.5" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Power: ${e.target.value}PS]` })} />
+                        <Input type="number" placeholder="e.g., 13.5" value={(formData as any).__power_bhp || ""} onChange={(e) => setFormData({ ...formData, __power_bhp: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Kerb Weight (kg)</Label>
-                        <Input type="number" placeholder="e.g., 165" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Weight: ${e.target.value}kg]` })} />
+                        <Input type="number" placeholder="e.g., 165" value={(formData as any).__weight || ""} onChange={(e) => setFormData({ ...formData, __weight: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Seat Height (mm)</Label>
-                        <Input type="number" placeholder="e.g., 800" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Seat Height: ${e.target.value}mm]` })} />
+                        <Input type="number" placeholder="e.g., 800" value={(formData as any).__seat_height || ""} onChange={(e) => setFormData({ ...formData, __seat_height: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Fuel Tank Capacity (L)</Label>
-                        <Input type="number" step="0.1" placeholder="e.g., 12.5" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Tank: ${e.target.value}L]` })} />
+                        <Input type="number" step="0.1" placeholder="e.g., 12.5" value={(formData as any).__tank || ""} onChange={(e) => setFormData({ ...formData, __tank: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Top Speed (km/h)</Label>
-                        <Input type="number" placeholder="e.g., 130" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Top Speed: ${e.target.value}km/h]` })} />
+                        <Input type="number" placeholder="e.g., 130" value={(formData as any).__top_speed || ""} onChange={(e) => setFormData({ ...formData, __top_speed: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Brake Type</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Brake: ${v}]` })}>
+                        <Select value={(formData as any).__brake || ""} onValueChange={(v) => setFormData({ ...formData, __brake: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Drum/Drum">Drum/Drum</SelectItem>
@@ -1348,7 +1380,7 @@ setVehicleImages(prev => ({
                       </div>
                       <div className="space-y-2">
                         <Label>ABS Type</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [ABS: ${v}]` })}>
+                        <Select value={(formData as any).__abs || ""} onValueChange={(v) => setFormData({ ...formData, __abs: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="No ABS">No ABS</SelectItem>
@@ -1359,7 +1391,7 @@ setVehicleImages(prev => ({
                       </div>
                       <div className="space-y-2">
                         <Label>Bike Type</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Type: ${v}]` })}>
+                        <Select value={(formData as any).__bike_type || ""} onValueChange={(v) => setFormData({ ...formData, __bike_type: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Sport">Sport</SelectItem>
@@ -1387,15 +1419,15 @@ setVehicleImages(prev => ({
                       </div>
                       <div className="space-y-2">
                         <Label>GVW (Gross Vehicle Weight in kg)</Label>
-                        <Input type="number" placeholder="e.g., 7500" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [GVW: ${e.target.value}kg]` })} />
+                        <Input type="number" placeholder="e.g., 7500" value={(formData as any).__gvw || ""} onChange={(e) => setFormData({ ...formData, __gvw: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Payload Capacity (kg)</Label>
-                        <Input type="number" placeholder="e.g., 3500" onChange={(e) => setFormData({ ...formData, notes: `${formData.notes || ""} [Payload: ${e.target.value}kg]` })} />
+                        <Input type="number" placeholder="e.g., 3500" value={(formData as any).__payload || ""} onChange={(e) => setFormData({ ...formData, __payload: e.target.value } as any)} />
                       </div>
                       <div className="space-y-2">
                         <Label>Body Type</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Body: ${v}]` })}>
+                        <Select value={(formData as any).__body_type || ""} onValueChange={(v) => setFormData({ ...formData, __body_type: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Open Body">Open Body</SelectItem>
@@ -1408,7 +1440,7 @@ setVehicleImages(prev => ({
                       </div>
                       <div className="space-y-2">
                         <Label>Permit Type</Label>
-                        <Select onValueChange={(v) => setFormData({ ...formData, notes: `${formData.notes || ""} [Permit: ${v}]` })}>
+                        <Select value={(formData as any).__permit_type || ""} onValueChange={(v) => setFormData({ ...formData, __permit_type: v } as any)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="National">National Permit</SelectItem>

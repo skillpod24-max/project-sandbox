@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ChevronLeft, ChevronRight, Phone, Mail, MapPin, Car, Fuel, Calendar,
   Gauge, Settings, Send, CheckCircle, MessageCircle, Star, Award, Sparkles, ArrowLeft,
-  Shield, Users, Palette
+  Shield, Users, Palette, X
 } from "lucide-react";
 import { createPublicLead } from "@/lib/leads";
 import ShimmerSkeleton from "@/components/marketplace/ShimmerSkeleton";
@@ -156,6 +156,7 @@ const PublicVehiclePage = () => {
   const [ratingForm, setRatingForm] = useState({ name: "", rating: 5, review: "" });
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [showEnquiryPanel, setShowEnquiryPanel] = useState(false);
 
   const { open, setOpen } = useAutoLeadPopup({
     enabled: dealer?.enable_auto_lead_popup === true,
@@ -323,22 +324,7 @@ const PublicVehiclePage = () => {
         </div>
       </header>
 
-      {/* Mobile CTA bar */}
-      {(dealer?.dealer_phone || dealer?.whatsapp_number) && (
-        <div className={`${isPremium ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"} border-b px-4 py-2 flex gap-3 sticky top-[52px] z-40 lg:hidden`}>
-          {dealer?.dealer_phone && (
-            <a href={`tel:${dealer.dealer_phone}`} className="flex-1">
-              <Button variant="outline" size="sm" className="w-full gap-2"><Phone className="h-4 w-4" /> Call</Button>
-            </a>
-          )}
-          {dealer?.whatsapp_number && (
-            <a href={`https://wa.me/${dealer.whatsapp_number.replace(/\D/g, "")}?text=${getWhatsAppMessage()}`} target="_blank" rel="noopener noreferrer" className="flex-1"
-              onClick={() => trackPublicEvent({ eventType: "cta_whatsapp", dealerUserId: vehicle.user_id, publicPageId: dealer?.public_page_id || "", vehicleId: vehicle.id })}>
-              <Button size="sm" className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"><MessageCircle className="h-4 w-4" /> WhatsApp</Button>
-            </a>
-          )}
-        </div>
-      )}
+      {/* Removed mobile CTA bar - replaced with sticky bottom CTA */}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -597,51 +583,7 @@ const PublicVehiclePage = () => {
               </CardContent>
             </Card>
 
-            {/* Enquiry Form */}
-            <div className="sticky top-24">
-              <Card className={`${cardBg} shadow-lg overflow-hidden`}>
-                <div className={`bg-gradient-to-r ${accent.gradient} p-4`}>
-                  <h3 className="text-white font-bold text-base flex items-center gap-2">
-                    <Send className="h-4 w-4" /> Send Enquiry
-                  </h3>
-                  <p className="text-white/80 text-xs mt-1">Get the best deal on this vehicle</p>
-                </div>
-                <CardContent className="p-4">
-                  {submitted ? (
-                    <div className="text-center py-6">
-                      <div className={`h-14 w-14 rounded-full bg-gradient-to-br ${accent.gradient} flex items-center justify-center mx-auto mb-3`}>
-                        <CheckCircle className="h-7 w-7 text-white" />
-                      </div>
-                      <p className={`text-lg font-semibold ${textPrimary}`}>Enquiry Submitted!</p>
-                      <p className={`text-xs mt-1 ${textMuted}`}>We'll contact you soon.</p>
-                      <Button variant="outline" size="sm" className="mt-4" onClick={() => { setSubmitted(false); setEnquiryForm({ name: "", phone: "", email: "", message: "" }); }}>Send Another</Button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleEnquirySubmit} className="space-y-3 mt-1">
-                      <div>
-                        <Label className={`text-xs ${textSecondary}`}>Name *</Label>
-                        <Input value={enquiryForm.name} onChange={(e) => setEnquiryForm({ ...enquiryForm, name: e.target.value })} required className={`${inputClasses} h-9 text-sm`} />
-                      </div>
-                      <div>
-                        <Label className={`text-xs ${textSecondary}`}>Phone *</Label>
-                        <Input value={enquiryForm.phone} onChange={(e) => setEnquiryForm({ ...enquiryForm, phone: e.target.value })} required className={`${inputClasses} h-9 text-sm`} />
-                      </div>
-                      <div>
-                        <Label className={`text-xs ${textSecondary}`}>Email</Label>
-                        <Input type="email" value={enquiryForm.email} onChange={(e) => setEnquiryForm({ ...enquiryForm, email: e.target.value })} className={`${inputClasses} h-9 text-sm`} />
-                      </div>
-                      <div>
-                        <Label className={`text-xs ${textSecondary}`}>Message</Label>
-                        <Textarea value={enquiryForm.message} onChange={(e) => setEnquiryForm({ ...enquiryForm, message: e.target.value })} rows={2} className={`${inputClasses} text-sm`} />
-                      </div>
-                      <Button type="submit" className={`w-full bg-gradient-to-r ${accent.gradient} text-white border-0 shadow-md hover:opacity-90`} disabled={isSubmitting}>
-                        {isSubmitting ? "Sending..." : "Send Enquiry"}
-                      </Button>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            {/* Enquiry form moved to sticky bottom CTA */}
           </div>
         </div>
       </main>
@@ -677,8 +619,68 @@ const PublicVehiclePage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Footer */}
-      <footer className={`border-t ${isPremium ? "border-gray-800" : "border-gray-200"} mt-16`}>
+      {/* Sticky Bottom CTA */}
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        {/* Slide-up Enquiry Panel */}
+        {showEnquiryPanel && (
+          <div className="bg-white border-t border-gray-200 shadow-2xl rounded-t-2xl max-w-lg mx-auto px-5 pt-5 pb-2 animate-in slide-in-from-bottom duration-300">
+            {submitted ? (
+              <div className="text-center py-6">
+                <div className={`h-14 w-14 rounded-full bg-gradient-to-br ${accent.gradient} flex items-center justify-center mx-auto mb-3`}>
+                  <CheckCircle className="h-7 w-7 text-white" />
+                </div>
+                <p className="text-lg font-semibold text-gray-900">Enquiry Submitted!</p>
+                <p className="text-xs mt-1 text-gray-400">We'll contact you soon.</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => { setSubmitted(false); setEnquiryForm({ name: "", phone: "", email: "", message: "" }); setShowEnquiryPanel(false); }}>Close</Button>
+              </div>
+            ) : (
+              <form onSubmit={(e) => { handleEnquirySubmit(e); }} className="space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2"><Send className="h-4 w-4" /> Send Enquiry</h3>
+                  <button type="button" onClick={() => setShowEnquiryPanel(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <Input value={enquiryForm.name} onChange={(e) => setEnquiryForm({ ...enquiryForm, name: e.target.value })} placeholder="Your name *" required className="h-9 text-sm" />
+                <Input value={enquiryForm.phone} onChange={(e) => setEnquiryForm({ ...enquiryForm, phone: e.target.value })} placeholder="Phone number *" required className="h-9 text-sm" />
+                <Input type="email" value={enquiryForm.email} onChange={(e) => setEnquiryForm({ ...enquiryForm, email: e.target.value })} placeholder="Email (optional)" className="h-9 text-sm" />
+                <Textarea value={enquiryForm.message} onChange={(e) => setEnquiryForm({ ...enquiryForm, message: e.target.value })} placeholder="Message (optional)" rows={2} className="text-sm" />
+                <Button type="submit" className={`w-full bg-gradient-to-r ${accent.gradient} text-white border-0 shadow-md hover:opacity-90`} disabled={isSubmitting}>
+                  {isSubmitting ? "Sending..." : "Send Enquiry"}
+                </Button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* CTA Bar */}
+        <div className="bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] px-4 py-3 flex items-center gap-3">
+          {dealer?.dealer_phone && (
+            <a href={`tel:${dealer.dealer_phone}`} className="flex-1">
+              <Button variant="outline" className="w-full gap-2 h-11 font-semibold border-gray-300">
+                <Phone className="h-4 w-4" /> Call
+              </Button>
+            </a>
+          )}
+          {dealer?.whatsapp_number && (
+            <a href={`https://wa.me/${dealer.whatsapp_number.replace(/\D/g, "")}?text=${getWhatsAppMessage()}`} target="_blank" rel="noopener noreferrer"
+              onClick={() => trackPublicEvent({ eventType: "cta_whatsapp", dealerUserId: vehicle.user_id, publicPageId: dealer?.public_page_id || "", vehicleId: vehicle.id })}>
+              <Button size="icon" className="h-11 w-11 bg-green-600 hover:bg-green-700 text-white rounded-xl">
+                <MessageCircle className="h-5 w-5" />
+              </Button>
+            </a>
+          )}
+          <Button
+            onClick={() => setShowEnquiryPanel(!showEnquiryPanel)}
+            className={`flex-1 h-11 font-semibold bg-gradient-to-r ${accent.gradient} text-white border-0 shadow-md hover:opacity-90 gap-2`}
+          >
+            <Send className="h-4 w-4" /> {showEnquiryPanel ? 'Close' : 'Enquiry'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Footer - add bottom padding for sticky CTA */}
+      <footer className="border-t border-gray-200 mt-16 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center">
           <p className={`text-sm ${textMuted}`}>© {new Date().getFullYear()} {dealer?.dealer_name}. Powered by VahanHub</p>
         </div>
