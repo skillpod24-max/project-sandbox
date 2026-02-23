@@ -365,7 +365,7 @@ const MarketplaceAdmin = () => {
   const handleAssignDealer = async (leadId: string, dealerUserId: string) => {
     const dealer = dealers.find(d => d.user_id === dealerUserId);
     const { error } = await supabase.from("leads").update({
-      assigned_to: dealer?.dealer_name || dealerUserId,
+      assigned_to: dealerUserId,
       status: "contacted",
     }).eq("id", leadId);
     if (error) {
@@ -375,7 +375,7 @@ const MarketplaceAdmin = () => {
     toast({ title: "Assigned!", description: `Assigned to ${dealer?.dealer_name}` });
     setAssignDialogOpen(false);
     fetchData();
-    setSelectedSellRequest((prev: any) => prev ? { ...prev, assigned_to: dealer?.dealer_name, status: "contacted" } : prev);
+    setSelectedSellRequest((prev: any) => prev ? { ...prev, assigned_to: dealerUserId, status: "contacted" } : prev);
   };
 
   // Group dealers by city for assignment popup
