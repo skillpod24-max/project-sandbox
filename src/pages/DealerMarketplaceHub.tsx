@@ -278,8 +278,8 @@ const DealerMarketplaceHub = () => {
     const { data } = await supabase
       .from("leads")
       .select("*")
-      .eq("user_id", uid)
-      .eq("lead_type", "selling")
+      .eq("assigned_to", uid)
+      .eq("source", "marketplace_sell")
       .order("created_at", { ascending: false });
 
     const parsedRequests = (data || []).map(req => {
