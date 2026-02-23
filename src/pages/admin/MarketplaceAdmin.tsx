@@ -996,25 +996,30 @@ const MarketplaceAdmin = () => {
                 </div>
 
                 {/* Status */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-slate-500">Status:</span>
-                  <Badge className={selectedSellRequest.status === 'new' ? 'bg-amber-100 text-amber-700 border-0' : selectedSellRequest.status === 'contacted' ? 'bg-blue-100 text-blue-700 border-0' : 'bg-emerald-100 text-emerald-700 border-0'}>
-                    {selectedSellRequest.status}
+                  <Badge className={selectedSellRequest.status === 'new' ? 'bg-amber-100 text-amber-700 border-0' : selectedSellRequest.status === 'contacted' ? 'bg-blue-100 text-blue-700 border-0' : selectedSellRequest.status === 'not_interested' ? 'bg-slate-100 text-slate-600 border-0' : 'bg-emerald-100 text-emerald-700 border-0'}>
+                    {selectedSellRequest.status.replace("_", " ")}
                   </Badge>
-                  {selectedSellRequest.assigned_to && (
-                    <Badge variant="outline" className="border-blue-200 text-blue-600">
-                      Assigned: {selectedSellRequest.assigned_to}
-                    </Badge>
-                  )}
+                  {selectedSellRequest.assigned_to && (() => {
+                    const assignedDealer = dealers.find(d => d.user_id === selectedSellRequest.assigned_to);
+                    return (
+                      <Badge variant="outline" className="border-blue-200 text-blue-600 gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {assignedDealer?.dealer_name || "Unknown Dealer"}
+                      </Badge>
+                    );
+                  })()}
                 </div>
 
                 {/* Assign to Dealer */}
                 <div className="border-t pt-4 flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold text-sm text-slate-900">Assign to Dealer</h4>
-                    {selectedSellRequest.assigned_to && (
-                      <p className="text-xs text-slate-500 mt-1">Currently: {selectedSellRequest.assigned_to}</p>
-                    )}
+                    {selectedSellRequest.assigned_to && (() => {
+                      const ad = dealers.find(d => d.user_id === selectedSellRequest.assigned_to);
+                      return <p className="text-xs text-slate-500 mt-1">Currently: {ad?.dealer_name || selectedSellRequest.assigned_to}</p>;
+                    })()}
                   </div>
                   <Button onClick={() => setAssignDialogOpen(true)} className="gap-2">
                     <Building2 className="h-4 w-4" />

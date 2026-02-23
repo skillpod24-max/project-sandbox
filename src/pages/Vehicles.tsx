@@ -1062,7 +1062,7 @@ setVehicleImages(prev => ({
                     <Input type="number" value={formData.odometer_reading || ""} onChange={(e) => setFormData({ ...formData, odometer_reading: parseInt(e.target.value) || null })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Purchase Price {formData.purchase_status === "purchased" && <span className="text-red-500">*</span>}</Label>
+                    <Label>Purchase Price {formData.purchase_status === "purchased" ? <span className="text-red-500">*</span> : null}</Label>
                     <Input
   type="text"
   inputMode="numeric"
@@ -1156,7 +1156,7 @@ setVehicleImages(prev => ({
 
                   <div className="space-y-2">
                   <Label>
-  Vendor {formData.purchase_status === "purchased" && <span className="text-red-500">*</span>}
+  Vendor {formData.purchase_status === "purchased" ? <span className="text-red-500">*</span> : null}
 </Label>
 
                     <Select value={formData.vendor_id || ""} onValueChange={(v) => setFormData({ ...formData, vendor_id: v  })}
@@ -1867,7 +1867,7 @@ setVehicleImages(prev => ({
                 <div className="relative bg-muted flex items-center justify-center">
                   {images.length > 0 ? (
                     <div
-  className={`relative w-full ${
+  className={`relative w-full flex items-center justify-center ${
     selectedVehicle.vehicle_type === "bike"
       ? "h-52 sm:h-64"
       : "h-64 sm:h-80"
@@ -1876,7 +1876,7 @@ setVehicleImages(prev => ({
                       <img 
                         src={currentImage?.image_url} 
                         alt={selectedVehicle.brand} 
-                        className="w-full h-full object-contain mx-auto"
+                        className="max-w-full max-h-full object-contain"
                       />
                       {images.length > 1 && (
                         <>
