@@ -354,8 +354,29 @@ const MarketplaceAdmin = () => {
       });
   }, [vehicles]);
 
+  const [selectedSellRequest, setSelectedSellRequest] = useState<any>(null);
+  const [sellDetailOpen, setSellDetailOpen] = useState(false);
+  const [assignDealerId, setAssignDealerId] = useState("");
+
   const parseSellNotes = (notes: string) => {
     try { return JSON.parse(notes); } catch { return null; }
+  };
+
+  const handleAssignDealer = async (leadId: string, dealerUserId: string) => {
+    const dealer = dealers.find(d => d.user_id === dealerUserId);
+    const { error } = await supabase.from("leads").update({
+      assigned_to: dealer?.dealer_name || dealerUserId,
+      status: "contacted",
+    }).eq("id", leadId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Assigned!", description: `Assigned to ${dealer?.dealer_name}` });
+    setAssignDealerId("");
+    fetchData();
+    // Update the selected request in place
+    setSelectedSellRequest((prev: any) => prev ? { ...prev, assigned_to: dealer?.dealer_name, status: "contacted" } : prev);
   };
 
   if (loading) return <PageSkeleton />;
@@ -770,75 +791,56 @@ const MarketplaceAdmin = () => {
                 <CardTitle className="flex items-center gap-2"><Tag className="h-5 w-5 text-rose-500" /> Sell Vehicle Requests</CardTitle>
                 <CardDescription>Admin-only: {sellRequests.length} submissions from "Sell Your Vehicle" form</CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent>
                 {sellRequests.length === 0 ? (
                   <div className="p-12 text-center text-slate-500"><Tag className="h-12 w-12 mx-auto mb-4 text-slate-300" /><p>No sell requests yet</p></div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Seller</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Vehicle</TableHead>
-                        <TableHead>Details</TableHead>
-                        <TableHead>Expected Price</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sellRequests.map((req) => {
-                        const details = parseSellNotes(req.notes);
-                        return (
-                          <TableRow key={req.id}>
-                            <TableCell className="text-sm whitespace-nowrap">{new Date(req.created_at).toLocaleDateString("en-IN")}</TableCell>
-                            <TableCell className="font-medium">{req.customer_name}</TableCell>
-                            <TableCell>
-                              <p className="text-sm">{req.phone}</p>
-                              {req.email && <p className="text-xs text-slate-500">{req.email}</p>}
-                            </TableCell>
-                            <TableCell>
-                              <p className="font-medium">{req.vehicle_interest}</p>
-                              {details?.variant && <p className="text-xs text-slate-500">{details.variant}</p>}
-                            </TableCell>
-                            <TableCell>
-                              {details ? (
-                                <div className="text-xs space-y-0.5">
-                                  <p>{details.fuelType} · {details.transmission}</p>
-                                  <p>{details.kmDriven ? `${details.kmDriven} km` : ''}{details.owners ? ` · ${details.owners} owner` : ''}</p>
-                                  {details.color && <p>Color: {details.color}</p>}
-                                  {details.registrationNumber && <p>Reg: {details.registrationNumber}</p>}
-                                  {details.condition && <p>Condition: <span className="capitalize">{details.condition}</span></p>}
-                                  {details.accidentHistory && details.accidentHistory !== "no" && (
-                                    <Badge variant="outline" className="text-xs mt-0.5 border-red-300 text-red-600">Accident: {details.accidentHistory}</Badge>
-                                  )}
-                                  {details.insuranceValid && <p>Insurance: {details.insuranceValid}</p>}
-                                  {details.images?.length > 0 && (
-                                    <Badge variant="outline" className="text-xs mt-1"><Image className="h-3 w-3 mr-1" />{details.images.length} photos</Badge>
-                                  )}
-                                </div>
-                              ) : <span className="text-xs text-slate-400">—</span>}
-                            </TableCell>
-                            <TableCell className="font-semibold text-blue-600">
-                              {req.budget_min ? formatCurrency(req.budget_min) : '—'}
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                {req.city || '—'}
-                                {details?.state && <p className="text-xs text-slate-500">{details.state}</p>}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={req.status === 'new' ? 'bg-amber-100 text-amber-700 border-0' : 'bg-emerald-100 text-emerald-700 border-0'}>
-                                {req.status}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sellRequests.map((req) => {
+                      const details = parseSellNotes(req.notes);
+                      const primaryImage = details?.images?.[0];
+                      return (
+                        <Card key={req.id} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                          onClick={() => { setSelectedSellRequest(req); setSellDetailOpen(true); }}>
+                          {/* Image */}
+                          <div className="aspect-video bg-slate-100 relative overflow-hidden">
+                            {primaryImage ? (
+                              <img src={primaryImage} alt={req.vehicle_interest} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center"><Car className="h-12 w-12 text-slate-300" /></div>
+                            )}
+                            {details?.images?.length > 1 && (
+                              <Badge className="absolute bottom-2 right-2 bg-black/60 text-white border-0 text-xs">
+                                <Image className="h-3 w-3 mr-1" />{details.images.length} photos
                               </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                            )}
+                            <Badge className={`absolute top-2 left-2 border-0 text-xs ${req.status === 'new' ? 'bg-amber-500 text-white' : req.status === 'contacted' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                              {req.status}
+                            </Badge>
+                          </div>
+                          {/* Info */}
+                          <div className="p-4 space-y-2">
+                            <h3 className="font-semibold text-slate-900 truncate">{req.vehicle_interest}</h3>
+                            {details?.variant && <p className="text-xs text-slate-500">{details.variant}</p>}
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-slate-600">{req.customer_name}</span>
+                              {req.budget_min ? <span className="font-bold text-blue-600">{formatCurrency(req.budget_min)}</span> : null}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(req.created_at).toLocaleDateString("en-IN")}
+                              {req.city && <><MapPin className="h-3 w-3 ml-2" />{req.city}</>}
+                            </div>
+                            {req.assigned_to && (
+                              <Badge variant="outline" className="text-xs mt-1 border-blue-200 text-blue-600">
+                                Assigned: {req.assigned_to}
+                              </Badge>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -952,6 +954,97 @@ const MarketplaceAdmin = () => {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sell Request Detail Dialog */}
+      <Dialog open={sellDetailOpen} onOpenChange={setSellDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedSellRequest && (() => {
+            const details = parseSellNotes(selectedSellRequest.notes);
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{selectedSellRequest.vehicle_interest}</DialogTitle>
+                  <DialogDescription>
+                    {details?.variant && <span>{details.variant} · </span>}
+                    Submitted {new Date(selectedSellRequest.created_at).toLocaleDateString("en-IN")}
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Images Gallery */}
+                {details?.images?.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                    {details.images.map((img: string, i: number) => (
+                      <div key={i} className={`${i === 0 ? 'col-span-2 aspect-video' : 'aspect-square'} bg-slate-100 rounded-lg overflow-hidden`}>
+                        <img src={img} alt={`Vehicle photo ${i + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Vehicle Details Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { label: "Seller", value: selectedSellRequest.customer_name },
+                    { label: "Phone", value: selectedSellRequest.phone },
+                    { label: "Email", value: selectedSellRequest.email || "—" },
+                    { label: "Expected Price", value: selectedSellRequest.budget_min ? formatCurrency(selectedSellRequest.budget_min) : "—" },
+                    { label: "City", value: selectedSellRequest.city || "—" },
+                    { label: "State", value: details?.state || "—" },
+                    { label: "Fuel Type", value: details?.fuelType || "—" },
+                    { label: "Transmission", value: details?.transmission || "—" },
+                    { label: "KM Driven", value: details?.kmDriven ? `${details.kmDriven} km` : "—" },
+                    { label: "Owners", value: details?.owners || "—" },
+                    { label: "Color", value: details?.color || "—" },
+                    { label: "Reg. Number", value: details?.registrationNumber || "—" },
+                    { label: "Condition", value: details?.condition || "—" },
+                    { label: "Insurance", value: details?.insuranceValid || "—" },
+                    { label: "Accident History", value: details?.accidentHistory || "No" },
+                  ].map((item, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-slate-50">
+                      <p className="text-xs text-slate-500">{item.label}</p>
+                      <p className="font-medium text-sm text-slate-900 capitalize">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Status */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500">Status:</span>
+                  <Badge className={selectedSellRequest.status === 'new' ? 'bg-amber-100 text-amber-700 border-0' : selectedSellRequest.status === 'contacted' ? 'bg-blue-100 text-blue-700 border-0' : 'bg-emerald-100 text-emerald-700 border-0'}>
+                    {selectedSellRequest.status}
+                  </Badge>
+                  {selectedSellRequest.assigned_to && (
+                    <Badge variant="outline" className="border-blue-200 text-blue-600">
+                      Assigned: {selectedSellRequest.assigned_to}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Assign to Dealer */}
+                <div className="border-t pt-4 space-y-3">
+                  <h4 className="font-semibold text-sm text-slate-900">Assign to Dealer</h4>
+                  <div className="flex gap-2">
+                    <Select value={assignDealerId} onValueChange={setAssignDealerId}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select a dealer..." /></SelectTrigger>
+                      <SelectContent>
+                        {dealers.filter(d => d.marketplace_status === 'approved').map(d => (
+                          <SelectItem key={d.user_id} value={d.user_id}>{d.dealer_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      disabled={!assignDealerId}
+                      onClick={() => handleAssignDealer(selectedSellRequest.id, assignDealerId)}
+                    >
+                      Assign
+                    </Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
