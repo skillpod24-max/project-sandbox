@@ -15,7 +15,7 @@ import {
   Shield, Users, Palette
 } from "lucide-react";
 import { createPublicLead } from "@/lib/leads";
-import CarLoader from "@/components/CarLoader";
+import ShimmerSkeleton from "@/components/marketplace/ShimmerSkeleton";
 import { trackPublicEvent } from "@/lib/publicAnalytics";
 import { useScrollTracking } from "@/lib/useScrollTracking";
 import { useAutoLeadPopup } from "@/lib/useAutoLeadPopup";
@@ -87,6 +87,57 @@ interface DealerInfo {
   show_vehicle_page_enquiries?: boolean;
   shop_logo_url?: string | null;
 }
+
+const VehicleCatalogueSkeleton = () => (
+  <div className="min-h-screen bg-gray-50">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <div className="px-4 py-3 flex items-center justify-between gap-3 max-w-7xl mx-auto">
+        <div className="flex items-center gap-3">
+          <ShimmerSkeleton className="h-9 w-9 rounded-lg" />
+          <ShimmerSkeleton className="h-8 w-8 rounded-lg" />
+          <ShimmerSkeleton variant="text" className="h-5 w-40" />
+        </div>
+        <div className="flex gap-2">
+          <ShimmerSkeleton className="h-9 w-20 rounded-lg" />
+          <ShimmerSkeleton className="h-9 w-28 rounded-lg" />
+        </div>
+      </div>
+    </header>
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-2xl overflow-hidden shadow-xl">
+            <ShimmerSkeleton className="aspect-[16/10]" />
+            <div className="p-3 flex gap-2">
+              {[1, 2, 3, 4, 5].map(i => <ShimmerSkeleton key={i} className="w-16 h-12 rounded-md shrink-0" />)}
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-xl space-y-4">
+            <ShimmerSkeleton variant="text" className="h-8 w-2/3" />
+            <ShimmerSkeleton variant="text" className="h-5 w-1/3" />
+            <ShimmerSkeleton variant="text" className="h-10 w-1/4" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[1, 2, 3, 4].map(i => <ShimmerSkeleton key={i} className="h-16 rounded-xl" />)}
+            </div>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div key={i} className="flex justify-between py-2.5">
+                  <ShimmerSkeleton variant="text" className="h-4 w-1/3" />
+                  <ShimmerSkeleton variant="text" className="h-4 w-1/4" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="space-y-5">
+          <ShimmerSkeleton className="h-52 rounded-2xl" />
+          <ShimmerSkeleton className="h-40 rounded-2xl" />
+          <ShimmerSkeleton className="h-72 rounded-2xl" />
+        </div>
+      </div>
+    </main>
+  </div>
+);
 
 const PublicVehiclePage = () => {
   const { pageId } = useParams<{ pageId: string }>();
@@ -215,7 +266,7 @@ const PublicVehiclePage = () => {
   const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % images.length);
   const prevImage = () => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
 
-  if (loading) return <CarLoader variant="center" text="Loading, hold on!" />;
+  if (loading) return <VehicleCatalogueSkeleton />;
 
   if (!vehicle) {
     return (
@@ -583,7 +634,7 @@ const PublicVehiclePage = () => {
                         <Label className={`text-xs ${textSecondary}`}>Message</Label>
                         <Textarea value={enquiryForm.message} onChange={(e) => setEnquiryForm({ ...enquiryForm, message: e.target.value })} rows={2} className={`${inputClasses} text-sm`} />
                       </div>
-                      <Button type="submit" className={`w-full bg-gradient-to-r ${accent.gradient} text-white border-0`} disabled={isSubmitting}>
+                      <Button type="submit" className={`w-full bg-gradient-to-r ${accent.gradient} text-white border-0 shadow-md hover:opacity-90`} disabled={isSubmitting}>
                         {isSubmitting ? "Sending..." : "Send Enquiry"}
                       </Button>
                     </form>
@@ -597,7 +648,7 @@ const PublicVehiclePage = () => {
 
       {/* Auto Lead Popup */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-0">
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-0 max-h-[90vh] overflow-y-auto">
           <div className={`bg-gradient-to-br ${accent.gradient} p-6 text-white`}>
             <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full w-fit mb-3">
               <Sparkles className="h-3.5 w-3.5 text-amber-300" />
@@ -617,7 +668,7 @@ const PublicVehiclePage = () => {
                 <Input value={enquiryForm.name} onChange={(e) => setEnquiryForm({ ...enquiryForm, name: e.target.value })} placeholder="Your name *" required className="h-10" />
                 <Input value={enquiryForm.phone} onChange={(e) => setEnquiryForm({ ...enquiryForm, phone: e.target.value })} placeholder="Phone number *" required className="h-10" />
                 <Input type="email" value={enquiryForm.email} onChange={(e) => setEnquiryForm({ ...enquiryForm, email: e.target.value })} placeholder="Email (optional)" className="h-10" />
-                <Button type="submit" className={`w-full bg-gradient-to-r ${accent.gradient} text-white`} disabled={isSubmitting}>
+                <Button type="submit" className={`w-full bg-gradient-to-r ${accent.gradient} text-white shadow-md hover:opacity-90`} disabled={isSubmitting}>
                   {isSubmitting ? "Sending..." : "Get Best Price"}
                 </Button>
               </form>
