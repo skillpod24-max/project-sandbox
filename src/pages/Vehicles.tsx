@@ -1896,332 +1896,328 @@ setVehicleImages(prev => ({
 
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-4xl w-[calc(100vw-2rem)] max-h-[95vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-3xl w-[calc(100vw-2rem)] max-h-[95vh] overflow-y-auto p-0">
           {selectedVehicle && (() => {
             const images = vehicleImages[selectedVehicle.id] || [];
             const docs = vehicleDocs[selectedVehicle.id] || [];
             const currentImage = images[currentImageIndex];
+
+            // Parse specs from notes
+            const specPatterns = [
+              { key: "Ground Clearance", icon: "📐", regex: /\[Ground Clearance: ([^\]]+)\]/ },
+              { key: "Engine", icon: "🔧", regex: /\[Engine: ([^\]]+)\]/ },
+              { key: "Power", icon: "⚡", regex: /\[Power: ([^\]]+)\]/ },
+              { key: "Torque", icon: "🔩", regex: /\[Torque: ([^\]]+)\]/ },
+              { key: "Airbags", icon: "🛡️", regex: /\[Airbags: ([^\]]+)\]/ },
+              { key: "Sunroof", icon: "☀️", regex: /\[Sunroof: ([^\]]+)\]/ },
+              { key: "Infotainment", icon: "📱", regex: /\[Infotainment: ([^\]]+)\]/ },
+              { key: "Weight", icon: "⚖️", regex: /\[Weight: ([^\]]+)\]/ },
+              { key: "Seat Height", icon: "📏", regex: /\[Seat Height: ([^\]]+)\]/ },
+              { key: "Tank Capacity", icon: "⛽", regex: /\[Tank: ([^\]]+)\]/ },
+              { key: "Top Speed", icon: "🏎️", regex: /\[Top Speed: ([^\]]+)\]/ },
+              { key: "Brake Type", icon: "🛑", regex: /\[Brake: ([^\]]+)\]/ },
+              { key: "ABS", icon: "🔒", regex: /\[ABS: ([^\]]+)\]/ },
+              { key: "Bike Type", icon: "🏍️", regex: /\[Type: ([^\]]+)\]/ },
+              { key: "GVW", icon: "🚛", regex: /\[GVW: ([^\]]+)\]/ },
+              { key: "Payload", icon: "📦", regex: /\[Payload: ([^\]]+)\]/ },
+              { key: "Body Type", icon: "🚚", regex: /\[Body: ([^\]]+)\]/ },
+              { key: "Permit Type", icon: "📋", regex: /\[Permit: ([^\]]+)\]/ },
+            ];
+            const parsedSpecs = specPatterns
+              .map(s => { const m = selectedVehicle.notes?.match(s.regex); return m ? { key: s.key, value: m[1], icon: s.icon } : null; })
+              .filter(Boolean) as { key: string; value: string; icon: string }[];
+            let cleanNotes = selectedVehicle.notes || "";
+            specPatterns.forEach(s => { cleanNotes = cleanNotes.replace(s.regex, ""); });
+            cleanNotes = cleanNotes.trim();
+
             return (
-              <div>
-                <DialogHeader className="p-4 sm:p-6 pb-0">
-                  <DialogTitle>{selectedVehicle.brand} {selectedVehicle.model} - {selectedVehicle.code}</DialogTitle>
-                </DialogHeader>
-                
-                <div className="relative bg-muted flex items-center justify-center">
-                  {images.length > 0 ? (
-                    <div
-  className={`relative w-full flex items-center justify-center ${
-    selectedVehicle.vehicle_type === "bike"
-      ? "h-52 sm:h-64"
-      : "h-64 sm:h-80"
-  }`}
->
-                      <img 
-                        src={currentImage?.image_url} 
-                        alt={selectedVehicle.brand} 
-                        className="max-w-full max-h-full object-contain"
-                      />
+              <div className="flex flex-col">
+                {/* Compact Card Header - Image + Title Side by Side on Desktop */}
+                <div className="flex flex-col sm:flex-row">
+                  {/* Image Section */}
+                  <div className="relative bg-muted sm:w-[45%] shrink-0">
+                    <div className="relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden">
+                      {images.length > 0 ? (
+                        <img src={currentImage?.image_url} alt={selectedVehicle.brand} className="w-full h-full object-contain" />
+                      ) : (
+                        <Image className="h-16 w-16 text-muted-foreground/30" />
+                      )}
                       {images.length > 1 && (
                         <>
-                          <Button 
-                            variant="secondary" 
-                            size="icon" 
-                            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-background/80"
-                            onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                          >
-                            <ChevronLeft className="h-5 w-5" />
+                          <Button variant="secondary" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
+                            <ChevronLeft className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="secondary" 
-                            size="icon" 
-                            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-background/80"
-                            onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                          >
-                            <ChevronRight className="h-5 w-5" />
+                          <Button variant="secondary" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-background/80" onClick={(e) => { e.stopPropagation(); nextImage(); }}>
+                            <ChevronRight className="h-4 w-4" />
                           </Button>
-                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
                             {images.map((_, i) => (
-                              <button 
-                                key={i} 
-                                className={`w-2 h-2 rounded-full transition-all ${i === currentImageIndex ? 'bg-foreground w-4' : 'bg-foreground/40'}`}
-                                onClick={() => setCurrentImageIndex(i)}
-                              />
+                              <button key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentImageIndex ? 'bg-foreground w-3' : 'bg-foreground/40'}`} onClick={() => setCurrentImageIndex(i)} />
                             ))}
                           </div>
                         </>
                       )}
+                      <div className="absolute top-2 right-2">
+                        <Badge className="text-[10px]">{images.length} photo{images.length !== 1 ? 's' : ''}</Badge>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="h-48 flex items-center justify-center text-muted-foreground">
-                      <Image className="h-16 w-16" />
+                  </div>
+
+                  {/* Title & Key Info Card */}
+                  <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className={`${getStatusColor(selectedVehicle.status)} text-[10px]`}>{selectedVehicle.status.replace("_", " ")}</Badge>
+                        <Badge variant="outline" className="text-[10px] capitalize">{selectedVehicle.condition}</Badge>
+                        {selectedVehicle.is_public && <Badge variant="outline" className="text-[10px] text-green-600 border-green-600 gap-0.5"><Globe className="h-2.5 w-2.5" /> Public</Badge>}
+                      </div>
+                      <h2 className="text-lg sm:text-xl font-bold text-foreground leading-tight">
+                        {selectedVehicle.manufacturing_year} {selectedVehicle.brand} {selectedVehicle.model}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">{selectedVehicle.variant || selectedVehicle.code}</p>
                     </div>
-                  )}
+                    
+                    {/* Quick Specs Strip */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="capitalize">⛽ {selectedVehicle.fuel_type}</span>
+                      <span className="uppercase">⚙️ {selectedVehicle.transmission}</span>
+                      <span>📏 {selectedVehicle.odometer_reading ? `${selectedVehicle.odometer_reading.toLocaleString()} km` : 'N/A'}</span>
+                      <span>👤 {(selectedVehicle as any).number_of_owners || 1} owner</span>
+                      {selectedVehicle.color && <span>🎨 {selectedVehicle.color}</span>}
+                    </div>
+
+                    {/* Price Row */}
+                    <div className="flex items-end gap-6 pt-1">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Purchase</p>
+                        <p className="text-base font-bold">{formatCurrency(selectedVehicle.purchase_price)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Selling</p>
+                        <p className="text-base font-bold text-chart-2">{formatCurrency(selectedVehicle.selling_price)}</p>
+                      </div>
+                      {selectedVehicle.strikeout_price && selectedVehicle.strikeout_price > selectedVehicle.selling_price && (
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">MRP</p>
+                          <p className="text-sm text-muted-foreground line-through">{formatCurrency(selectedVehicle.strikeout_price)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className={getStatusColor(selectedVehicle.status)}>{selectedVehicle.status.replace("_", " ")}</Badge>
-                    <Badge variant="outline">{selectedVehicle.condition}</Badge>
-                    {selectedVehicle.is_public && (
-                      <Badge variant="outline" className="gap-1 text-green-600 border-green-600">
-                        <Globe className="h-3 w-3" /> Public
-                      </Badge>
-                    )}
+                <Separator />
+
+                {/* Tabbed Content */}
+                <Tabs defaultValue="overview" className="w-full">
+                  <div className="px-4 pt-2">
+                    <TabsList className="w-full grid grid-cols-4 h-9">
+                      <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                      <TabsTrigger value="specs" className="text-xs">Specs</TabsTrigger>
+                      <TabsTrigger value="docs" className="text-xs">Docs ({docs.length})</TabsTrigger>
+                      <TabsTrigger value="more" className="text-xs">More</TabsTrigger>
+                    </TabsList>
                   </div>
 
-                  {/* Specs Grid - Card Style with Icons */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                    {[
-                      { label: "Type", value: selectedVehicle.vehicle_type, icon: "🚗", capitalize: true },
-                      { label: "Color", value: selectedVehicle.color || "N/A", icon: "🎨" },
-                      { label: "Transmission", value: selectedVehicle.transmission, icon: "⚙️", uppercase: true },
-                      { label: "Odometer", value: selectedVehicle.odometer_reading ? `${selectedVehicle.odometer_reading.toLocaleString()} km` : "N/A", icon: "📏" },
-                      { label: "Owners", value: (selectedVehicle as any).number_of_owners || "N/A", icon: "👤" },
-                      { label: "Fuel", value: selectedVehicle.fuel_type, icon: "⛽", capitalize: true },
-                      { label: "Year", value: selectedVehicle.manufacturing_year, icon: "📅" },
-                      ...(selectedVehicle.variant ? [{ label: "Variant", value: selectedVehicle.variant, icon: "🏷️" }] : []),
-                    ].map((spec, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5 p-2.5 sm:p-3 bg-muted/50 rounded-xl border border-border/50">
-                        <span className="text-base mt-0.5">{spec.icon}</span>
-                        <div className="min-w-0">
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{spec.label}</p>
-                          <p className={`font-semibold text-sm truncate ${spec.capitalize ? "capitalize" : ""} ${spec.uppercase ? "uppercase" : ""}`}>{spec.value}</p>
+                  {/* Overview Tab */}
+                  <TabsContent value="overview" className="px-4 pb-4 mt-0 pt-3 space-y-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {[
+                        { label: "Type", value: selectedVehicle.vehicle_type, icon: "🚗", capitalize: true },
+                        { label: "Year", value: selectedVehicle.manufacturing_year, icon: "📅" },
+                        { label: "Fuel", value: selectedVehicle.fuel_type, icon: "⛽", capitalize: true },
+                        { label: "Trans", value: selectedVehicle.transmission, icon: "⚙️", uppercase: true },
+                        { label: "Color", value: selectedVehicle.color || "N/A", icon: "🎨" },
+                        { label: "KM", value: selectedVehicle.odometer_reading ? `${selectedVehicle.odometer_reading.toLocaleString()}` : "N/A", icon: "📏" },
+                        { label: "Owners", value: (selectedVehicle as any).number_of_owners || "N/A", icon: "👤" },
+                        ...(selectedVehicle.variant ? [{ label: "Variant", value: selectedVehicle.variant, icon: "🏷️" }] : []),
+                      ].map((spec, idx) => (
+                        <div key={idx} className="p-2 bg-muted/50 rounded-lg border border-border/50 text-center">
+                          <span className="text-sm">{spec.icon}</span>
+                          <p className={`font-semibold text-xs truncate mt-0.5 ${spec.capitalize ? "capitalize" : ""} ${(spec as any).uppercase ? "uppercase" : ""}`}>{spec.value}</p>
+                          <p className="text-[9px] text-muted-foreground uppercase">{spec.label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Parsed Additional Specs from Notes */}
+                    {parsedSpecs.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Additional Specs</p>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {parsedSpecs.map(s => (
+                            <div key={s.key} className="p-2 bg-muted/50 rounded-lg border border-border/50 text-center">
+                              <span className="text-sm">{s.icon}</span>
+                              <p className="font-semibold text-xs truncate mt-0.5">{s.value}</p>
+                              <p className="text-[9px] text-muted-foreground uppercase">{s.key}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    )}
 
-                  {/* Extended Specs - Collapsible on Mobile */}
-                  {((selectedVehicle.registration_number) || 
-                    (selectedVehicle.variant) ||
-                    (selectedVehicle.engine_number) ||
-                    (selectedVehicle.chassis_number) ||
-                    ((selectedVehicle as any).mileage) ||
-                    ((selectedVehicle as any).insurance_expiry) ||
-                    ((selectedVehicle as any).puc_expiry) ||
-                    ((selectedVehicle as any).fitness_expiry) ||
-                    ((selectedVehicle as any).tyre_condition) ||
-                    ((selectedVehicle as any).battery_health) ||
-                    ((selectedVehicle as any).hypothecation) ||
-                    ((selectedVehicle as any).seating_capacity) ||
-                    ((selectedVehicle as any).boot_space)) && (
-                    <details className="group">
-                      <summary className="cursor-pointer list-none flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                        <span className="font-medium text-sm">View More Specifications</span>
-                        <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </summary>
-                      <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-3">
-                        <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Mfg Year</p><p className="font-medium text-sm truncate">{selectedVehicle.manufacturing_year}</p></div>
-                        {(selectedVehicle as any).registration_year && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Reg Year</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).registration_year}</p></div>}
-                        {selectedVehicle.registration_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Reg No</p><p className="font-medium text-sm truncate">{selectedVehicle.registration_number}</p></div>}
-                        {selectedVehicle.variant && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Variant</p><p className="font-medium text-sm truncate">{selectedVehicle.variant}</p></div>}
-                        {selectedVehicle.engine_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Engine No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.engine_number}</p></div>}
-                        {selectedVehicle.chassis_number && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Chassis No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.chassis_number}</p></div>}
-                        {(selectedVehicle as any).mileage && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Mileage</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).mileage} km/l</p></div>}
-                        {(selectedVehicle as any).insurance_expiry && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Insurance</p><p className="font-medium text-sm truncate">{format(new Date((selectedVehicle as any).insurance_expiry), "dd MMM yyyy")}</p></div>}
-                        {(selectedVehicle as any).puc_expiry && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">PUC Expiry</p><p className="font-medium text-sm truncate">{format(new Date((selectedVehicle as any).puc_expiry), "dd MMM yyyy")}</p></div>}
-                        {(selectedVehicle as any).fitness_expiry && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Fitness</p><p className="font-medium text-sm truncate">{format(new Date((selectedVehicle as any).fitness_expiry), "dd MMM yyyy")}</p></div>}
-                        {(selectedVehicle as any).tyre_condition && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Tyre Condition</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).tyre_condition}</p></div>}
-                        {(selectedVehicle as any).battery_health && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Battery</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).battery_health}</p></div>}
-                        {(selectedVehicle as any).hypothecation && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Hypothecation</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).hypothecation}</p></div>}
-                        {(selectedVehicle as any).seating_capacity && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Seats</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).seating_capacity}</p></div>}
-                        {(selectedVehicle as any).boot_space && <div className="p-2 sm:p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground uppercase">Boot Space</p><p className="font-medium text-sm truncate">{(selectedVehicle as any).boot_space}</p></div>}
+                    {cleanNotes && (
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
+                        <p className="text-sm">{cleanNotes}</p>
                       </div>
-                    </details>
-                  )}
+                    )}
+                  </TabsContent>
 
-                  {selectedVehicle.is_public && selectedVehicle.public_page_id && (
-                    <div className="flex flex-col sm:flex-row gap-2 p-3 bg-muted rounded-lg">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Globe className="h-5 w-5 text-green-600 shrink-0" />
-                        <code className="text-sm truncate">{window.location.origin}/d/{selectedVehicle.public_page_id}/{selectedVehicle.id}</code>
+                  {/* Specs Tab */}
+                  <TabsContent value="specs" className="px-4 pb-4 mt-0 pt-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedVehicle.registration_number && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Reg No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.registration_number}</p></div>
+                      )}
+                      {(selectedVehicle as any).registration_year && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Reg Year</p><p className="font-medium text-sm">{(selectedVehicle as any).registration_year}</p></div>
+                      )}
+                      {selectedVehicle.engine_number && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Engine No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.engine_number}</p></div>
+                      )}
+                      {selectedVehicle.chassis_number && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Chassis No</p><p className="font-medium text-sm font-mono truncate">{selectedVehicle.chassis_number}</p></div>
+                      )}
+                      {(selectedVehicle as any).mileage && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Mileage</p><p className="font-medium text-sm">{(selectedVehicle as any).mileage} km/l</p></div>
+                      )}
+                      {(selectedVehicle as any).tyre_condition && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Tyre Condition</p><p className="font-medium text-sm">{(selectedVehicle as any).tyre_condition}</p></div>
+                      )}
+                      {(selectedVehicle as any).battery_health && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Battery</p><p className="font-medium text-sm">{(selectedVehicle as any).battery_health}</p></div>
+                      )}
+                      {(selectedVehicle as any).hypothecation && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Hypothecation</p><p className="font-medium text-sm">{(selectedVehicle as any).hypothecation}</p></div>
+                      )}
+                      {(selectedVehicle as any).seating_capacity && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Seats</p><p className="font-medium text-sm">{(selectedVehicle as any).seating_capacity}</p></div>
+                      )}
+                      {(selectedVehicle as any).boot_space && (
+                        <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Boot Space</p><p className="font-medium text-sm">{(selectedVehicle as any).boot_space}</p></div>
+                      )}
+                    </div>
+
+                    {/* Expiry Dates */}
+                    {((selectedVehicle as any).insurance_expiry || (selectedVehicle as any).puc_expiry || (selectedVehicle as any).fitness_expiry || (selectedVehicle as any).permit_expiry || (selectedVehicle as any).road_tax_expiry) && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Expiry Dates</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(selectedVehicle as any).insurance_expiry && (
+                            <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Insurance</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).insurance_expiry), "dd MMM yyyy")}</p></div>
+                          )}
+                          {(selectedVehicle as any).puc_expiry && (
+                            <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">PUC</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).puc_expiry), "dd MMM yyyy")}</p></div>
+                          )}
+                          {(selectedVehicle as any).fitness_expiry && (
+                            <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Fitness</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).fitness_expiry), "dd MMM yyyy")}</p></div>
+                          )}
+                          {(selectedVehicle as any).permit_expiry && (
+                            <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Permit</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).permit_expiry), "dd MMM yyyy")}</p></div>
+                          )}
+                          {(selectedVehicle as any).road_tax_expiry && (
+                            <div className="p-2.5 bg-muted/50 rounded-lg"><p className="text-[10px] text-muted-foreground uppercase">Road Tax</p><p className="font-medium text-sm">{format(new Date((selectedVehicle as any).road_tax_expiry), "dd MMM yyyy")}</p></div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => {
-                          const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
-                          navigator.clipboard.writeText(url);
-                          toast({ title: "Link copied to clipboard" });
-                        }} className="gap-1">
-                          <Copy className="h-4 w-4" /> Copy
-                        </Button>
-                        <a href={`/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="outline" className="gap-1">
-                            <ExternalLink className="h-4 w-4" /> View
-                          </Button>
-                        </a>
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase">Purchase Price</p>
-                      <p className="text-xl sm:text-2xl font-bold">{formatCurrency(selectedVehicle.purchase_price)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase">Selling Price</p>
-                      <p className="text-xl sm:text-2xl font-bold text-chart-2">{formatCurrency(selectedVehicle.selling_price)}</p>
-                    </div>
-                  </div>
+                    {/* No specs fallback */}
+                    {!selectedVehicle.registration_number && !(selectedVehicle as any).mileage && !(selectedVehicle as any).tyre_condition && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No additional specifications available</p>
+                    )}
+                  </TabsContent>
 
-                  {docs.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">Documents</h4>
-                      <div className="flex flex-wrap gap-2">
+                  {/* Documents Tab */}
+                  <TabsContent value="docs" className="px-4 pb-4 mt-0 pt-3 space-y-3">
+                    {docs.length > 0 ? (
+                      <div className="space-y-2">
                         {docs.map((doc) => (
-                          <div key={doc.id} className="flex items-center gap-2 bg-muted px-3 py-2 rounded">
-                            <FileText className="h-4 w-4" />
-                            <div className="flex flex-col">
-  <span className="text-sm truncate">{doc.document_name}</span>
-  <span
-    className={`mt-0.5 w-fit px-2 py-0.5 rounded text-xs border ${
-      documentTypeMeta[doc.document_type as DocumentType].className
-    }`}
-  >
-    {documentTypeMeta[doc.document_type as DocumentType].label}
-  </span>
-</div>
-
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openDocViewer(doc.document_url)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <a href={doc.document_url} download target="_blank" rel="noopener noreferrer">
-                              <Button variant="ghost" size="icon" className="h-6 w-6">
-                                <Download className="h-4 w-4" />
+                          <div key={doc.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/50">
+                            <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{doc.document_name}</p>
+                              <Badge variant="outline" className={`mt-0.5 text-[10px] ${documentTypeMeta[doc.document_type as DocumentType]?.className || ''}`}>
+                                {documentTypeMeta[doc.document_type as DocumentType]?.label || doc.document_type}
+                              </Badge>
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDocViewer(doc.document_url)}>
+                                <Eye className="h-3.5 w-3.5" />
                               </Button>
-                            </a>
+                              <a href={doc.document_url} download target="_blank" rel="noopener noreferrer">
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                              </a>
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-6">No documents uploaded</p>
+                    )}
+                  </TabsContent>
 
-                  {/* Parsed specs from notes */}
-                  {selectedVehicle.notes && (() => {
-                    const specPatterns = [
-                      { key: "Ground Clearance", regex: /\[Ground Clearance: ([^\]]+)\]/ },
-                      { key: "Engine", regex: /\[Engine: ([^\]]+)\]/ },
-                      { key: "Power", regex: /\[Power: ([^\]]+)\]/ },
-                      { key: "Torque", regex: /\[Torque: ([^\]]+)\]/ },
-                      { key: "Airbags", regex: /\[Airbags: ([^\]]+)\]/ },
-                      { key: "Sunroof", regex: /\[Sunroof: ([^\]]+)\]/ },
-                      { key: "Infotainment", regex: /\[Infotainment: ([^\]]+)\]/ },
-                      { key: "Weight", regex: /\[Weight: ([^\]]+)\]/ },
-                      { key: "Seat Height", regex: /\[Seat Height: ([^\]]+)\]/ },
-                      { key: "Tank Capacity", regex: /\[Tank: ([^\]]+)\]/ },
-                      { key: "Top Speed", regex: /\[Top Speed: ([^\]]+)\]/ },
-                      { key: "Brake Type", regex: /\[Brake: ([^\]]+)\]/ },
-                      { key: "ABS", regex: /\[ABS: ([^\]]+)\]/ },
-                      { key: "Bike Type", regex: /\[Type: ([^\]]+)\]/ },
-                      { key: "GVW", regex: /\[GVW: ([^\]]+)\]/ },
-                      { key: "Payload", regex: /\[Payload: ([^\]]+)\]/ },
-                      { key: "Body Type", regex: /\[Body: ([^\]]+)\]/ },
-                      { key: "Permit Type", regex: /\[Permit: ([^\]]+)\]/ },
-                    ];
-                    const parsedSpecs = specPatterns
-                      .map(s => { const m = selectedVehicle.notes?.match(s.regex); return m ? { key: s.key, value: m[1] } : null; })
-                      .filter(Boolean) as { key: string; value: string }[];
-                    let cleanNotes = selectedVehicle.notes;
-                    specPatterns.forEach(s => {
-                      cleanNotes = cleanNotes!.replace(s.regex, "");
-                    });
-                    cleanNotes = cleanNotes.trim();
-                    return (
-                      <>
-                        {parsedSpecs.length > 0 && (
-                          <div>
-                            <h4 className="font-medium mb-2 text-sm">Additional Specifications</h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {parsedSpecs.map(s => (
-                                <div key={s.key} className="flex items-start gap-2 p-2.5 bg-muted/50 rounded-xl border border-border/50">
-                                  <span className="text-base mt-0.5">🔧</span>
-                                  <div>
-                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.key}</p>
-                                    <p className="font-semibold text-sm">{s.value}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {cleanNotes && (
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase">Notes</p>
-                            <p className="mt-1">{cleanNotes}</p>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+                  {/* More Tab - Public Links & Actions */}
+                  <TabsContent value="more" className="px-4 pb-4 mt-0 pt-3 space-y-3">
+                    {selectedVehicle.is_public && selectedVehicle.public_page_id && (
+                      <div className="p-3 bg-muted/50 rounded-lg border border-border/50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-green-600 shrink-0" />
+                          <p className="text-xs font-medium">Public Page</p>
+                        </div>
+                        <code className="text-[11px] text-muted-foreground block truncate">{window.location.origin}/d/{selectedVehicle.public_page_id}/{selectedVehicle.id}</code>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => {
+                            const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
+                            navigator.clipboard.writeText(url);
+                            toast({ title: "Link copied" });
+                          }}>
+                            <Copy className="h-3 w-3" /> Copy
+                          </Button>
+                          <a href={`/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" variant="outline" className="text-xs h-7 gap-1">
+                              <ExternalLink className="h-3 w-3" /> View
+                            </Button>
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      className="gap-2" 
-                      onClick={async () => {
-                        const { data: settingsData } = await supabase.from("settings").select("*").maybeSingle();
-                        const images = vehicleImages[selectedVehicle.id] || [];
-                        const primaryImage = images.find(i => i.is_primary) || images[0];
-                        await generateVehicleBrochurePDF(selectedVehicle as any, settingsData || {}, primaryImage?.image_url);
-                        toast({ title: "Brochure PDF downloaded" });
-                      }}
-                    >
+                    <Button variant="outline" size="sm" className="gap-2 w-full justify-start" onClick={async () => {
+                      const { data: settingsData } = await supabase.from("settings").select("*").maybeSingle();
+                      const primaryImage = images.find(i => i.is_primary) || images[0];
+                      await generateVehicleBrochurePDF(selectedVehicle as any, settingsData || {}, primaryImage?.image_url);
+                      toast({ title: "Brochure PDF downloaded" });
+                    }}>
                       <Printer className="h-4 w-4" /> Download Brochure
                     </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-4">
-  <Button
-    variant="outline"
-    onClick={() => {
-      setDetailDialogOpen(false);
-      openEditDialog(selectedVehicle);
-    }}
-  >
-    <Pencil className="h-4 w-4 mr-2" /> Edit Vehicle
-  </Button>
 
-  {selectedVehicle.status !== "sold" && (
-  <Button
-    variant="destructive"
-    onClick={() => {
-      setDetailDialogOpen(false);
-      openDeleteDialog(selectedVehicle.id);
-    }}
-  >
-    <Trash2 className="h-4 w-4 mr-2" /> Delete Vehicle
-  </Button>
-)}
+                    <Separator />
 
-
-  {selectedVehicle.is_public && selectedVehicle.public_page_id && (
-    <>
-      <Button
-        variant="outline"
-        onClick={() => {
-          const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
-          navigator.clipboard.writeText(url);
-          toast({ title: "Link copied to clipboard" });
-        }}
-      >
-        <Link className="h-4 w-4 mr-2" /> Copy Public Link
-      </Button>
-
-      <a
-        href={`/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Button variant="outline">
-          <ExternalLink className="h-4 w-4 mr-2" /> View Public Page
-        </Button>
-      </a>
-    </>
-  )}
-</div>
-
-                </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDetailDialogOpen(false); openEditDialog(selectedVehicle); }}>
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </Button>
+                      {selectedVehicle.status !== "sold" && (
+                        <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => { setDetailDialogOpen(false); openDeleteDialog(selectedVehicle.id); }}>
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </Button>
+                      )}
+                      {selectedVehicle.is_public && selectedVehicle.public_page_id && (
+                        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+                          const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
+                          navigator.clipboard.writeText(url);
+                          toast({ title: "Link copied" });
+                        }}>
+                          <Link className="h-3.5 w-3.5" /> Copy Link
+                        </Button>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             );
           })()}
