@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { formatIndianNumber } from "@/lib/formatters";
 import { createPublicLead } from "@/lib/leads";
-import CarLoader from "@/components/CarLoader";
+import ShimmerSkeleton from "@/components/marketplace/ShimmerSkeleton";
 import { trackPublicEvent } from "@/lib/publicAnalytics";
 import { useScrollTracking } from "@/lib/useScrollTracking";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -23,6 +23,61 @@ import { useAutoLeadPopup } from "@/lib/useAutoLeadPopup";
 import DealerEnquiryForm from "@/components/public/DealerEnquiryForm";
 import CatalogueVehicleCard from "@/components/catalogue/CatalogueVehicleCard";
 import { getAccent } from "@/components/catalogue/CatalogueThemeProvider";
+
+const DealerCatalogueSkeleton = () => (
+  <div className="min-h-screen bg-gray-50">
+    <div className="border-b border-gray-200 bg-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+        <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
+          <ShimmerSkeleton className="h-24 w-24 sm:h-32 sm:w-32 rounded-2xl" />
+          <div className="flex-1 space-y-3 text-center md:text-left">
+            <ShimmerSkeleton variant="text" className="h-10 w-64 mx-auto md:mx-0" />
+            <ShimmerSkeleton variant="text" className="h-5 w-48 mx-auto md:mx-0" />
+            <div className="flex gap-2 justify-center md:justify-start">
+              <ShimmerSkeleton className="h-7 w-24 rounded-full" />
+              <ShimmerSkeleton className="h-7 w-28 rounded-full" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <ShimmerSkeleton className="h-9 w-20 rounded-lg" />
+            <ShimmerSkeleton className="h-9 w-28 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[1, 2, 3].map(i => <ShimmerSkeleton key={i} className="h-16 rounded-xl" />)}
+          </div>
+          <ShimmerSkeleton variant="text" className="h-7 w-48" />
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                <ShimmerSkeleton className="aspect-[4/3]" />
+                <div className="p-3 space-y-2">
+                  <ShimmerSkeleton variant="text" className="h-5 w-3/4" />
+                  <ShimmerSkeleton variant="text" className="h-4 w-1/2" />
+                  <div className="flex gap-2">
+                    <ShimmerSkeleton className="h-5 w-14 rounded" />
+                    <ShimmerSkeleton className="h-5 w-14 rounded" />
+                  </div>
+                  <ShimmerSkeleton variant="text" className="h-6 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <ShimmerSkeleton className="h-48 rounded-2xl" />
+          <ShimmerSkeleton className="h-64 rounded-2xl" />
+          <ShimmerSkeleton className="h-80 rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const DealerPublicPage = () => {
   const { pageId } = useParams();
@@ -170,7 +225,7 @@ const DealerPublicPage = () => {
     if (vehicle.public_page_id) navigate(`/v/${vehicle.public_page_id}`);
   };
 
-  if (loading) return <CarLoader variant="center" text="Loading, hold on!" />;
+  if (loading) return <DealerCatalogueSkeleton />;
 
   if (!dealerInfo) {
     return (
@@ -553,7 +608,7 @@ const DealerPublicPage = () => {
                       <Label className={`text-xs ${textSecondary}`}>Message</Label>
                       <Textarea value={enquiryForm.message} onChange={(e) => setEnquiryForm({ ...enquiryForm, message: e.target.value })} placeholder="I'm interested in..." rows={2} onFocus={handleInlineFormFocus} className={`${inputClasses} text-sm`} />
                     </div>
-                    <Button onClick={handleEnquiry} disabled={submitting} size="sm" className={`w-full bg-gradient-to-r ${accent.gradient} hover:${accent.gradientHover} text-white border-0`}>
+                    <Button onClick={handleEnquiry} disabled={submitting} size="sm" className={`w-full bg-gradient-to-r ${accent.gradient} text-white border-0 shadow-md hover:shadow-lg hover:opacity-90`}>
                       <Send className="h-3.5 w-3.5 mr-2" />
                       {submitting ? "Sending..." : "Send Enquiry"}
                     </Button>
@@ -567,7 +622,7 @@ const DealerPublicPage = () => {
 
       {/* Auto Lead Popup */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-0">
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-0 max-h-[90vh] overflow-y-auto">
           <div className={`bg-gradient-to-br ${accent.gradient} p-6 text-white`}>
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full">
@@ -630,14 +685,14 @@ const DealerPublicPage = () => {
       <>
         {dealerInfo.dealer_phone && (
           <a href={`tel:${dealerInfo.dealer_phone}`} onClick={() => trackPublicEvent({ eventType: "cta_call", dealerUserId: dealerInfo.user_id, publicPageId: pageId! })}>
-            <Button variant="outline" size="sm" className={`gap-2 ${isWhiteText ? "border-white/30 text-white hover:bg-white/10" : "border-gray-300 bg-white text-gray-800 hover:bg-gray-100"}`}>
+            <Button variant="outline" size="sm" className={`gap-2 ${isWhiteText ? "border-white/40 text-white hover:bg-white/20 bg-white/10" : "border-gray-300 bg-white text-gray-800 hover:bg-gray-100 shadow-sm"}`}>
               <Phone className="h-4 w-4" /> Call
             </Button>
           </a>
         )}
         {dealerInfo.whatsapp_number && (
           <a href={`https://wa.me/${dealerInfo.whatsapp_number.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" onClick={() => trackPublicEvent({ eventType: "cta_whatsapp", dealerUserId: dealerInfo.user_id, publicPageId: pageId! })}>
-            <Button size="sm" className="gap-2 bg-green-500 hover:bg-green-600 text-white border-0">
+            <Button size="sm" className="gap-2 bg-green-600 hover:bg-green-700 text-white border-0 shadow-md">
               <MessageCircle className="h-4 w-4" /> WhatsApp
             </Button>
           </a>
