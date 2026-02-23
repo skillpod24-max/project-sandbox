@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Eye, ChevronLeft, ChevronRight, Upload, X, Image, FileText, Download, ExternalLink, Globe, Copy, Link, Printer } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, ChevronLeft, ChevronRight, Upload, X, Image, FileText, Download, ExternalLink, Globe, Copy, Link, Printer, Store } from "lucide-react";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -1633,9 +1633,13 @@ setVehicleImages(prev => ({
               <TabsContent value="public" className="space-y-4 mt-4">
                 <Card className="border">
                   <CardContent className="p-4 space-y-4">
+                    {/* Catalogue Toggle */}
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label>Make Vehicle Public</Label>
+                        <Label className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-green-600" />
+                          Show on Catalogue
+                        </Label>
                         <p className="text-sm text-muted-foreground">Generate a shareable public page for this vehicle</p>
                       </div>
                       <Switch 
@@ -1644,7 +1648,46 @@ setVehicleImages(prev => ({
                       />
                     </div>
 
-                    {formData.is_public && (
+                    <Separator />
+
+                    {/* Marketplace Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-2">
+                          <Store className="h-4 w-4 text-blue-600" />
+                          Show on Marketplace
+                        </Label>
+                        <p className="text-sm text-muted-foreground">List this vehicle on the public marketplace</p>
+                      </div>
+                      <Switch 
+                        checked={(formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured'} 
+                        onCheckedChange={(v) => setFormData({ ...formData, marketplace_status: v ? 'approved' : 'unlisted', is_public: v ? true : formData.is_public } as any)} 
+                      />
+                    </div>
+
+                    {/* Sync Button */}
+                    <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border border-dashed border-border">
+                      <p className="text-xs text-muted-foreground flex-1">Sync both toggles to same state</p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 text-xs"
+                        onClick={() => {
+                          const isPublic = formData.is_public || false;
+                          setFormData({
+                            ...formData,
+                            is_public: !isPublic,
+                            marketplace_status: !isPublic ? 'approved' : 'unlisted',
+                          } as any);
+                          toast({ title: !isPublic ? "Both enabled" : "Both disabled" });
+                        }}
+                      >
+                        <Copy className="h-3 w-3" /> Sync
+                      </Button>
+                    </div>
+
+                    {(formData.is_public || (formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured') && (
                       <>
                         <Separator />
                         
