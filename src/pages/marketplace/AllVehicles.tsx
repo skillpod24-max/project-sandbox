@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Car, MapPin, Search, Sparkles, X, RefreshCw, SlidersHorizontal, Gauge } from "lucide-react";
@@ -17,7 +17,8 @@ import useComparison from "@/hooks/useComparison";
 import CompareBar from "@/components/marketplace/CompareBar";
 
 const AllVehicles = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [cityFilter, setCityFilter] = useState("all");
   const [vehicleType, setVehicleType] = useState("all");
   const [fuelType, setFuelType] = useState("all");

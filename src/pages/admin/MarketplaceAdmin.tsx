@@ -356,7 +356,7 @@ const MarketplaceAdmin = () => {
 
   const [selectedSellRequest, setSelectedSellRequest] = useState<any>(null);
   const [sellDetailOpen, setSellDetailOpen] = useState(false);
-  const [assignDealerId, setAssignDealerId] = useState("");
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   const parseSellNotes = (notes: string) => {
     try { return JSON.parse(notes); } catch { return null; }
@@ -373,10 +373,28 @@ const MarketplaceAdmin = () => {
       return;
     }
     toast({ title: "Assigned!", description: `Assigned to ${dealer?.dealer_name}` });
-    setAssignDealerId("");
+    setAssignDialogOpen(false);
     fetchData();
-    // Update the selected request in place
     setSelectedSellRequest((prev: any) => prev ? { ...prev, assigned_to: dealer?.dealer_name, status: "contacted" } : prev);
+  };
+
+  // Group dealers by city for assignment popup
+  const getDealersByCity = useMemo(() => {
+    const approvedDealers = dealers.filter(d => d.marketplace_status === 'approved');
+    const cityMap: Record<string, any[]> = {};
+    approvedDealers.forEach(d => {
+      const addr = d.dealer_address || "";
+      const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
+      const city = parts.length > 1 ? parts[parts.length - 2] : parts[0] || "Other";
+      if (!cityMap[city]) cityMap[city] = [];
+      cityMap[city].push(d);
+    });
+    return cityMap;
+  }, [dealers]);
+
+  // Get the sell request city to show matching dealers first
+  const getSellRequestCity = (req: any) => {
+    return req?.city || "";
   };
 
   if (loading) return <PageSkeleton />;
@@ -976,8 +994,8 @@ const MarketplaceAdmin = () => {
                 {details?.images?.length > 0 && (
                   <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
                     {details.images.map((img: string, i: number) => (
-                      <div key={i} className={`${i === 0 ? 'col-span-2 aspect-video' : 'aspect-square'} bg-slate-100 rounded-lg overflow-hidden`}>
-                        <img src={img} alt={`Vehicle photo ${i + 1}`} className="w-full h-full object-cover" />
+                      <div key={i} className={`${i === 0 ? 'col-span-2' : ''} bg-slate-100 rounded-lg overflow-hidden`}>
+                        <img src={img} alt={`Vehicle photo ${i + 1}`} className="w-full h-auto max-h-64 object-contain bg-slate-50" />
                       </div>
                     ))}
                   </div>
@@ -1023,28 +1041,85 @@ const MarketplaceAdmin = () => {
                 </div>
 
                 {/* Assign to Dealer */}
-                <div className="border-t pt-4 space-y-3">
-                  <h4 className="font-semibold text-sm text-slate-900">Assign to Dealer</h4>
-                  <div className="flex gap-2">
-                    <Select value={assignDealerId} onValueChange={setAssignDealerId}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select a dealer..." /></SelectTrigger>
-                      <SelectContent>
-                        {dealers.filter(d => d.marketplace_status === 'approved').map(d => (
-                          <SelectItem key={d.user_id} value={d.user_id}>{d.dealer_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button 
-                      disabled={!assignDealerId}
-                      onClick={() => handleAssignDealer(selectedSellRequest.id, assignDealerId)}
-                    >
-                      Assign
-                    </Button>
+                <div className="border-t pt-4 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-sm text-slate-900">Assign to Dealer</h4>
+                    {selectedSellRequest.assigned_to && (
+                      <p className="text-xs text-slate-500 mt-1">Currently: {selectedSellRequest.assigned_to}</p>
+                    )}
                   </div>
+                  <Button onClick={() => setAssignDialogOpen(true)} className="gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Assign
+                  </Button>
                 </div>
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Dealer Dialog - City-wise grouped */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assign to Dealer</DialogTitle>
+            <DialogDescription>
+              Vehicle City: <Badge variant="outline" className="ml-1">{getSellRequestCity(selectedSellRequest) || "Not specified"}</Badge>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {(() => {
+              const reqCity = getSellRequestCity(selectedSellRequest);
+              const cityEntries = Object.entries(getDealersByCity);
+              // Sort: matching city first
+              const sorted = cityEntries.sort(([a], [b]) => {
+                if (a === reqCity) return -1;
+                if (b === reqCity) return 1;
+                return a.localeCompare(b);
+              });
+
+              return sorted.map(([city, cityDealers]) => {
+                const isMatchingCity = city === reqCity;
+                return (
+                  <div key={city} className={`rounded-xl border ${isMatchingCity ? 'border-blue-200 bg-blue-50/50' : 'border-slate-200'}`}>
+                    <div className={`px-4 py-2.5 flex items-center gap-2 ${isMatchingCity ? 'bg-blue-100/60' : 'bg-slate-50'} rounded-t-xl`}>
+                      <MapPin className="h-4 w-4 text-slate-500" />
+                      <span className="font-semibold text-sm text-slate-800">{city}</span>
+                      {isMatchingCity && <Badge className="bg-blue-500 text-white border-0 text-[10px] ml-auto">Same City</Badge>}
+                      <Badge variant="outline" className="text-[10px] ml-auto">{cityDealers.length}</Badge>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      {cityDealers.map((d: any) => (
+                        <button
+                          key={d.user_id}
+                          onClick={() => selectedSellRequest && handleAssignDealer(selectedSellRequest.id, d.user_id)}
+                          className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-blue-100/50 transition-colors text-left"
+                        >
+                          {d.shop_logo_url ? (
+                            <img src={d.shop_logo_url} alt="" className="h-9 w-9 rounded-lg object-cover" />
+                          ) : (
+                            <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center">
+                              <Building2 className="h-4 w-4 text-slate-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-slate-900 truncate">{d.dealer_name}</p>
+                            <p className="text-xs text-slate-500">{d.dealer_phone || ''}</p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] shrink-0">{getDealerVehicleCount(d.user_id)} vehicles</Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+            {Object.keys(getDealersByCity).length === 0 && (
+              <p className="text-center text-slate-500 py-8">No approved dealers found</p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

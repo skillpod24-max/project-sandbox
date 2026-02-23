@@ -277,16 +277,19 @@ const Marketplace = () => {
       .slice(0, 5); // Show only 4-5 dealers
   }, [dealers, getDealerRating, getDealerVehicleCount]);
 
-  // High demand vehicles (show only 4)
-  const highDemandVehicles = useMemo(() => {
-    // Sort by featured/marketplace_status first, then by price
+  // Featured vehicles - only marketplace_status=featured, max 6 (2 per row, 3 rows)
+  const featuredVehicles = useMemo(() => {
     return [...vehicles]
-      .sort((a, b) => {
-        if (a.marketplace_status === 'featured' && b.marketplace_status !== 'featured') return -1;
-        if (a.marketplace_status !== 'featured' && b.marketplace_status === 'featured') return 1;
-        return (b.selling_price || 0) - (a.selling_price || 0);
-      })
-      .slice(0, 4); // Show only 3-4 vehicles
+      .filter(v => v.marketplace_status === 'featured')
+      .slice(0, 6);
+  }, [vehicles]);
+
+  // High demand vehicles (show only 4) - non-featured popular ones
+  const highDemandVehicles = useMemo(() => {
+    return [...vehicles]
+      .filter(v => v.marketplace_status !== 'featured')
+      .sort((a, b) => (b.selling_price || 0) - (a.selling_price || 0))
+      .slice(0, 4);
   }, [vehicles]);
 
   // Get compare vehicles data
@@ -341,6 +344,7 @@ const Marketplace = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && searchTerm.trim()) { navigate(`/marketplace/vehicles?search=${encodeURIComponent(searchTerm.trim())}`); setSearchFocused(false); } }}
                   className="pl-12 pr-4 h-11 rounded-full bg-muted border-0 focus-visible:ring-2 focus-visible:ring-primary"
                 />
                 <LiveSearchSuggestions 
@@ -411,6 +415,7 @@ const Marketplace = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && searchTerm.trim()) { navigate(`/marketplace/vehicles?search=${encodeURIComponent(searchTerm.trim())}`); setSearchFocused(false); } }}
                 className="pl-10 pr-4 h-10 rounded-xl bg-muted border-0 text-sm"
               />
               <LiveSearchSuggestions 
@@ -515,6 +520,39 @@ const Marketplace = () => {
           )}
         </div>
       </section>
+
+      {/* Featured Vehicles Section - Above Dealers */}
+      {featuredVehicles.length > 0 && (
+        <section className="container mx-auto px-3 md:px-4 py-6 md:py-8">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <div>
+              <h2 className="text-lg md:text-2xl font-bold text-foreground flex items-center gap-2">
+                <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
+                Featured Vehicles
+              </h2>
+              <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">Handpicked for you</p>
+            </div>
+            <Link to="/marketplace/vehicles">
+              <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 text-xs md:text-sm">
+                View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {featuredVehicles.map((vehicle) => (
+              <MarketplaceVehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                dealer={getDealerForVehicle(vehicle.user_id)}
+                isInWishlist={isInWishlist(vehicle.id)}
+                isInCompare={isInCompare(vehicle.id)}
+                onWishlistToggle={toggleWishlist}
+                onCompareToggle={toggleCompare}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Top Dealers Section */}
       <section id="dealers" className="container mx-auto px-3 md:px-4 py-6 md:py-8">
