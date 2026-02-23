@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/formatters";
 import {
@@ -15,7 +16,7 @@ import {
   Award, TrendingUp, Calendar, Image, Upload, Settings,
   Crown, DollarSign, MessageSquare, CreditCard, Clock, Ticket,
   BarChart3, Phone, Globe, Zap, ArrowUpRight, ArrowDownRight,
-  Activity, MapPin, Tag, FileText, ChevronRight
+  Activity, MapPin, Tag, FileText, ChevronRight, ArrowUp, ArrowDown
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -29,7 +30,7 @@ import {
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar, CartesianGrid
+  PieChart, Pie, Cell, CartesianGrid
 } from "recharts";
 import { format, subDays, startOfDay } from "date-fns";
 
@@ -51,6 +52,10 @@ const MarketplaceAdmin = () => {
   const [dealerInsightsOpen, setDealerInsightsOpen] = useState(false);
   const [dealerEvents, setDealerEvents] = useState<any[]>([]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState("30d");
+
+  // City filter
+  const [allCities, setAllCities] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
 
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState({
@@ -93,20 +98,32 @@ const MarketplaceAdmin = () => {
         supabase.from("settings").select("*").eq("marketplace_enabled", true),
         supabase.from("vehicles").select("*").eq("is_public", true),
         supabase.from("support_tickets" as any).select("*").order("created_at", { ascending: false }),
-        supabase.from("leads").select("*").in("source", ["marketplace_sell", "marketplace"]).eq("lead_type", "seller").order("created_at", { ascending: false }),
+        supabase.from("leads").select("*").in("source", ["marketplace_sell"]).eq("lead_type", "seller").order("created_at", { ascending: false }),
       ]);
 
-      setDealers(dealersRes.data || []);
+      const dealersList = dealersRes.data || [];
+      setDealers(dealersList);
       setVehicles(vehiclesRes.data || []);
       setSupportTickets(ticketsRes.data || []);
       setSellRequests(sellRes.data || []);
 
-      const d = dealersRes.data || [];
+      // Extract unique cities from dealer settings (case-sensitive)
+      const cities = dealersList
+        .map(d => {
+          const addr = d.dealer_address || "";
+          // Try to extract city from address - take last meaningful part
+          const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
+          return parts.length > 1 ? parts[parts.length - 2] : parts[0] || "";
+        })
+        .filter(Boolean);
+      const uniqueCities = [...new Set(cities)].sort();
+      setAllCities(uniqueCities);
+
       setStats({
-        totalDealers: d.length,
-        activeDealers: d.filter(x => x.marketplace_status === 'approved').length,
-        pendingDealers: d.filter(x => x.marketplace_status === 'pending').length,
-        featuredDealers: d.filter(x => x.marketplace_featured).length,
+        totalDealers: dealersList.length,
+        activeDealers: dealersList.filter(x => x.marketplace_status === 'approved').length,
+        pendingDealers: dealersList.filter(x => x.marketplace_status === 'pending').length,
+        featuredDealers: dealersList.filter(x => x.marketplace_featured).length,
         totalVehicles: (vehiclesRes.data || []).length,
         totalSellRequests: (sellRes.data || []).length,
       });
@@ -116,7 +133,6 @@ const MarketplaceAdmin = () => {
       if (savedDesktop) setBannerDesktopUrl(savedDesktop);
       if (savedMobile) setBannerMobileUrl(savedMobile);
 
-      // Fetch marketplace analytics
       await fetchAnalytics();
     } catch (error) {
       console.error("Error fetching admin data:", error);
@@ -129,11 +145,18 @@ const MarketplaceAdmin = () => {
     const days = analyticsPeriod === "7d" ? 7 : analyticsPeriod === "30d" ? 30 : 90;
     const startDate = startOfDay(subDays(new Date(), days));
 
-    const { data: events } = await supabase
+    // Fetch ALL marketplace events (admin RLS policy now allows this)
+    const { data: events, error } = await supabase
       .from("public_page_events")
       .select("*")
       .eq("public_page_id", "marketplace")
-      .gte("created_at", startDate.toISOString());
+      .gte("created_at", startDate.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(5000);
+
+    if (error) {
+      console.error("Analytics fetch error:", error);
+    }
 
     const allEvents = events || [];
     const views = allEvents.filter(e => e.event_type === "vehicle_view" || e.event_type === "dealer_view").length;
@@ -194,13 +217,13 @@ const MarketplaceAdmin = () => {
   const fetchDealerInsights = async (dealer: any) => {
     setSelectedDealer(dealer);
     setDealerInsightsOpen(true);
-    const days = 30;
-    const startDate = startOfDay(subDays(new Date(), days));
+    const startDate = startOfDay(subDays(new Date(), 30));
     const { data: events } = await supabase
       .from("public_page_events")
       .select("*")
       .eq("dealer_user_id", dealer.user_id)
-      .gte("created_at", startDate.toISOString());
+      .gte("created_at", startDate.toISOString())
+      .limit(5000);
     setDealerEvents(events || []);
   };
 
@@ -239,11 +262,21 @@ const MarketplaceAdmin = () => {
       switch (action) {
         case 'approve': updates.marketplace_status = 'approved'; break;
         case 'suspend': updates.marketplace_status = 'suspended'; break;
-        case 'feature': updates.marketplace_featured = true; break;
+        case 'feature': {
+          // Check max 5 featured
+          const currentFeatured = dealers.filter(d => d.marketplace_featured).length;
+          if (currentFeatured >= 5) {
+            toast({ title: "Limit reached", description: "Maximum 5 dealers can be featured. Unfeature one first.", variant: "destructive" });
+            return;
+          }
+          updates.marketplace_featured = true;
+          break;
+        }
         case 'unfeature': updates.marketplace_featured = false; break;
         case 'badge_update': updates.marketplace_badge = badgeValue; break;
       }
-      await supabase.from("settings").update(updates).eq("id", dealerId);
+      const { error } = await supabase.from("settings").update(updates).eq("id", dealerId);
+      if (error) throw error;
       const dealer = dealers.find(d => d.id === dealerId);
       await supabase.from("marketplace_moderation").insert({
         target_type: 'dealer', target_id: dealer?.user_id, action, badge_value: badgeValue, performed_by: user.id,
@@ -253,6 +286,25 @@ const MarketplaceAdmin = () => {
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
+  };
+
+  const handleToggleFeaturedVehicle = async (vehicleId: string, currentlyFeatured: boolean) => {
+    if (!currentlyFeatured) {
+      const featuredCount = vehicles.filter(v => v.marketplace_status === 'featured' && v.status === 'in_stock').length;
+      if (featuredCount >= 5) {
+        toast({ title: "Limit reached", description: "Maximum 5 vehicles can be featured. Remove one first.", variant: "destructive" });
+        return;
+      }
+    }
+    const { error } = await supabase.from("vehicles").update({
+      marketplace_status: currentlyFeatured ? 'listed' : 'featured'
+    }).eq("id", vehicleId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: currentlyFeatured ? "Removed from featured" : "Vehicle featured!" });
+    fetchData();
   };
 
   const handleUploadBanner = async (file: File, type: 'desktop' | 'mobile') => {
@@ -281,8 +333,26 @@ const MarketplaceAdmin = () => {
   const filteredDealers = dealers.filter(d => {
     const matchesSearch = !searchTerm || d.dealer_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || d.marketplace_status === statusFilter;
+    // City filter
+    if (selectedCities.length > 0) {
+      const addr = d.dealer_address || "";
+      const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
+      const dealerCity = parts.length > 1 ? parts[parts.length - 2] : parts[0] || "";
+      if (!selectedCities.includes(dealerCity)) return false;
+    }
     return matchesSearch && matchesStatus;
   });
+
+  // Featured vehicles: only in_stock, sorted by marketplace_status=featured first
+  const featuredVehicles = useMemo(() => {
+    return vehicles
+      .filter(v => v.status === 'in_stock') // Only available vehicles
+      .sort((a, b) => {
+        const aFeat = a.marketplace_status === 'featured' ? 1 : 0;
+        const bFeat = b.marketplace_status === 'featured' ? 1 : 0;
+        return bFeat - aFeat;
+      });
+  }, [vehicles]);
 
   const parseSellNotes = (notes: string) => {
     try { return JSON.parse(notes); } catch { return null; }
@@ -312,7 +382,7 @@ const MarketplaceAdmin = () => {
                   <Image className="h-4 w-4" /> Banners
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Banner Customization</DialogTitle>
                   <DialogDescription>Upload separate banners for desktop and mobile</DialogDescription>
@@ -352,12 +422,12 @@ const MarketplaceAdmin = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {[
-            { label: "Total Dealers", value: stats.totalDealers, icon: Building2, color: "from-blue-500 to-blue-600", bg: "bg-blue-50" },
-            { label: "Active", value: stats.activeDealers, icon: CheckCircle, color: "from-emerald-500 to-emerald-600", bg: "bg-emerald-50" },
-            { label: "Pending", value: stats.pendingDealers, icon: AlertTriangle, color: "from-amber-500 to-amber-600", bg: "bg-amber-50" },
-            { label: "Featured", value: stats.featuredDealers, icon: Sparkles, color: "from-purple-500 to-purple-600", bg: "bg-purple-50" },
-            { label: "Vehicles", value: stats.totalVehicles, icon: Car, color: "from-slate-500 to-slate-600", bg: "bg-slate-100" },
-            { label: "Sell Requests", value: stats.totalSellRequests, icon: Tag, color: "from-rose-500 to-rose-600", bg: "bg-rose-50" },
+            { label: "Total Dealers", value: stats.totalDealers, icon: Building2, color: "from-blue-500 to-blue-600" },
+            { label: "Active", value: stats.activeDealers, icon: CheckCircle, color: "from-emerald-500 to-emerald-600" },
+            { label: "Pending", value: stats.pendingDealers, icon: AlertTriangle, color: "from-amber-500 to-amber-600" },
+            { label: "Featured", value: stats.featuredDealers, icon: Sparkles, color: "from-purple-500 to-purple-600" },
+            { label: "Vehicles", value: stats.totalVehicles, icon: Car, color: "from-slate-500 to-slate-600" },
+            { label: "Sell Requests", value: stats.totalSellRequests, icon: Tag, color: "from-rose-500 to-rose-600" },
           ].map((stat, i) => (
             <Card key={i} className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
@@ -366,7 +436,7 @@ const MarketplaceAdmin = () => {
                     <stat.icon className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                    <p className="text-2xl font-bold text-slate-900 tabular-nums">{stat.value}</p>
                     <p className="text-xs text-slate-500 font-medium">{stat.label}</p>
                   </div>
                 </div>
@@ -376,14 +446,12 @@ const MarketplaceAdmin = () => {
         </div>
 
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="bg-white/80 backdrop-blur-sm border border-slate-200/60 shadow-sm p-1 rounded-xl">
+          <TabsList className="bg-white/80 backdrop-blur-sm border border-slate-200/60 shadow-sm p-1 rounded-xl flex-wrap h-auto">
             <TabsTrigger value="analytics" className="gap-2 rounded-lg"><BarChart3 className="h-4 w-4" /> Analytics</TabsTrigger>
             <TabsTrigger value="dealers" className="gap-2 rounded-lg"><Building2 className="h-4 w-4" /> Dealers</TabsTrigger>
-            <TabsTrigger value="vehicles" className="gap-2 rounded-lg"><Car className="h-4 w-4" /> Vehicles</TabsTrigger>
-            <TabsTrigger value="sell_requests" className="gap-2 rounded-lg"><Tag className="h-4 w-4" /> Sell Requests</TabsTrigger>
             <TabsTrigger value="featured" className="gap-2 rounded-lg"><Sparkles className="h-4 w-4" /> Featured</TabsTrigger>
+            <TabsTrigger value="sell_requests" className="gap-2 rounded-lg"><Tag className="h-4 w-4" /> Sell Requests</TabsTrigger>
             <TabsTrigger value="tickets" className="gap-2 rounded-lg"><Ticket className="h-4 w-4" /> Support</TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2 rounded-lg"><Settings className="h-4 w-4" /> Settings</TabsTrigger>
           </TabsList>
 
           {/* ===== ANALYTICS TAB ===== */}
@@ -416,7 +484,7 @@ const MarketplaceAdmin = () => {
                       <div className={`h-9 w-9 rounded-lg ${m.color} flex items-center justify-center mb-2`}>
                         <m.icon className="h-4 w-4" />
                       </div>
-                      <p className="text-2xl font-bold text-slate-900">{m.value}</p>
+                      <p className="text-2xl font-bold text-slate-900 tabular-nums">{m.value}</p>
                       <p className="text-xs text-slate-500">{m.label}</p>
                     </CardContent>
                   </Card>
@@ -505,7 +573,7 @@ const MarketplaceAdmin = () => {
                 <div className="flex flex-col md:flex-row justify-between gap-4">
                   <div>
                     <CardTitle>Dealer Management</CardTitle>
-                    <CardDescription>Approve, feature, and view dealer insights</CardDescription>
+                    <CardDescription>Approve, feature (max 5), and view dealer insights</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <div className="relative">
@@ -523,6 +591,32 @@ const MarketplaceAdmin = () => {
                     </Select>
                   </div>
                 </div>
+                {/* City Filter Checkboxes */}
+                {allCities.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-1"><MapPin className="h-4 w-4" /> Filter by City</p>
+                    <div className="flex flex-wrap gap-3">
+                      {allCities.map(city => (
+                        <label key={city} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 px-2 py-1 rounded-lg transition-colors">
+                          <Checkbox
+                            checked={selectedCities.includes(city)}
+                            onCheckedChange={(checked) => {
+                              setSelectedCities(prev =>
+                                checked ? [...prev, city] : prev.filter(c => c !== city)
+                              );
+                            }}
+                          />
+                          <span>{city}</span>
+                        </label>
+                      ))}
+                      {selectedCities.length > 0 && (
+                        <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedCities([])}>
+                          Clear all
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -532,7 +626,8 @@ const MarketplaceAdmin = () => {
                       <TableHead>Contact</TableHead>
                       <TableHead>Vehicles</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Badge</TableHead>
+                      <TableHead>Featured</TableHead>
+                      <TableHead>Sort Order</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -550,9 +645,7 @@ const MarketplaceAdmin = () => {
                             )}
                             <div>
                               <p className="font-semibold text-slate-900">{dealer.dealer_name}</p>
-                              {dealer.marketplace_featured && (
-                                <Badge className="bg-amber-100 text-amber-700 border-0 text-xs"><Sparkles className="h-3 w-3 mr-1" /> Featured</Badge>
-                              )}
+                              <p className="text-xs text-slate-500">{dealer.dealer_address?.split(",").slice(-2).join(",").trim() || "—"}</p>
                             </div>
                           </div>
                         </TableCell>
@@ -566,8 +659,24 @@ const MarketplaceAdmin = () => {
                             {dealer.marketplace_status || 'pending'}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {dealer.marketplace_badge ? <Badge variant="outline" className="text-xs">{dealer.marketplace_badge}</Badge> : <span className="text-xs text-slate-400">—</span>}
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <Checkbox
+                            checked={dealer.marketplace_featured || false}
+                            onCheckedChange={() => handleDealerAction(dealer.id, dealer.marketplace_featured ? 'unfeature' : 'feature')}
+                          />
+                        </TableCell>
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                              // Move up in sort (swap featured status or just visual)
+                            }}>
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                            }}>
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
@@ -576,9 +685,6 @@ const MarketplaceAdmin = () => {
                               <DropdownMenuItem onClick={() => fetchDealerInsights(dealer)}><Eye className="h-4 w-4 mr-2 text-blue-600" /> View Insights</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'approve')}><CheckCircle className="h-4 w-4 mr-2 text-emerald-600" /> Approve</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'suspend')}><Ban className="h-4 w-4 mr-2 text-red-600" /> Suspend</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, dealer.marketplace_featured ? 'unfeature' : 'feature')}>
-                                <Sparkles className="h-4 w-4 mr-2 text-amber-600" /> {dealer.marketplace_featured ? 'Unfeature' : 'Feature'}
-                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'badge_update', 'Trusted Seller')}><Award className="h-4 w-4 mr-2 text-blue-600" /> Trusted Seller</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDealerAction(dealer.id, 'badge_update', 'Premium Dealer')}><Award className="h-4 w-4 mr-2 text-purple-600" /> Premium Dealer</DropdownMenuItem>
                             </DropdownMenuContent>
@@ -595,12 +701,15 @@ const MarketplaceAdmin = () => {
             </Card>
           </TabsContent>
 
-          {/* ===== VEHICLES TAB ===== */}
-          <TabsContent value="vehicles">
+          {/* ===== FEATURED TAB (Vehicles only - in_stock only) ===== */}
+          <TabsContent value="featured">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle>Listed Vehicles</CardTitle>
-                <CardDescription>All {vehicles.length} vehicles on the marketplace</CardDescription>
+                <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" /> Featured Vehicles</CardTitle>
+                <CardDescription>
+                  Only available (in_stock) vehicles shown. Max 5 featured. 
+                  Currently featured: {vehicles.filter(v => v.marketplace_status === 'featured' && v.status === 'in_stock').length}/5
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -610,14 +719,16 @@ const MarketplaceAdmin = () => {
                       <TableHead>Dealer</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Listed</TableHead>
+                      <TableHead>Featured</TableHead>
+                      <TableHead>Sort Order</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {vehicles.slice(0, 30).map((vehicle) => {
+                    {featuredVehicles.slice(0, 50).map((vehicle) => {
                       const dealer = dealers.find(d => d.user_id === vehicle.user_id);
+                      const isFeatured = vehicle.marketplace_status === 'featured';
                       return (
-                        <TableRow key={vehicle.id}>
+                        <TableRow key={vehicle.id} className={isFeatured ? "bg-amber-50/50" : ""}>
                           <TableCell>
                             <p className="font-semibold text-slate-900">{vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}</p>
                             <p className="text-xs text-slate-500">{vehicle.fuel_type} · {vehicle.transmission}</p>
@@ -625,9 +736,24 @@ const MarketplaceAdmin = () => {
                           <TableCell>{dealer?.dealer_name || 'Unknown'}</TableCell>
                           <TableCell className="font-semibold text-blue-600">{formatCurrency(vehicle.selling_price)}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={vehicle.status === 'in_stock' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100'}>{vehicle.status}</Badge>
+                            <Badge className="bg-emerald-50 text-emerald-700 border-0">in_stock</Badge>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-500">{new Date(vehicle.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Checkbox
+                              checked={isFeatured}
+                              onCheckedChange={() => handleToggleFeaturedVehicle(vehicle.id, isFeatured)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -637,12 +763,12 @@ const MarketplaceAdmin = () => {
             </Card>
           </TabsContent>
 
-          {/* ===== SELL REQUESTS TAB ===== */}
+          {/* ===== SELL REQUESTS TAB (Admin only - no dealer access) ===== */}
           <TabsContent value="sell_requests">
             <Card className="border-0 shadow-sm">
               <CardHeader className="border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2"><Tag className="h-5 w-5 text-rose-500" /> Sell Vehicle Requests</CardTitle>
-                <CardDescription>Submissions from the "Sell Your Vehicle" form ({sellRequests.length} total)</CardDescription>
+                <CardDescription>Admin-only: {sellRequests.length} submissions from "Sell Your Vehicle" form</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 {sellRequests.length === 0 ? (
@@ -718,53 +844,6 @@ const MarketplaceAdmin = () => {
             </Card>
           </TabsContent>
 
-          {/* ===== FEATURED TAB ===== */}
-          <TabsContent value="featured">
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" /> Featured Vehicles</CardTitle>
-                <CardDescription>Control "High Demand" section (max 4)</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Dealer</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Featured</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vehicles.slice(0, 30).map((vehicle) => {
-                      const dealer = dealers.find(d => d.user_id === vehicle.user_id);
-                      const isFeatured = vehicle.marketplace_status === 'featured';
-                      return (
-                        <TableRow key={vehicle.id}>
-                          <TableCell className="font-semibold">{vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}</TableCell>
-                          <TableCell>{dealer?.dealer_name || 'Unknown'}</TableCell>
-                          <TableCell className="font-semibold text-blue-600">{formatCurrency(vehicle.selling_price)}</TableCell>
-                          <TableCell>
-                            {isFeatured ? <Badge className="bg-amber-100 text-amber-700 border-0"><Sparkles className="h-3 w-3 mr-1" /> Featured</Badge> : <Badge variant="outline">No</Badge>}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button size="sm" variant={isFeatured ? "outline" : "default"} onClick={async () => {
-                              await supabase.from("vehicles").update({ marketplace_status: isFeatured ? 'listed' : 'featured' }).eq("id", vehicle.id);
-                              toast({ title: isFeatured ? "Removed" : "Featured" }); fetchData();
-                            }}>
-                              {isFeatured ? 'Remove' : 'Feature'}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* ===== SUPPORT TAB ===== */}
           <TabsContent value="tickets">
             <Card className="border-0 shadow-sm">
@@ -801,29 +880,6 @@ const MarketplaceAdmin = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* ===== SETTINGS TAB ===== */}
-          <TabsContent value="settings">
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle>Marketplace Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Display Settings</h4>
-                    <div className="space-y-2"><label className="text-sm text-slate-600">Vehicles per page</label><Input type="number" defaultValue="6" /></div>
-                    <div className="space-y-2"><label className="text-sm text-slate-600">Featured dealers limit</label><Input type="number" defaultValue="10" /></div>
-                  </div>
-                  <div className="space-y-4">
-                    <h4 className="font-medium">General</h4>
-                    <div className="space-y-2"><label className="text-sm text-slate-600">Min bid increment (₹)</label><Input type="number" defaultValue="1000" /></div>
-                  </div>
-                </div>
-                <Button>Save Settings</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
 
@@ -845,7 +901,6 @@ const MarketplaceAdmin = () => {
           </DialogHeader>
 
           <div className="space-y-6 pt-2">
-            {/* Dealer Stats */}
             <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
               {[
                 { label: "Views", value: getDealerInsightStats.views, color: "text-blue-600" },
@@ -862,7 +917,6 @@ const MarketplaceAdmin = () => {
               ))}
             </div>
 
-            {/* Dealer trend chart */}
             <Card className="border shadow-none">
               <CardHeader className="pb-2"><CardTitle className="text-sm">Daily Traffic</CardTitle></CardHeader>
               <CardContent>
@@ -879,7 +933,6 @@ const MarketplaceAdmin = () => {
               </CardContent>
             </Card>
 
-            {/* Dealer info */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="p-3 rounded-lg bg-slate-50">
                 <p className="text-slate-500">Phone</p>
