@@ -170,11 +170,11 @@ const PublicVehiclePage = () => {
   });
 
   // Derive theme from dealer settings
-  const template = dealer?.catalogue_template || "classic";
+  const template = "modern";
   const accent = getAccent(dealer?.public_page_theme);
-  const isPremium = template === "premium";
+  const isPremium = false;
 
-  const pageBg = isPremium ? "bg-gray-950 text-white" : "bg-gray-50 text-gray-900";
+  const pageBg = "bg-gray-50 text-gray-900";
   const cardBg = isPremium ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200";
   const textPrimary = isPremium ? "text-white" : "text-gray-900";
   const textSecondary = isPremium ? "text-gray-400" : "text-gray-600";

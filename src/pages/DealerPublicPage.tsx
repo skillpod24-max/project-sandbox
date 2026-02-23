@@ -125,7 +125,7 @@ const DealerPublicPage = () => {
   }, [formOpened, submitted, dealerInfo?.user_id, pageId]);
 
   // Template & accent
-  const template = dealerInfo?.catalogue_template || "classic";
+  const template = "modern";
   const accent = getAccent(dealerInfo?.public_page_theme);
 
   useEffect(() => {
@@ -238,16 +238,16 @@ const DealerPublicPage = () => {
     );
   }
 
-  const isPremium = template === "premium";
-  const isModern = template === "modern";
-  const isShowroom = template === "showroom";
-  const isMinimal = template === "minimal";
+  const isPremium = false;
+  const isModern = true;
+  const isShowroom = false;
+  const isMinimal = false;
 
-  const pageBg = isPremium ? "bg-gray-950 text-white" : "bg-gray-50 text-gray-900";
-  const cardBg = isPremium ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200";
-  const textPrimary = isPremium ? "text-white" : "text-gray-900";
-  const textSecondary = isPremium ? "text-gray-400" : "text-gray-600";
-  const textMuted = isPremium ? "text-gray-500" : "text-gray-400";
+  const pageBg = "bg-gray-50 text-gray-900";
+  const cardBg = "bg-white border-gray-200";
+  const textPrimary = "text-gray-900";
+  const textSecondary = "text-gray-600";
+  const textMuted = "text-gray-400";
   const inputClasses = isPremium
     ? "bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:ring-1"
     : "bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-1";
