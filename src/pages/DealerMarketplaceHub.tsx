@@ -641,13 +641,28 @@ const DealerMarketplaceHub = () => {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-4">
-                <Button onClick={() => handleStatusUpdate(selectedRequest.id, "contacted")} variant="outline">
-                  Mark Contacted
-                </Button>
-                <Button onClick={() => handleStatusUpdate(selectedRequest.id, "purchased")}>
-                  Mark Purchased
-                </Button>
+              <div className="space-y-2 pt-4 border-t">
+                <p className="text-sm font-medium text-muted-foreground">Update Status</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "contacted", label: "Contacted", color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
+                    { value: "purchased", label: "Purchased", color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" },
+                    { value: "not_interested", label: "Not Interested", color: "bg-slate-100 text-slate-600 hover:bg-slate-200" },
+                  ].map((s) => (
+                    <Button
+                      key={s.value}
+                      size="sm"
+                      variant="outline"
+                      className={`${selectedRequest.status === s.value ? s.color + " border-2 font-bold" : ""}`}
+                      onClick={() => {
+                        handleStatusUpdate(selectedRequest.id, s.value);
+                        setSelectedRequest({ ...selectedRequest, status: s.value });
+                      }}
+                    >
+                      {selectedRequest.status === s.value ? "✓ " : ""}{s.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

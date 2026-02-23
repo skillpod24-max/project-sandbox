@@ -261,8 +261,8 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog open={!!selectedPayment} onOpenChange={(open) => { if (!open) setSelectedPayment(null); }}>
-  <DialogContent className="max-w-md rounded-2xl">
+      <Dialog open={!!selectedPayment} onOpenChange={(open) => { if (!open) setSelectedPayment(null); }} modal>
+  <DialogContent className="max-w-md rounded-2xl" onAnimationEnd={(e) => e.stopPropagation()}>
     <DialogHeader>
       <DialogTitle>Payment Breakdown</DialogTitle>
     </DialogHeader>
@@ -291,7 +291,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Recorded At</span>
-          <span className="font-medium">{new Date(selectedPayment.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}</span>
+          <span className="font-medium">{new Date(selectedPayment.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })} IST</span>
         </div>
 
         {selectedPayment.payment_purpose && (
