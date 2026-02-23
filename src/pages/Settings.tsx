@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Palette, Building, FileText, Globe, Check, Bell, Smartphone, Store, Copy, ExternalLink, Upload, Star, Plus, Pencil, Trash2, Award, ShoppingBag } from "lucide-react";
@@ -36,6 +37,14 @@ const themeColors = [
   { name: "Indigo Night", sidebar: "245 30% 12%", primary: "245 58% 48%", accent: "245 58% 58%", preview: { bg: "#1f1d33", accent: "#6366f1" } },
   { name: "Emerald", sidebar: "160 30% 10%", primary: "160 84% 35%", accent: "160 84% 39%", preview: { bg: "#132620", accent: "#10b981" } },
 ];
+
+// State -> Districts mapping
+const stateDistrictMap: Record<string, string[]> = {
+  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem", "Tirunelveli", "Erode", "Vellore", "Thoothukudi", "Dindigul", "Thanjavur", "Ranipet", "Sivaganga", "Karur", "Namakkal", "Tiruppur", "Cuddalore", "Kanchipuram", "Tiruvallur", "Villupuram", "Nagapattinam", "Krishnagiri", "Dharmapuri", "Ramanathapuram", "Virudhunagar", "Theni", "Perambalur", "Ariyalur", "Nilgiris", "Tenkasi", "Tirupattur", "Chengalpattu", "Kallakurichi", "Mayiladuthurai"],
+  "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam", "Alappuzha", "Palakkad", "Malappuram", "Kannur", "Kasaragod", "Kottayam", "Idukki", "Pathanamthitta", "Wayanad"],
+  "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Rajahmundry", "Tirupati", "Kadapa", "Kakinada", "Anantapur", "Eluru", "Ongole", "Chittoor", "Srikakulam", "Prakasam", "East Godavari", "West Godavari", "Krishna", "Palnadu", "Bapatla", "Konaseema", "Anakapalli", "Alluri Sitarama Raju", "NTR", "Annamayya", "Sri Sathya Sai"],
+  "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Khammam", "Mahbubnagar", "Nalgonda", "Adilabad", "Medak", "Rangareddy", "Sangareddy", "Siddipet", "Medchal-Malkajgiri", "Jagtial", "Peddapalli", "Kamareddy", "Rajanna Sircilla", "Mancherial", "Vikarabad", "Wanaparthy", "Jogulamba Gadwal", "Suryapet", "Jangaon", "Mahabubabad", "Bhadradri Kothagudem", "Jayashankar Bhupalpally", "Mulugu", "Narayanpet", "Yadadri Bhuvanagiri", "Kumuram Bheem Asifabad"],
+};
 
 
 
@@ -590,12 +599,33 @@ const Settings = () => {
                   <Input value={dealerAddress.street} onChange={(e) => setDealerAddress({ ...dealerAddress, street: e.target.value })} placeholder="Street address, building name" />
                 </div>
                 <div className="space-y-2">
-                  <Label>City</Label>
-                  <Input value={dealerAddress.city} onChange={(e) => setDealerAddress({ ...dealerAddress, city: e.target.value })} placeholder="City" />
+                  <Label>State</Label>
+                  <Select
+                    value={dealerAddress.state}
+                    onValueChange={(v) => setDealerAddress({ ...dealerAddress, state: v, city: "" })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select State" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(stateDistrictMap).map(state => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>State</Label>
-                  <Input value={dealerAddress.state} onChange={(e) => setDealerAddress({ ...dealerAddress, state: e.target.value })} placeholder="State" />
+                  <Label>City / District</Label>
+                  <Select
+                    value={dealerAddress.city}
+                    onValueChange={(v) => setDealerAddress({ ...dealerAddress, city: v })}
+                    disabled={!dealerAddress.state}
+                  >
+                    <SelectTrigger className={!dealerAddress.state ? "opacity-50" : ""}><SelectValue placeholder={dealerAddress.state ? "Select City" : "Select state first"} /></SelectTrigger>
+                    <SelectContent>
+                      {(stateDistrictMap[dealerAddress.state] || []).map((city: string) => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Postal Code</Label>
