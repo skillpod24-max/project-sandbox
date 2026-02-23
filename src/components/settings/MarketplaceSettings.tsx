@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Globe, Building, Star, Clock, RefreshCw, Link2 } from "lucide-react";
+import { Globe, Building, Star, Clock, RefreshCw, Link2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface MarketplaceSettingsProps {
@@ -18,7 +18,6 @@ interface MarketplaceSettingsProps {
 
 const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: MarketplaceSettingsProps) => {
   const { toast } = useToast();
-  const [syncEnabled, setSyncEnabled] = useState(false);
 
   const handleSyncFromCatalogue = () => {
     if (!catalogueSettings.public_page_enabled) {
@@ -32,7 +31,7 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
 
     setSettings({
       ...settings,
-      marketplace_description: catalogueSettings.shop_tagline || settings.marketplace_description,
+      marketplace_tagline: catalogueSettings.shop_tagline || settings.marketplace_tagline,
       marketplace_working_hours: settings.marketplace_working_hours,
     });
     
@@ -84,7 +83,7 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
               </div>
               <div>
                 <p className="text-sm font-medium">Sync with Catalogue</p>
-                <p className="text-xs text-muted-foreground">Copy settings from your catalogue</p>
+                <p className="text-xs text-muted-foreground">Copy tagline from your catalogue</p>
               </div>
             </div>
             <Button 
@@ -110,6 +109,16 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <Label>Marketplace Tagline</Label>
+                <Input
+                  value={settings.marketplace_tagline || ""}
+                  onChange={(e) => setSettings({ ...settings, marketplace_tagline: e.target.value })}
+                  placeholder="e.g., Your trusted partner for quality vehicles"
+                />
+                <p className="text-xs text-muted-foreground">Short tagline shown on marketplace dealer card</p>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Marketplace Description</Label>
                 <Textarea
                   value={settings.marketplace_description || ""}
@@ -118,7 +127,7 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
                   rows={3}
                   className="resize-none"
                 />
-                <p className="text-xs text-muted-foreground">Shown on your marketplace dealer page</p>
+                <p className="text-xs text-muted-foreground">Detailed description on your marketplace dealer page</p>
               </div>
 
               <div className="space-y-2">
@@ -224,6 +233,64 @@ const MarketplaceSettings = ({ settings, setSettings, catalogueSettings }: Marke
                   Current: {settings.marketplace_working_hours || "Not set"}
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Google Reviews Card */}
+          <Card className="border-0 shadow-sm ring-1 ring-border/50">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-blue-500" />
+                Google Reviews
+              </CardTitle>
+              <CardDescription>Display your Google Business rating on the marketplace</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Google Rating</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={settings.google_reviews_rating || ""}
+                    onChange={(e) => setSettings({ ...settings, google_reviews_rating: parseFloat(e.target.value) || null })}
+                    placeholder="e.g., 4.6"
+                  />
+                  <p className="text-xs text-muted-foreground">Your Google Business rating (0-5)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Number of Reviews</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={settings.google_reviews_count || ""}
+                    onChange={(e) => setSettings({ ...settings, google_reviews_count: parseInt(e.target.value) || null })}
+                    placeholder="e.g., 120"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Google Maps / Reviews Link</Label>
+                <Input
+                  value={settings.google_reviews_url || ""}
+                  onChange={(e) => setSettings({ ...settings, google_reviews_url: e.target.value })}
+                  placeholder="https://maps.google.com/..."
+                />
+                <p className="text-xs text-muted-foreground">Link to your Google Business page for customers to verify</p>
+              </div>
+              {settings.google_reviews_rating > 0 && (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                    <span className="font-bold text-lg">{settings.google_reviews_rating}</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    Google Rating {settings.google_reviews_count ? `(${settings.google_reviews_count} reviews)` : ""}
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 

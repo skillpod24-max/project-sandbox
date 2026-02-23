@@ -942,6 +942,9 @@ export type Database = {
           dealer_tag: string | null
           enable_auto_lead_popup: boolean | null
           gmap_link: string | null
+          google_reviews_count: number | null
+          google_reviews_rating: number | null
+          google_reviews_url: string | null
           id: string
           invoice_prefix: string | null
           marketplace_badge: string | null
@@ -950,6 +953,7 @@ export type Database = {
           marketplace_featured: boolean | null
           marketplace_status: string | null
           marketplace_suspended_reason: string | null
+          marketplace_tagline: string | null
           marketplace_working_hours: string | null
           public_page_enabled: boolean | null
           public_page_id: string | null
@@ -982,6 +986,9 @@ export type Database = {
           dealer_tag?: string | null
           enable_auto_lead_popup?: boolean | null
           gmap_link?: string | null
+          google_reviews_count?: number | null
+          google_reviews_rating?: number | null
+          google_reviews_url?: string | null
           id?: string
           invoice_prefix?: string | null
           marketplace_badge?: string | null
@@ -990,6 +997,7 @@ export type Database = {
           marketplace_featured?: boolean | null
           marketplace_status?: string | null
           marketplace_suspended_reason?: string | null
+          marketplace_tagline?: string | null
           marketplace_working_hours?: string | null
           public_page_enabled?: boolean | null
           public_page_id?: string | null
@@ -1022,6 +1030,9 @@ export type Database = {
           dealer_tag?: string | null
           enable_auto_lead_popup?: boolean | null
           gmap_link?: string | null
+          google_reviews_count?: number | null
+          google_reviews_rating?: number | null
+          google_reviews_url?: string | null
           id?: string
           invoice_prefix?: string | null
           marketplace_badge?: string | null
@@ -1030,6 +1041,7 @@ export type Database = {
           marketplace_featured?: boolean | null
           marketplace_status?: string | null
           marketplace_suspended_reason?: string | null
+          marketplace_tagline?: string | null
           marketplace_working_hours?: string | null
           public_page_enabled?: boolean | null
           public_page_id?: string | null

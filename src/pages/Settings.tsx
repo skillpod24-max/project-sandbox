@@ -447,7 +447,7 @@ const Settings = () => {
         <TabsList
           className="
             flex gap-1 overflow-x-auto 
-            sm:grid sm:grid-cols-8 
+            sm:grid sm:grid-cols-7
             w-full max-w-4xl
             scrollbar-hide p-1 bg-muted/50 rounded-xl
           "
@@ -493,12 +493,6 @@ const Settings = () => {
             className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
             <Award className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Reviews</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="regional"
-            className="gap-2 min-w-[44px] sm:min-w-0 px-2.5 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <Globe className="h-4 w-4" /> <span className="hidden sm:inline text-xs">Regional</span>
           </TabsTrigger>
         </TabsList>
 
@@ -809,24 +803,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* Regional Tab */}
-        <TabsContent value="regional" className="space-y-6">
-          <Card className="border border-border">
-            <CardHeader>
-              <CardTitle>Regional Settings</CardTitle>
-              <CardDescription>Currency and regional preferences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Currency</Label>
-                  <Input value={settings.currency || "INR"} onChange={(e) => setSettings({ ...settings, currency: e.target.value })} placeholder="INR" />
-                  <p className="text-xs text-muted-foreground">Currency code (INR, USD, EUR, etc.)</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       <div className="flex gap-4 pt-4">
