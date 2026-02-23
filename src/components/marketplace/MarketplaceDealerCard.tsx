@@ -68,10 +68,19 @@ const MarketplaceDealerCard = memo(({ dealer, vehicleCount, rating }: Props) => 
             
             {/* Stats Row */}
             <div className="flex items-center gap-3 mt-3">
-              <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-lg">
-                <Star className="h-3.5 w-3.5 fill-current" />
-                <span className="font-semibold text-xs">{rating.toFixed(1)}</span>
-              </div>
+              {dealer.google_reviews_rating > 0 ? (
+                <div className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2.5 py-1 rounded-lg">
+                  <MapPin className="h-3 w-3" />
+                  <Star className="h-3.5 w-3.5 fill-current" />
+                  <span className="font-semibold text-xs">{Number(dealer.google_reviews_rating).toFixed(1)}</span>
+                  {dealer.google_reviews_count > 0 && <span className="text-[10px] opacity-70">({dealer.google_reviews_count})</span>}
+                </div>
+              ) : rating > 0 ? (
+                <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-lg">
+                  <Star className="h-3.5 w-3.5 fill-current" />
+                  <span className="font-semibold text-xs">{rating.toFixed(1)}</span>
+                </div>
+              ) : null}
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-lg">
                 <Car className="h-3.5 w-3.5" />
                 <span className="font-medium">{vehicleCount}</span>

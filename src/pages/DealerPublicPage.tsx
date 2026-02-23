@@ -270,7 +270,14 @@ const DealerPublicPage = () => {
                 <img src={dealerInfo.shop_logo_url} alt={dealerInfo.dealer_name} className="h-24 w-24 sm:h-28 sm:w-28 object-contain rounded-2xl bg-white/20 backdrop-blur-sm p-3 border border-white/20" />
               )}
               <div className="text-center md:text-left flex-1">
-                <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">{dealerInfo.dealer_name || "Dealer"}</h1>
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">{dealerInfo.dealer_name || "Dealer"}</h1>
+                  {dealerInfo.show_ratings !== false && stats.avgRating > 0 && (
+                    <Badge className="bg-white/20 text-white border-0 text-sm py-1 px-3 gap-1.5 w-fit mx-auto md:mx-0 backdrop-blur-sm">
+                      <Star className="h-3.5 w-3.5 fill-white" /> {stats.avgRating} ({stats.totalReviews})
+                    </Badge>
+                  )}
+                </div>
                 {dealerInfo.shop_tagline && <p className="text-lg text-white/80 mt-2">{dealerInfo.shop_tagline}</p>}
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
                   {renderTrustBadges(true)}
@@ -295,7 +302,14 @@ const DealerPublicPage = () => {
                 </div>
               )}
               <div className="text-center md:text-left flex-1">
-                <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">{dealerInfo.dealer_name || "Dealer"}</h1>
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">{dealerInfo.dealer_name || "Dealer"}</h1>
+                  {dealerInfo.show_ratings !== false && stats.avgRating > 0 && (
+                    <Badge className="bg-white/10 text-white border-0 text-sm py-1 px-3 gap-1.5 w-fit mx-auto md:mx-0 backdrop-blur-sm">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> {stats.avgRating} ({stats.totalReviews})
+                    </Badge>
+                  )}
+                </div>
                 {dealerInfo.shop_tagline && <p className="text-lg text-gray-400 mt-2">{dealerInfo.shop_tagline}</p>}
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
                   {renderTrustBadges(false)}
@@ -321,7 +335,7 @@ const DealerPublicPage = () => {
               <div className="text-center md:text-left flex-1">
                 <div className="flex flex-col md:flex-row md:items-center gap-3">
                   <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 tracking-tight">{dealerInfo.dealer_name || "Dealer"}</h1>
-                  {dealerInfo.show_ratings && stats.avgRating > 0 && (
+                  {dealerInfo.show_ratings !== false && stats.avgRating > 0 && (
                     <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-sm py-1 px-3 gap-1.5 w-fit mx-auto md:mx-0 shadow-lg">
                       <Star className="h-3.5 w-3.5 fill-white" /> {stats.avgRating} ({stats.totalReviews})
                     </Badge>
@@ -484,7 +498,7 @@ const DealerPublicPage = () => {
             </Card>
 
             {/* Customer Reviews */}
-            {dealerInfo.show_testimonials && testimonials.length > 0 && (
+            {dealerInfo.show_testimonials !== false && testimonials.length > 0 && (
               <Card className={cardBg}>
                 <CardHeader className="pb-2 px-4 pt-4">
                   <CardTitle className={`flex items-center gap-2 text-base ${textPrimary}`}>
