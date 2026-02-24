@@ -41,6 +41,7 @@ interface SellRequest {
     vehicleType?: string;
     brand?: string;
     model?: string;
+    variant?: string;
     year?: number;
     fuelType?: string;
     transmission?: string;
@@ -49,6 +50,12 @@ interface SellRequest {
     owners?: string;
     description?: string;
     images?: string[];
+    color?: string;
+    registrationNumber?: string;
+    condition?: string;
+    insuranceValid?: string;
+    accidentHistory?: string;
+    state?: string;
   };
 }
 
@@ -594,53 +601,114 @@ const DealerMarketplaceHub = () => {
 
       {/* Detail Dialog for Sell Requests */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Vehicle Selling Request</DialogTitle>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Customer</p>
-                  <p className="font-medium">{selectedRequest.customer_name}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Phone</p>
-                  <p className="font-medium">{selectedRequest.phone}</p>
-                </div>
-                {selectedRequest.email && (
-                  <div>
-                    <p className="text-muted-foreground">Email</p>
-                    <p className="font-medium">{selectedRequest.email}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-muted-foreground">Vehicle</p>
-                  <p className="font-medium">{selectedRequest.vehicle_interest}</p>
-                </div>
-              </div>
-
-              {selectedRequest.parsedData && Object.keys(selectedRequest.parsedData).length > 0 && (
-                <div className="pt-4 border-t">
-                  <p className="font-medium mb-2">Vehicle Details</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {selectedRequest.parsedData.brand && (
-                      <p><span className="text-muted-foreground">Brand:</span> {selectedRequest.parsedData.brand}</p>
-                    )}
-                    {selectedRequest.parsedData.model && (
-                      <p><span className="text-muted-foreground">Model:</span> {selectedRequest.parsedData.model}</p>
-                    )}
-                    {selectedRequest.parsedData.year && (
-                      <p><span className="text-muted-foreground">Year:</span> {selectedRequest.parsedData.year}</p>
-                    )}
-                    {selectedRequest.parsedData.expectedPrice && (
-                      <p><span className="text-muted-foreground">Expected:</span> {selectedRequest.parsedData.expectedPrice}</p>
-                    )}
-                  </div>
+              {/* Images Gallery */}
+              {selectedRequest.parsedData?.images && selectedRequest.parsedData.images.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                  {selectedRequest.parsedData.images.map((img: string, i: number) => (
+                    <div key={i} className={`${i === 0 ? 'col-span-2' : ''} bg-muted rounded-lg overflow-hidden`}>
+                      <img src={img} alt={`Vehicle photo ${i + 1}`} className="w-full h-auto max-h-64 object-contain bg-muted" />
+                    </div>
+                  ))}
                 </div>
               )}
 
+              {/* All Details Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                <div className="p-3 rounded-lg bg-muted">
+                  <p className="text-muted-foreground text-xs">Customer</p>
+                  <p className="font-medium">{selectedRequest.customer_name}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted">
+                  <p className="text-muted-foreground text-xs">Phone</p>
+                  <p className="font-medium">{selectedRequest.phone}</p>
+                </div>
+                {selectedRequest.email && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Email</p>
+                    <p className="font-medium">{selectedRequest.email}</p>
+                  </div>
+                )}
+                <div className="p-3 rounded-lg bg-muted">
+                  <p className="text-muted-foreground text-xs">Vehicle</p>
+                  <p className="font-medium">{selectedRequest.vehicle_interest}</p>
+                </div>
+                {selectedRequest.city && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">City</p>
+                    <p className="font-medium">{selectedRequest.city}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.brand && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Brand</p>
+                    <p className="font-medium">{selectedRequest.parsedData.brand}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.model && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Model</p>
+                    <p className="font-medium">{selectedRequest.parsedData.model}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.year && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Year</p>
+                    <p className="font-medium">{selectedRequest.parsedData.year}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.vehicleType && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Vehicle Type</p>
+                    <p className="font-medium capitalize">{selectedRequest.parsedData.vehicleType}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.fuelType && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Fuel Type</p>
+                    <p className="font-medium capitalize">{selectedRequest.parsedData.fuelType}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.transmission && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Transmission</p>
+                    <p className="font-medium capitalize">{selectedRequest.parsedData.transmission}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.kmDriven && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">KM Driven</p>
+                    <p className="font-medium">{selectedRequest.parsedData.kmDriven} km</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.expectedPrice && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Expected Price</p>
+                    <p className="font-medium text-primary">{selectedRequest.parsedData.expectedPrice}</p>
+                  </div>
+                )}
+                {selectedRequest.parsedData?.owners && (
+                  <div className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">Owners</p>
+                    <p className="font-medium">{selectedRequest.parsedData.owners}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              {selectedRequest.parsedData?.description && (
+                <div className="p-3 rounded-lg bg-muted">
+                  <p className="text-muted-foreground text-xs mb-1">Description</p>
+                  <p className="text-sm">{selectedRequest.parsedData.description}</p>
+                </div>
+              )}
+
+              {/* Status Actions */}
               <div className="space-y-2 pt-4 border-t">
                 <p className="text-sm font-medium text-muted-foreground">Update Status</p>
                 <div className="flex flex-wrap gap-2">

@@ -53,6 +53,10 @@ const MarketplaceAdmin = () => {
   const [dealerEvents, setDealerEvents] = useState<any[]>([]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState("30d");
 
+  // Marketplace settings state
+  const [mpSettings, setMpSettings] = useState<Record<string, string>>({});
+  const [savingSettings, setSavingSettings] = useState(false);
+
   // City filter
   const [allCities, setAllCities] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -94,11 +98,12 @@ const MarketplaceAdmin = () => {
 
   const fetchData = async () => {
     try {
-      const [dealersRes, vehiclesRes, ticketsRes, sellRes] = await Promise.all([
+      const [dealersRes, vehiclesRes, ticketsRes, sellRes, mpSettingsRes] = await Promise.all([
         supabase.from("settings").select("*").eq("marketplace_enabled", true),
         supabase.from("vehicles").select("*").eq("is_public", true),
         supabase.from("support_tickets" as any).select("*").order("created_at", { ascending: false }),
         supabase.from("leads").select("*").in("source", ["marketplace_sell"]).eq("lead_type", "seller").order("created_at", { ascending: false }),
+        supabase.from("marketplace_settings").select("*"),
       ]);
 
       const dealersList = dealersRes.data || [];
@@ -107,11 +112,14 @@ const MarketplaceAdmin = () => {
       setSupportTickets(ticketsRes.data || []);
       setSellRequests(sellRes.data || []);
 
-      // Extract unique cities from dealer settings (case-sensitive)
+      // Parse marketplace settings into key-value map
+      const settingsMap: Record<string, string> = {};
+      (mpSettingsRes.data || []).forEach((s: any) => { settingsMap[s.setting_key] = s.setting_value || ""; });
+      setMpSettings(settingsMap);
+
       const cities = dealersList
         .map(d => {
           const addr = d.dealer_address || "";
-          // Try to extract city from address - take last meaningful part
           const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
           return parts.length > 1 ? parts[parts.length - 2] : parts[0] || "";
         })
@@ -138,6 +146,24 @@ const MarketplaceAdmin = () => {
       console.error("Error fetching admin data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveMarketplaceSetting = async (key: string, value: string) => {
+    setSavingSettings(true);
+    try {
+      const existing = await supabase.from("marketplace_settings").select("id").eq("setting_key", key).single();
+      if (existing.data) {
+        await supabase.from("marketplace_settings").update({ setting_value: value }).eq("setting_key", key);
+      } else {
+        await supabase.from("marketplace_settings").insert({ setting_key: key, setting_value: value });
+      }
+      setMpSettings(prev => ({ ...prev, [key]: value }));
+      toast({ title: "Setting saved" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -407,6 +433,7 @@ const MarketplaceAdmin = () => {
     { id: "featured", label: "Featured", icon: Sparkles },
     { id: "sell_requests", label: "Sell Requests", icon: Tag },
     { id: "tickets", label: "Support", icon: Ticket },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -867,6 +894,137 @@ const MarketplaceAdmin = () => {
                 </Table>
               </CardContent>
             </Card>
+          )}
+
+          {/* ===== SETTINGS ===== */}
+          {activeAdminTab === "settings" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <Settings className="h-5 w-5" /> Marketplace Settings
+              </h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* General Config */}
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">General Configuration</CardTitle>
+                    <CardDescription>Core marketplace parameters</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { key: "marketplace_name", label: "Marketplace Name", placeholder: "VahanHub Marketplace" },
+                      { key: "support_phone", label: "Support Phone", placeholder: "1800-123-4567" },
+                      { key: "support_email", label: "Support Email", placeholder: "support@vahanhub.com" },
+                      { key: "whatsapp_number", label: "WhatsApp Number", placeholder: "+91..." },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key} className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">{label}</label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={mpSettings[key] || ""}
+                            placeholder={placeholder}
+                            onChange={(e) => setMpSettings(prev => ({ ...prev, [key]: e.target.value }))}
+                          />
+                          <Button size="sm" variant="outline" disabled={savingSettings}
+                            onClick={() => handleSaveMarketplaceSetting(key, mpSettings[key] || "")}>
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Display Config */}
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Display & Limits</CardTitle>
+                    <CardDescription>Control what shows on marketplace</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { key: "max_featured_vehicles", label: "Max Featured Vehicles", placeholder: "5" },
+                      { key: "max_featured_dealers", label: "Max Featured Dealers", placeholder: "5" },
+                      { key: "vehicles_per_page", label: "Vehicles Per Page", placeholder: "6" },
+                      { key: "hero_tagline", label: "Hero Tagline", placeholder: "India's most trusted vehicle marketplace" },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key} className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">{label}</label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={mpSettings[key] || ""}
+                            placeholder={placeholder}
+                            onChange={(e) => setMpSettings(prev => ({ ...prev, [key]: e.target.value }))}
+                          />
+                          <Button size="sm" variant="outline" disabled={savingSettings}
+                            onClick={() => handleSaveMarketplaceSetting(key, mpSettings[key] || "")}>
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* SEO & Meta */}
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">SEO & Meta</CardTitle>
+                    <CardDescription>Search engine and social sharing</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { key: "meta_title", label: "Meta Title", placeholder: "Buy & Sell Used Cars - VahanHub" },
+                      { key: "meta_description", label: "Meta Description", placeholder: "India's fastest growing..." },
+                      { key: "og_image_url", label: "OG Image URL", placeholder: "https://..." },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key} className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">{label}</label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={mpSettings[key] || ""}
+                            placeholder={placeholder}
+                            onChange={(e) => setMpSettings(prev => ({ ...prev, [key]: e.target.value }))}
+                          />
+                          <Button size="sm" variant="outline" disabled={savingSettings}
+                            onClick={() => handleSaveMarketplaceSetting(key, mpSettings[key] || "")}>
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Quick Actions */}
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Quick Actions</CardTitle>
+                    <CardDescription>Administrative shortcuts</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setBannerDialogOpen(true)}>
+                      <Image className="h-4 w-4" /> Manage Hero Banners
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveAdminTab("featured")}>
+                      <Sparkles className="h-4 w-4" /> Manage Featured Items
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/")}>
+                      <Globe className="h-4 w-4" /> View Live Marketplace
+                    </Button>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">Platform Stats</p>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="p-2 rounded bg-muted"><span className="font-bold">{stats.totalDealers}</span> <span className="text-muted-foreground">Dealers</span></div>
+                        <div className="p-2 rounded bg-muted"><span className="font-bold">{stats.totalVehicles}</span> <span className="text-muted-foreground">Vehicles</span></div>
+                        <div className="p-2 rounded bg-muted"><span className="font-bold">{stats.featuredDealers}</span> <span className="text-muted-foreground">Featured</span></div>
+                        <div className="p-2 rounded bg-muted"><span className="font-bold">{stats.totalSellRequests}</span> <span className="text-muted-foreground">Sell Req</span></div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           )}
         </div>
       </main>
