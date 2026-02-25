@@ -72,21 +72,21 @@ const AllDealers = () => {
   const availableCities = useMemo(() => {
     const cities = dealers
       .map(d => {
-        const parts = (d.dealer_address || "").split(",");
-        return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+        const parts = (d.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+        return parts.length >= 2 ? parts[1] : null;
       })
       .filter(Boolean);
     return [...new Set(cities)] as string[];
   }, [dealers]);
 
   const getDealerLocation = (address: string) => {
-    const parts = address.split(",");
-    if (parts.length >= 2) {
-      const city = parts[parts.length - 2]?.trim();
-      const state = parts[parts.length - 1]?.trim();
-      return { city, state };
+    const parts = address.split(",").map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      return { city: parts[1], state: parts[2] };
+    } else if (parts.length >= 2) {
+      return { city: parts[1], state: "" };
     }
-    return { city: "Unknown", state: "" };
+    return { city: parts[0] || "Unknown", state: "" };
   };
 
   const filteredDealers = useMemo(() => {
