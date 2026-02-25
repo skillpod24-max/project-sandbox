@@ -121,7 +121,7 @@ const MarketplaceAdmin = () => {
         .map(d => {
           const addr = d.dealer_address || "";
           const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
-          return parts.length > 1 ? parts[parts.length - 2] : parts[0] || "";
+          return parts.length >= 2 ? parts[1] : parts[0] || "";
         })
         .filter(Boolean);
       const uniqueCities = [...new Set(cities)].sort();
@@ -362,7 +362,7 @@ const MarketplaceAdmin = () => {
     if (selectedCities.length > 0) {
       const addr = d.dealer_address || "";
       const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
-      const dealerCity = parts.length > 1 ? parts[parts.length - 2] : parts[0] || "";
+      const dealerCity = parts.length >= 2 ? parts[1] : parts[0] || "";
       if (!selectedCities.includes(dealerCity)) return false;
     }
     return matchesSearch;
@@ -409,7 +409,7 @@ const MarketplaceAdmin = () => {
     dealers.forEach(d => {
       const addr = d.dealer_address || "";
       const parts = addr.split(",").map((s: string) => s.trim()).filter(Boolean);
-      const city = parts.length > 1 ? parts[parts.length - 2] : parts[0] || "Other";
+      const city = parts.length >= 2 ? parts[1] : parts[0] || "Other";
       if (!cityMap[city]) cityMap[city] = [];
       cityMap[city].push(d);
     });
@@ -431,6 +431,7 @@ const MarketplaceAdmin = () => {
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "dealers", label: "Dealers", icon: Building2 },
     { id: "featured", label: "Featured", icon: Sparkles },
+    { id: "banners", label: "Banners", icon: Image },
     { id: "sell_requests", label: "Sell Requests", icon: Tag },
     { id: "tickets", label: "Support", icon: Ticket },
     { id: "settings", label: "Settings", icon: Settings },
@@ -797,6 +798,106 @@ const MarketplaceAdmin = () => {
                 </Table>
               </CardContent>
             </Card>
+          )}
+
+          {/* ===== BANNERS ===== */}
+          {activeAdminTab === "banners" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <Image className="h-5 w-5" /> Banner Management
+              </h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Hero Slider Banners */}
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Hero Slider Banners</CardTitle>
+                    <CardDescription>Desktop & mobile banners for the marketplace hero carousel</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {(['desktop', 'mobile'] as const).map(type => (
+                      <div key={type} className="space-y-2">
+                        <label className="text-sm font-medium capitalize">{type} Banner</label>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder={`${type} banner URL`}
+                            value={type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl}
+                            onChange={(e) => type === 'desktop' ? setBannerDesktopUrl(e.target.value) : setBannerMobileUrl(e.target.value)}
+                          />
+                          <label className="cursor-pointer">
+                            <Button variant="outline" size="sm" asChild disabled={type === 'desktop' ? uploadingDesktop : uploadingMobile}>
+                              <span><Upload className="h-4 w-4" /></span>
+                            </Button>
+                            <input type="file" accept="image/*" className="hidden"
+                              onChange={(e) => e.target.files?.[0] && handleUploadBanner(e.target.files[0], type)} />
+                          </label>
+                        </div>
+                        {(type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl) && (
+                          <img src={type === 'desktop' ? bannerDesktopUrl : bannerMobileUrl} alt={`${type} preview`}
+                            className="w-full h-32 object-cover rounded-lg border" />
+                        )}
+                      </div>
+                    ))}
+                    <Button onClick={handleSaveBanners} className="w-full">Save Hero Banners</Button>
+                  </CardContent>
+                </Card>
+
+                {/* Entry Popup Banner */}
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Entry Popup Banner</CardTitle>
+                    <CardDescription>Image-only popup shown on first visit to marketplace landing page</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Popup Image URL</label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Popup banner image URL"
+                          value={mpSettings["popup_image_url"] || ""}
+                          onChange={(e) => setMpSettings(prev => ({ ...prev, popup_image_url: e.target.value }))}
+                        />
+                        <Button size="sm" variant="outline" disabled={savingSettings}
+                          onClick={() => handleSaveMarketplaceSetting("popup_image_url", mpSettings["popup_image_url"] || "")}>
+                          Save
+                        </Button>
+                      </div>
+                      {mpSettings["popup_image_url"] && (
+                        <img src={mpSettings["popup_image_url"]} alt="Popup preview"
+                          className="w-full h-48 object-cover rounded-lg border" />
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Popup Link URL (when clicked)</label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="/marketplace/vehicles or https://..."
+                          value={mpSettings["popup_link_url"] || ""}
+                          onChange={(e) => setMpSettings(prev => ({ ...prev, popup_link_url: e.target.value }))}
+                        />
+                        <Button size="sm" variant="outline" disabled={savingSettings}
+                          onClick={() => handleSaveMarketplaceSetting("popup_link_url", mpSettings["popup_link_url"] || "")}>
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <Checkbox
+                        checked={mpSettings["popup_enabled"] === "true"}
+                        onCheckedChange={(checked) => {
+                          const val = checked ? "true" : "false";
+                          setMpSettings(prev => ({ ...prev, popup_enabled: val }));
+                          handleSaveMarketplaceSetting("popup_enabled", val);
+                        }}
+                      />
+                      <label className="text-sm font-medium">Enable Entry Popup</label>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           )}
 
           {/* ===== SELL REQUESTS ===== */}

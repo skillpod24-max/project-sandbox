@@ -183,8 +183,8 @@ const Marketplace = () => {
   const availableCities = useMemo(() => {
     const cities = dealers
       .map(d => {
-        const parts = (d.dealer_address || "").split(",");
-        return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+        const parts = (d.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+        return parts.length >= 2 ? parts[1] : null;
       })
       .filter(Boolean);
     return [...new Set(cities)];
@@ -207,8 +207,8 @@ const Marketplace = () => {
   const getDealerCity = useCallback((userId: string) => {
     const dealer = dealers.find(d => d.user_id === userId);
     if (!dealer?.dealer_address) return null;
-    const parts = dealer.dealer_address.split(",");
-    return parts.length >= 2 ? parts[parts.length - 2]?.trim() : null;
+    const parts = dealer.dealer_address.split(",").map((s: string) => s.trim()).filter(Boolean);
+    return parts.length >= 2 ? parts[1] : null;
   }, [dealers]);
 
   const filteredVehicles = useMemo(() => {
@@ -598,7 +598,7 @@ const Marketplace = () => {
                           <MapPin className="h-2.5 w-2.5" />
                           <span className="truncate">{(() => {
                             const parts = (dealer.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
-                            return parts.length >= 2 ? parts[parts.length - 2] : parts[0] || "";
+                            return parts.length >= 2 ? parts[1] : parts[0] || "";
                           })()}</span>
                         </div>
                       )}
