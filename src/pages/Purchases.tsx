@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const formatINR = (value: string) => {
   const num = value.replace(/,/g, "");
@@ -27,23 +28,23 @@ const formatINR = (value: string) => {
 const parseINR = (value: string) =>
   Number(value.replace(/,/g, ""));
 
-
-
-
 type Purchase = Database["public"]["Tables"]["vehicle_purchases"]["Row"];
 type PurchaseInsert = Database["public"]["Tables"]["vehicle_purchases"]["Insert"];
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 type Vendor = Database["public"]["Tables"]["vendors"]["Row"];
 type Payment = Database["public"]["Tables"]["payments"]["Row"];
+type VehicleImage = Database["public"]["Tables"]["vehicle_images"]["Row"];
 
 const paymentModes = ["cash", "bank_transfer", "cheque", "upi", "card"] as const;
 
 const Purchases = () => {
   const { toast } = useToast();
   const { viewMode, setViewMode } = useViewMode("purchases");
+  const isMobile = useIsMobile();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [vehicleImages, setVehicleImages] = useState<VehicleImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -52,12 +53,11 @@ const Purchases = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<string | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
-const [loadingPayments, setLoadingPayments] = useState(false);
-const [addPaymentOpen, setAddPaymentOpen] = useState(false);
-const [paymentAmount, setPaymentAmount] = useState(0);
-const [paymentMode, setPaymentMode] = useState<typeof paymentModes[number]>("cash");
-const [addingPayment, setAddingPayment] = useState(false);
-
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentMode, setPaymentMode] = useState<typeof paymentModes[number]>("cash");
+  const [addingPayment, setAddingPayment] = useState(false);
 
   const [formData, setFormData] = useState<Partial<PurchaseInsert>>({
     vehicle_id: "",
@@ -74,21 +74,22 @@ const [addingPayment, setAddingPayment] = useState(false);
 
   const fetchData = async () => {
     try {
-      // Get current user for explicit filtering
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
         return;
       }
 
-      const [purchasesRes, vehiclesRes, vendorsRes] = await Promise.all([
+      const [purchasesRes, vehiclesRes, vendorsRes, imagesRes] = await Promise.all([
         supabase.from("vehicle_purchases").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("vehicles").select("*").eq("user_id", user.id),
         supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
+        supabase.from("vehicle_images").select("*").eq("user_id", user.id).eq("is_primary", true),
       ]);
       setPurchases(purchasesRes.data || []);
       setVehicles(vehiclesRes.data || []);
       setVendors(vendorsRes.data || []);
+      setVehicleImages(imagesRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -98,11 +99,15 @@ const [addingPayment, setAddingPayment] = useState(false);
 
   const generateCode = () => `PUR${Date.now().toString(36).toUpperCase()}`;
   const paymentExceedsBalance =
-  selectedPurchase &&
-  paymentAmount > selectedPurchase.balance_amount;
-
+    selectedPurchase &&
+    paymentAmount > selectedPurchase.balance_amount;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getVehicleImage = (vehicleId: string): string | null => {
+    const img = vehicleImages.find(i => i.vehicle_id === vehicleId);
+    return img?.image_url || null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,59 +121,52 @@ const [addingPayment, setAddingPayment] = useState(false);
     }
 
     const vehicle = vehicles.find(v => v.id === formData.vehicle_id);
-const finalPurchasePrice = vehicle?.purchase_price || 0;
-const amountPaid = formData.amount_paid || 0;
-const balanceAmount = finalPurchasePrice - amountPaid;
+    const finalPurchasePrice = vehicle?.purchase_price || 0;
+    const amountPaid = formData.amount_paid || 0;
+    const balanceAmount = finalPurchasePrice - amountPaid;
 
-
-if (amountPaid > finalPurchasePrice) {
-  toast({
-    title: "Invalid amount",
-    description: "Amount paid cannot exceed purchase price",
-    variant: "destructive",
-  });
-  setIsSubmitting(false);
-  return;
-}
-
-
+    if (amountPaid > finalPurchasePrice) {
+      toast({
+        title: "Invalid amount",
+        description: "Amount paid cannot exceed purchase price",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (selectedPurchase) {
-  const { error } = await supabase
-    .from("vehicle_purchases")
-    .update({
-      notes: formData.notes,
-      payment_mode: formData.payment_mode,
-    })
-    .eq("id", selectedPurchase.id);
+        const { error } = await supabase
+          .from("vehicle_purchases")
+          .update({
+            notes: formData.notes,
+            payment_mode: formData.payment_mode,
+          })
+          .eq("id", selectedPurchase.id);
 
-  if (error) throw error;
-  toast({ title: "Purchase updated successfully" });
-}
- else {
+        if (error) throw error;
+        toast({ title: "Purchase updated successfully" });
+      } else {
         const purchaseNumber = generateCode();
         const { data: purchaseData, error } = await supabase.from("vehicle_purchases").insert([{
           ...formData,
-           purchase_price: finalPurchasePrice, // 🔒 FORCE VEHICLE PRICE
+          purchase_price: finalPurchasePrice,
           purchase_number: purchaseNumber,
           balance_amount: balanceAmount,
           user_id: user.id,
         } as PurchaseInsert]).select().single();
 
-        // 🔁 Sync vehicle state after purchase creation
-await supabase
-  .from("vehicles")
-  .update({
-    purchase_status: "purchased",
-    vendor_id: formData.vendor_id,
-  })
-  .eq("id", formData.vehicle_id);
-
+        await supabase
+          .from("vehicles")
+          .update({
+            purchase_status: "purchased",
+            vendor_id: formData.vendor_id,
+          })
+          .eq("id", formData.vehicle_id);
 
         if (error) throw error;
         
-        // Auto-create payment record if amount_paid > 0
         if (amountPaid > 0 && purchaseData) {
           const { data: existingPayment } = await supabase
             .from("payments")
@@ -231,100 +229,90 @@ await supabase
   };
 
   const openDetailDialog = async (purchase: Purchase) => {
-  setSelectedPurchase(purchase);
-  setDetailDialogOpen(true);
-  setLoadingPayments(true);
+    setSelectedPurchase(purchase);
+    setDetailDialogOpen(true);
+    setLoadingPayments(true);
 
-  
-
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const { data } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("reference_id", purchase.id)
-    .eq("reference_type", "purchase")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
-  setPayments(data || []);
-  setLoadingPayments(false);
-};
-
-const handleAddPayment = async () => {
-  if (!selectedPurchase || paymentAmount <= 0) return;
-
-  if (paymentAmount > selectedPurchase.balance_amount) {
-    toast({
-      title: "Invalid amount",
-      description: "Payment exceeds pending balance",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  setAddingPayment(true);
-
-  try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 1️⃣ Insert payment
-    const { data: payment } = await supabase
+    const { data } = await supabase
       .from("payments")
-      .insert({
-        payment_number: `PAY${Date.now().toString(36).toUpperCase()}`,
-        amount: paymentAmount,
-        payment_type: "vendor_payment",
-        payment_mode: paymentMode,
-        reference_id: selectedPurchase.id,
-        reference_type: "purchase",
-        vendor_id: selectedPurchase.vendor_id,
-        description: `Payment for ${selectedPurchase.purchase_number}`,
-        user_id: user.id,
-      })
-      .select()
-      .single();
+      .select("*")
+      .eq("reference_id", purchase.id)
+      .eq("reference_type", "purchase")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    // 2️⃣ Calculate new totals
-    const newPaid = selectedPurchase.amount_paid + paymentAmount;
-    const newBalance = selectedPurchase.purchase_price - newPaid;
+    setPayments(data || []);
+    setLoadingPayments(false);
+  };
 
-    // 3️⃣ Update purchase in DB
-    await supabase
-      .from("vehicle_purchases")
-      .update({
+  const handleAddPayment = async () => {
+    if (!selectedPurchase || paymentAmount <= 0) return;
+
+    if (paymentAmount > selectedPurchase.balance_amount) {
+      toast({
+        title: "Invalid amount",
+        description: "Payment exceeds pending balance",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAddingPayment(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: payment } = await supabase
+        .from("payments")
+        .insert({
+          payment_number: `PAY${Date.now().toString(36).toUpperCase()}`,
+          amount: paymentAmount,
+          payment_type: "vendor_payment",
+          payment_mode: paymentMode,
+          reference_id: selectedPurchase.id,
+          reference_type: "purchase",
+          vendor_id: selectedPurchase.vendor_id,
+          description: `Payment for ${selectedPurchase.purchase_number}`,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      const newPaid = selectedPurchase.amount_paid + paymentAmount;
+      const newBalance = selectedPurchase.purchase_price - newPaid;
+
+      await supabase
+        .from("vehicle_purchases")
+        .update({
+          amount_paid: newPaid,
+          balance_amount: newBalance,
+        })
+        .eq("id", selectedPurchase.id);
+
+      const updatedPurchase = {
+        ...selectedPurchase,
         amount_paid: newPaid,
         balance_amount: newBalance,
-      })
-      .eq("id", selectedPurchase.id);
+      };
 
-    // ✅ 4️⃣ UPDATE LOCAL STATE (THIS IS THE KEY)
-    const updatedPurchase = {
-      ...selectedPurchase,
-      amount_paid: newPaid,
-      balance_amount: newBalance,
-    };
+      setSelectedPurchase(updatedPurchase);
+      setPurchases(prev =>
+        prev.map(p => p.id === selectedPurchase.id ? updatedPurchase : p)
+      );
+      setPayments(prev => payment ? [payment, ...prev] : prev);
 
-    setSelectedPurchase(updatedPurchase);
-
-    setPurchases(prev =>
-      prev.map(p => p.id === selectedPurchase.id ? updatedPurchase : p)
-    );
-
-    setPayments(prev => payment ? [payment, ...prev] : prev);
-
-    toast({ title: "Payment added successfully" });
-    setAddPaymentOpen(false);
-  } catch (err: any) {
-    toast({ title: "Error", description: err.message, variant: "destructive" });
-  } finally {
-    setAddingPayment(false);
-  }
-};
-
+      toast({ title: "Payment added successfully" });
+      setAddPaymentOpen(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setAddingPayment(false);
+    }
+  };
 
   const resetForm = () => {
     setSelectedPurchase(null);
@@ -356,16 +344,30 @@ const handleAddPayment = async () => {
     return <PageSkeleton />;
   }
 
-// ✅ Vehicles eligible for manual purchase
-const purchasedVehicleIds = new Set(
-  purchases.map(p => p.vehicle_id)
-);
+  const purchasedVehicleIds = new Set(
+    purchases.map(p => p.vehicle_id)
+  );
 
-const eligibleVehicles = vehicles.filter(v =>
-  v.status === "in_stock" &&               // 1️⃣ only in stock
-  !purchasedVehicleIds.has(v.id)           // 2️⃣ no vendor / purchase exists
-);
+  const eligibleVehicles = vehicles.filter(v =>
+    v.status === "in_stock" &&
+    !purchasedVehicleIds.has(v.id)
+  );
 
+  // Small vehicle image thumbnail component
+  const VehicleThumbnail = ({ vehicleId }: { vehicleId: string }) => {
+    const imgUrl = getVehicleImage(vehicleId);
+    return (
+      <div className="w-10 h-10 rounded-md bg-muted overflow-hidden flex-shrink-0 border border-border">
+        {imgUrl ? (
+          <img src={imgUrl} alt="Vehicle" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+            No img
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -398,6 +400,7 @@ const eligibleVehicles = vehicles.filter(v =>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead>Number</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Vehicle</TableHead>
@@ -409,6 +412,9 @@ const eligibleVehicles = vehicles.filter(v =>
               <TableBody>
                 {filteredPurchases.map((purchase) => (
                   <TableRow key={purchase.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(purchase)}>
+                    <TableCell>
+                      <VehicleThumbnail vehicleId={purchase.vehicle_id} />
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{purchase.purchase_number}</TableCell>
                     <TableCell>{format(new Date(purchase.purchase_date), "dd MMM yyyy")}</TableCell>
                     <TableCell>{getVehicleName(purchase.vehicle_id)}</TableCell>
@@ -422,24 +428,35 @@ const eligibleVehicles = vehicles.filter(v =>
                   </TableRow>
                 ))}
                 {filteredPurchases.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No purchases found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No purchases found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredPurchases.map((purchase) => (
               <Card key={purchase.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(purchase)}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs text-muted-foreground">{purchase.purchase_number}</span>
-                    <Badge className={purchase.balance_amount > 0 ? "bg-chart-3 text-white text-xs" : "bg-chart-2 text-white text-xs"}>
-                      {purchase.balance_amount > 0 ? `₹${purchase.balance_amount.toLocaleString()} Due` : "Paid"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <VehicleThumbnail vehicleId={purchase.vehicle_id} />
+                      <span className="font-mono text-xs text-muted-foreground">{purchase.purchase_number}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {purchase.balance_amount > 0 && (
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-3 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-chart-3"></span>
+                        </span>
+                      )}
+                      <Badge className={purchase.balance_amount > 0 ? "bg-chart-3 text-white text-xs" : "bg-chart-2 text-white text-xs"}>
+                        {purchase.balance_amount > 0 ? `₹${purchase.balance_amount.toLocaleString("en-IN")} Due` : "Paid"}
+                      </Badge>
+                    </div>
                   </div>
-                  <p className="font-semibold text-foreground truncate">{getVehicleName(purchase.vehicle_id)}</p>
-                  <p className="text-sm text-muted-foreground">{getVendorName(purchase.vendor_id)}</p>
+                  <p className="font-semibold text-foreground truncate text-sm">{getVehicleName(purchase.vehicle_id)}</p>
+                  <p className="text-sm text-muted-foreground truncate">{getVendorName(purchase.vendor_id)}</p>
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-bold text-primary">₹{purchase.purchase_price.toLocaleString("en-IN")}</span>
                     <span className="text-xs text-muted-foreground">{format(new Date(purchase.purchase_date), "dd MMM yyyy")}</span>
@@ -467,17 +484,8 @@ const eligibleVehicles = vehicles.filter(v =>
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent
-  className="
-    max-w-2xl
-    w-[calc(100vw-1.5rem)]
-    sm:w-full
-    px-3 sm:px-6
-    rounded-2xl
-    sm:rounded-xl
-    overflow-hidden
-  "
->
-
+          className="max-w-2xl w-[calc(100vw-1.5rem)] sm:w-full px-3 sm:px-6 rounded-2xl sm:rounded-xl max-h-[90vh] overflow-y-auto"
+        >
           <DialogHeader>
             <DialogTitle>{selectedPurchase ? "Edit Purchase" : "Add New Purchase"}</DialogTitle>
           </DialogHeader>
@@ -486,43 +494,38 @@ const eligibleVehicles = vehicles.filter(v =>
               <div className="space-y-2">
                 <Label>Vehicle *</Label>
                 <Select
-  value={formData.vehicle_id}
-  onValueChange={(vehicleId) => {
-    const vehicle = vehicles.find(v => v.id === vehicleId);
-
-    setFormData(prev => ({
-      ...prev,
-      vehicle_id: vehicleId,
-      purchase_price: vehicle?.purchase_price || 0, // 🔥 AUTO FILL
-    }));
-  }}
->
-
+                  value={formData.vehicle_id}
+                  onValueChange={(vehicleId) => {
+                    const vehicle = vehicles.find(v => v.id === vehicleId);
+                    setFormData(prev => ({
+                      ...prev,
+                      vehicle_id: vehicleId,
+                      purchase_price: vehicle?.purchase_price || 0,
+                    }));
+                  }}
+                >
                   <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                   <SelectContent>
-  {eligibleVehicles.length === 0 && (
-    <div className="px-3 py-2 text-sm text-muted-foreground">
-      No eligible vehicles available
-    </div>
-  )}
-
-  {eligibleVehicles.map((v) => (
-    <SelectItem key={v.id} value={v.id}>
-      {v.brand} {v.model} ({v.code})
-    </SelectItem>
-  ))}
-</SelectContent>
-
+                    {eligibleVehicles.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        No eligible vehicles available
+                      </div>
+                    )}
+                    {eligibleVehicles.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.brand} {v.model} ({v.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Vendor *</Label>
                 <Select
-  value={formData.vendor_id}
-  onValueChange={(v) => setFormData({ ...formData, vendor_id: v })}
-  disabled={!!selectedPurchase} // 🔒 LOCK vendor after creation
->
-
+                  value={formData.vendor_id}
+                  onValueChange={(v) => setFormData({ ...formData, vendor_id: v })}
+                  disabled={!!selectedPurchase}
+                >
                   <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
                   <SelectContent>
                     {vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
@@ -530,46 +533,38 @@ const eligibleVehicles = vehicles.filter(v =>
                 </Select>
               </div>
               {selectedPurchase && (
-  <p className="text-xs text-muted-foreground">
-    Vendor is locked for accounting consistency
-  </p>
-)}
-
+                <p className="text-xs text-muted-foreground">
+                  Vendor is locked for accounting consistency
+                </p>
+              )}
               <div className="space-y-2">
                 <Label>Purchase Price *</Label>
                 <Input
-  inputMode="numeric"
-  value={formatINR(String(formData.purchase_price || ""))}
-  disabled
-/>
-
-<p className="text-xs text-muted-foreground">
-  Purchase price is taken from the vehicle.
-  To change it, edit the vehicle details.
-</p>
-
-
+                  inputMode="numeric"
+                  value={formatINR(String(formData.purchase_price || ""))}
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  Purchase price is taken from the vehicle. To change it, edit the vehicle details.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Amount Paid</Label>
                 <Input
-  inputMode="numeric"
-  value={formatINR(String(formData.amount_paid || ""))}
-  onChange={(e) =>
-    setFormData({
-      ...formData,
-      amount_paid: parseINR(e.target.value),
-    })
-  }
-/>
-
-{formData.amount_paid > (formData.purchase_price || 0) && (
-  <p className="text-xs text-red-500 font-medium">
-    Amount paid cannot exceed purchase price
-  </p>
-)}
-
-
+                  inputMode="numeric"
+                  value={formatINR(String(formData.amount_paid || ""))}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      amount_paid: parseINR(e.target.value),
+                    })
+                  }
+                />
+                {formData.amount_paid > (formData.purchase_price || 0) && (
+                  <p className="text-xs text-destructive font-medium">
+                    Amount paid cannot exceed purchase price
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Payment Mode</Label>
@@ -596,28 +591,17 @@ const eligibleVehicles = vehicles.filter(v =>
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent
-  className="
-    max-w-2xl
-    w-[calc(100vw-1.5rem)]
-    sm:w-full
-    px-3 sm:px-6
-    rounded-2xl
-    sm:rounded-xl
-    overflow-hidden
-  "
->
-
+          className="max-w-2xl w-[calc(100vw-1.5rem)] sm:w-full px-3 sm:px-6 rounded-2xl sm:rounded-xl max-h-[90vh] overflow-y-auto"
+        >
           {selectedPurchase && (
             <>
               <DialogHeader className="flex flex-row items-center justify-between">
-  <DialogTitle>
-    Purchase {selectedPurchase.purchase_number}
-  </DialogTitle>
-
-  <div className="flex gap-2">
-    
-  </div>
-</DialogHeader>
+                <DialogTitle>
+                  Purchase {selectedPurchase.purchase_number}
+                </DialogTitle>
+                <div className="flex gap-2">
+                </div>
+              </DialogHeader>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -627,7 +611,10 @@ const eligibleVehicles = vehicles.filter(v =>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Vehicle</p>
-                    <p className="font-medium">{getVehicleName(selectedPurchase.vehicle_id)}</p>
+                    <div className="flex items-center gap-2">
+                      <VehicleThumbnail vehicleId={selectedPurchase.vehicle_id} />
+                      <p className="font-medium text-sm">{getVehicleName(selectedPurchase.vehicle_id)}</p>
+                    </div>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Vendor</p>
@@ -638,146 +625,141 @@ const eligibleVehicles = vehicles.filter(v =>
                     <p className="font-medium capitalize">{selectedPurchase.payment_mode.replace("_", " ")}</p>
                   </div>
                 </div>
-                <div className="relative grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
-  <div>
-    <p className="text-sm text-muted-foreground">Purchase Price</p>
-    <p className="text-xl font-bold">₹{selectedPurchase.purchase_price.toLocaleString("en-IN")}</p>
-  </div>
+                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Purchase Price</p>
+                    <p className="text-xl font-bold">₹{selectedPurchase.purchase_price.toLocaleString("en-IN")}</p>
+                  </div>
 
-  <div>
-    <p className="text-sm text-muted-foreground">Amount Paid</p>
-    <p className="text-xl font-bold text-chart-2">
-      ₹{selectedPurchase.amount_paid.toLocaleString("en-IN")}
-    </p>
-  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Amount Paid</p>
+                    <p className="text-xl font-bold text-chart-2">
+                      ₹{selectedPurchase.amount_paid.toLocaleString("en-IN")}
+                    </p>
+                  </div>
 
-  <div>
-    <p className="text-sm text-muted-foreground">Balance</p>
-    <p className="text-xl font-bold text-chart-3">
-      ₹{selectedPurchase.balance_amount.toLocaleString("en-IN")}
-    </p>
-  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Balance</p>
+                    <p className="text-xl font-bold text-chart-3">
+                      ₹{selectedPurchase.balance_amount.toLocaleString("en-IN")}
+                    </p>
+                  </div>
 
-  {selectedPurchase.balance_amount > 0 && (
-    <Button
-      size="icon"
-      className="absolute -top-3 -right-3 rounded-full"
-      onClick={() => {
-        setPaymentAmount(selectedPurchase.balance_amount); // auto fill
-        setPaymentMode(selectedPurchase.payment_mode as any);
-        setAddPaymentOpen(true);
-      }}
-    >
-      <Plus className="h-4 w-4" />
-    </Button>
-  )}
-</div>
+                  {selectedPurchase.balance_amount > 0 && (
+                    <Button
+                      size="icon"
+                      className="absolute -top-3 -right-3 rounded-full"
+                      onClick={() => {
+                        setPaymentAmount(selectedPurchase.balance_amount);
+                        setPaymentMode(selectedPurchase.payment_mode as any);
+                        setAddPaymentOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
 
-<Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
-  <DialogContent className="max-w-sm">
-    <DialogHeader>
-      <DialogTitle>Add Payment</DialogTitle>
-    </DialogHeader>
+                <Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
+                  <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>Add Payment</DialogTitle>
+                    </DialogHeader>
 
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Pending Amount</Label>
-        <Input
-          value={`₹${selectedPurchase?.balance_amount.toLocaleString()}`}
-          disabled
-        />
-      </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Pending Amount</Label>
+                        <Input
+                          value={`₹${selectedPurchase?.balance_amount.toLocaleString("en-IN")}`}
+                          disabled
+                        />
+                      </div>
 
-      <div className="space-y-2">
-        <Label>Payment Amount</Label>
-        <Input
-  inputMode="numeric"
-  value={formatINR(String(paymentAmount))}
-  onChange={(e) => setPaymentAmount(parseINR(e.target.value))}
-/>
+                      <div className="space-y-2">
+                        <Label>Payment Amount</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={formatINR(String(paymentAmount))}
+                          onChange={(e) => setPaymentAmount(parseINR(e.target.value))}
+                        />
+                        {paymentExceedsBalance && (
+                          <p className="text-xs text-destructive font-medium">
+                            Entered amount is greater than pending balance
+                          </p>
+                        )}
+                      </div>
 
-{paymentExceedsBalance && (
-  <p className="text-xs text-red-500 font-medium">
-    Entered amount is greater than pending balance
-  </p>
-)}
+                      <div className="space-y-2">
+                        <Label>Payment Mode</Label>
+                        <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as any)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {paymentModes.map((m) => (
+                              <SelectItem key={m} value={m} className="capitalize">
+                                {m.replace("_", " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-
-      </div>
-
-      <div className="space-y-2">
-        <Label>Payment Mode</Label>
-        <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as any)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {paymentModes.map((m) => (
-              <SelectItem key={m} value={m} className="capitalize">
-                {m.replace("_", " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-
-    <DialogFooter>
-      <Button variant="outline" onClick={() => setAddPaymentOpen(false)}>
-        Cancel
-      </Button>
-      <Button
-  onClick={handleAddPayment}
-  disabled={addingPayment || paymentExceedsBalance}
->
-  {addingPayment ? "Saving..." : "Add Payment"}
-</Button>
-
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setAddPaymentOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleAddPayment}
+                        disabled={addingPayment || paymentExceedsBalance}
+                      >
+                        {addingPayment ? "Saving..." : "Add Payment"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
                 <div className="space-y-3">
-  <h4 className="font-semibold text-sm">Payment History</h4>
+                  <h4 className="font-semibold text-sm">Payment History</h4>
 
-  {loadingPayments && (
-    <p className="text-sm text-muted-foreground">Loading payments...</p>
-  )}
+                  {loadingPayments && (
+                    <p className="text-sm text-muted-foreground">Loading payments...</p>
+                  )}
 
-  {!loadingPayments && payments.length === 0 && (
-    <p className="text-sm text-muted-foreground">
-      No payments recorded yet
-    </p>
-  )}
+                  {!loadingPayments && payments.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No payments recorded yet
+                    </p>
+                  )}
 
-  {!loadingPayments && payments.length > 0 && (
-    <div className="space-y-2">
-      {payments.map((payment) => (
-        <div
-          key={payment.id}
-          className="flex items-center justify-between p-3 rounded-md border bg-background"
-        >
-          <div>
-            <p className="font-medium">
-              ₹{payment.amount.toLocaleString("en-IN")}
-            </p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {payment.payment_mode.replace("_", " ")}
-            </p>
-          </div>
+                  {!loadingPayments && payments.length > 0 && (
+                    <div className="space-y-2">
+                      {payments.map((payment) => (
+                        <div
+                          key={payment.id}
+                          className="flex items-center justify-between p-3 rounded-md border bg-background"
+                        >
+                          <div>
+                            <p className="font-medium">
+                              ₹{payment.amount.toLocaleString("en-IN")}
+                            </p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {payment.payment_mode.replace("_", " ")}
+                            </p>
+                          </div>
 
-          <div className="text-right">
-            <p className="text-xs">
-              {format(new Date(payment.created_at), "dd MMM yyyy")}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(payment.created_at), "hh:mm a")}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+                          <div className="text-right">
+                            <p className="text-xs">
+                              {format(new Date(payment.created_at), "dd MMM yyyy")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(payment.created_at), "hh:mm a")}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {selectedPurchase.notes && (
                   <div>
