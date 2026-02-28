@@ -28,7 +28,7 @@ type DocumentType =
   | "id_proof"
   | "driving_license";
 
-const documentTypeMeta: Record<DocumentType, { label: string; className: string }> = {
+const documentTypeMeta: Record<string, { label: string; className: string }> = {
   rc: { label: "RC Book", className: "bg-blue-100 text-blue-700 border-blue-300" },
   insurance: { label: "Insurance", className: "bg-green-100 text-green-700 border-green-300" },
   puc: { label: "PUC", className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
@@ -37,9 +37,10 @@ const documentTypeMeta: Record<DocumentType, { label: string; className: string 
   delivery_note: { label: "Delivery Note", className: "bg-cyan-100 text-cyan-700 border-cyan-300" },
   id_proof: { label: "ID Proof", className: "bg-orange-100 text-orange-700 border-orange-300" },
   driving_license: { label: "Driving License", className: "bg-rose-100 text-rose-700 border-rose-300" },
+  company: { label: "Company", className: "bg-teal-100 text-teal-700 border-teal-300" },
 };
 
-const documentTypes: { value: DocumentType; label: string }[] = [
+const documentTypes: { value: string; label: string }[] = [
   { value: "rc", label: "RC Book" },
   { value: "insurance", label: "Insurance" },
   { value: "puc", label: "PUC" },
@@ -48,6 +49,7 @@ const documentTypes: { value: DocumentType; label: string }[] = [
   { value: "delivery_note", label: "Delivery Note" },
   { value: "id_proof", label: "ID Proof" },
   { value: "driving_license", label: "Driving License" },
+  { value: "company", label: "Company" },
 ];
 
 // Extended categories for the add form
@@ -77,7 +79,7 @@ const Documents = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState({
     documentName: "",
-    documentType: "rc" as DocumentType,
+    documentType: "rc" as string,
     vehicleId: "",
     expiryDate: "",
   });
@@ -148,16 +150,16 @@ const Documents = () => {
         reference_type: addForm.vehicleId ? "vehicle" : "general",
         user_id: user.id,
         document_name: addForm.documentName,
-        document_type: addForm.documentType,
+        document_type: addForm.documentType as any,
         document_url: publicUrl,
-        status: "completed",
+        status: "completed" as const,
         expiry_date: addForm.expiryDate || null,
       });
       if (error) throw error;
 
       toast({ title: "Document uploaded successfully" });
       setAddDialogOpen(false);
-      setAddForm({ documentName: "", documentType: "rc", vehicleId: "", expiryDate: "" });
+      setAddForm({ documentName: "", documentType: "rc" as string, vehicleId: "", expiryDate: "" });
       setSelectedFile(null);
       fetchData();
     } catch (error: any) {
@@ -274,7 +276,7 @@ const Documents = () => {
 
       {/* Add Document Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Add New Document</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -283,12 +285,12 @@ const Documents = () => {
             </div>
             <div className="space-y-2">
               <Label>Category *</Label>
-              <Select value={addForm.documentType} onValueChange={(v) => setAddForm({ ...addForm, documentType: v as DocumentType })}>
+              <Select value={addForm.documentType} onValueChange={(v) => setAddForm({ ...addForm, documentType: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {documentTypes.map(dt => (
                     <SelectItem key={dt.value} value={dt.value}>
-                      <span className={`px-2 py-0.5 rounded text-xs border ${documentTypeMeta[dt.value].className}`}>{dt.label}</span>
+                      <span className={`px-2 py-0.5 rounded text-xs border ${documentTypeMeta[dt.value]?.className || ''}`}>{dt.label}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>

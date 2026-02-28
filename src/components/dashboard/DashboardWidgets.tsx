@@ -13,7 +13,8 @@ import {
   MessageSquare,
   ArrowRight,
   Clock,
-  AlertCircle
+  AlertCircle,
+  CarFront
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -299,6 +300,61 @@ export const OutstandingPaymentsWidget = ({ payments, pendingAmount }: { payment
         ))
       ) : (
         <p className="text-sm text-muted-foreground text-center py-2">No outstanding payments</p>
+      )}
+    </CardContent>
+  </Card>
+);
+
+interface TestDriveSchedule {
+  id: string;
+  customer_name: string;
+  phone: string;
+  test_drive_date: string;
+  test_drive_time?: string;
+  vehicle_interest?: string;
+}
+
+export const UpcomingTestDrivesWidget = ({ testDrives }: { testDrives: TestDriveSchedule[] }) => (
+  <Card className="border border-border bg-card rounded-xl">
+    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+      <CardTitle className="text-base font-semibold flex items-center gap-2">
+        <CarFront className="h-4 w-4 text-chart-3" />
+        Upcoming Test Drives
+      </CardTitle>
+      <Link to="/leads">
+        <Button variant="ghost" size="sm" className="text-xs gap-1">
+          View All <ArrowRight className="h-3 w-3" />
+        </Button>
+      </Link>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      {testDrives.length > 0 ? (
+        testDrives.slice(0, 4).map((td) => (
+          <div key={td.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-full bg-chart-3/10 flex items-center justify-center shrink-0">
+                <CarFront className="h-4 w-4 text-chart-3" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-sm truncate">{td.customer_name}</p>
+                <p className="text-xs text-muted-foreground truncate">{td.vehicle_interest || 'General'}</p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <Badge variant="outline" className="text-xs bg-chart-3/10 text-chart-3 border-chart-3/30">
+                {format(new Date(td.test_drive_date), 'dd MMM')}
+              </Badge>
+              {td.test_drive_time && (
+                <p className="text-xs text-muted-foreground mt-1">{td.test_drive_time}</p>
+              )}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="text-center py-6 text-muted-foreground">
+          <CarFront className="h-8 w-8 mx-auto mb-2 opacity-40" />
+          <p className="text-sm">No test drives scheduled</p>
+        </div>
       )}
     </CardContent>
   </Card>
