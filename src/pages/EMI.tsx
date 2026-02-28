@@ -955,7 +955,14 @@ const needsFinalConfirmation =
                   type="number" 
                   value={paymentAmount} 
                   onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)} 
+                  className={paymentAmount > ((selectedEmi?.emi_amount || 0) - (selectedEmi?.amount_paid || 0)) ? "border-destructive" : ""}
                 />
+                {paymentAmount > ((selectedEmi?.emi_amount || 0) - (selectedEmi?.amount_paid || 0)) && (
+                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span>Amount exceeds remaining balance of {formatCurrency((selectedEmi?.emi_amount || 0) - (selectedEmi?.amount_paid || 0))}</span>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Payment Mode</Label>
@@ -975,9 +982,9 @@ const needsFinalConfirmation =
               <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
               <Button
   onClick={recordPayment}
-  disabled={isRecordingPayment}
+  disabled={isRecordingPayment || paymentAmount <= 0 || paymentAmount > ((selectedEmi?.emi_amount || 0) - (selectedEmi?.amount_paid || 0))}
   className={`transition-opacity ${
-    isRecordingPayment ? "opacity-50 cursor-not-allowed" : ""
+    isRecordingPayment || paymentAmount > ((selectedEmi?.emi_amount || 0) - (selectedEmi?.amount_paid || 0)) ? "opacity-50 cursor-not-allowed" : ""
   }`}
 >
   {isRecordingPayment ? "Recording..." : "Record Payment"}

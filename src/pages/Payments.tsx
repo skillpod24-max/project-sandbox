@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +111,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   return true;
 });
 
+  const { displayedItems: displayedPayments, hasMore: hasMorePayments, loaderRef: paymentsLoaderRef } = useInfiniteScroll(filteredPayments, 30);
 
   if (loading) {
     return <PageSkeleton />;
@@ -203,7 +206,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           <Table>
             <TableHeader><TableRow><TableHead>Number</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Mode</TableHead><TableHead>Amount</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
             <TableBody>
-              {filteredPayments.map((p) => (
+              {displayedPayments.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-mono">{p.payment_number}</TableCell>
                   <TableCell>{format(new Date(p.payment_date), "dd MMM yyyy")}</TableCell>
@@ -226,7 +229,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           </Table>
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredPayments.map((p) => (
+            {displayedPayments.map((p) => (
               <Card key={p.id} className="border border-border hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPayment(p)}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -246,6 +249,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
             )}
           </div>
           )}
+          <ScrollLoader ref={paymentsLoaderRef} hasMore={hasMorePayments} />
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -806,6 +808,8 @@ setVehicleImages(prev => ({
     `${v.brand} ${v.model} ${v.code} ${v.registration_number || ""}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const { displayedItems: displayedVehicles, hasMore: hasMoreVehicles, loaderRef: vehiclesLoaderRef } = useInfiniteScroll(filteredVehicles, 30);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "in_stock": return "bg-chart-2 text-white";
@@ -876,7 +880,7 @@ setVehicleImages(prev => ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredVehicles.map((vehicle) => {
+                {displayedVehicles.map((vehicle) => {
                   const images = vehicleImages[vehicle.id] || [];
                   const primaryImage = images.find((i) => i.is_primary) || images[0];
                   return (
@@ -914,7 +918,7 @@ setVehicleImages(prev => ({
           </div>
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredVehicles.map((vehicle) => {
+            {displayedVehicles.map((vehicle) => {
               const images = vehicleImages[vehicle.id] || [];
               const primaryImage = images.find((i) => i.is_primary) || images[0];
               return (
@@ -952,6 +956,7 @@ setVehicleImages(prev => ({
             )}
           </div>
           )}
+          <ScrollLoader ref={vehiclesLoaderRef} hasMore={hasMoreVehicles} />
         </CardContent>
       </Card>
 

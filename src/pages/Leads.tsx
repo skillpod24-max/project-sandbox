@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -339,6 +341,8 @@ const Leads = () => {
     return matchesSearch && matchesStatus && matchesCity && matchesSource && matchesDate;
   });
 
+  const { displayedItems: displayedLeads, hasMore, loaderRef } = useInfiniteScroll(filteredLeads, 30);
+
   const exportLeads = () => {
     if (leads.length === 0) { toast({ title: "No leads to export" }); return; }
     const headers = ["Lead Number","Customer Name","Phone","Email","City","Type","Vehicle Interest","Source","Priority","Status","Created At"];
@@ -642,7 +646,7 @@ const Leads = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLeads.map((lead) => (
+                  {displayedLeads.map((lead) => (
                     <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(lead)}>
                       <TableCell className="font-mono text-sm">{lead.lead_number}</TableCell>
                       <TableCell>
@@ -700,7 +704,7 @@ const Leads = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-              {filteredLeads.map((lead) => {
+              {displayedLeads.map((lead) => {
                 const hasTestDrive = lead.notes?.includes("TEST DRIVE REQUESTED");
                 const tdDateMatch = lead.notes?.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
                 return (
@@ -756,7 +760,8 @@ const Leads = () => {
                 <div className="col-span-full text-center py-8 text-muted-foreground">No leads found</div>
               )}
             </div>
-          )}
+           )}
+           <ScrollLoader ref={loaderRef} hasMore={hasMore} />
         </CardContent>
       </Card>
 
