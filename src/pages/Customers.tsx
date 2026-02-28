@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Phone, Mail, MapPin, Car, IndianRupee, AlertCircle } from "lucide-react";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,35 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
 
-const idProofTypes = ["Aadhar", "Passport", "Voter ID", "Driving License", "PAN Card"] as const;
+const idProofTypes = ["Aadhar", "Passport", "Voter ID", "PAN Card"] as const;
+
+const isProfileIncomplete = (customer: Customer) => {
+  const fields = [
+    customer.address,
+    customer.id_proof_type,
+    customer.id_proof_number,
+    customer.email,
+  ];
+  return fields.some((f) => !f || f.trim?.() === "");
+};
+
+const getCity = (address: string | null) => {
+  if (!address) return "";
+  if (address.includes("||")) return address.split("||")[1]?.trim() || "";
+  return "";
+};
+
+type SaleWithVehicle = {
+  id: string;
+  sale_number: string;
+  total_amount: number;
+  amount_paid: number;
+  balance_amount: number;
+  status: string;
+  sale_date: string;
+  vehicle_id: string;
+  vehicle_name?: string;
+};
 
 const Customers = () => {
   const { toast } = useToast();
@@ -34,6 +62,7 @@ const Customers = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerSales, setCustomerSales] = useState<SaleWithVehicle[]>([]);
   const [formData, setFormData] = useState<Partial<CustomerInsert>>({
     full_name: "",
     phone: "",
@@ -52,13 +81,8 @@ const Customers = () => {
 
   const fetchCustomers = async () => {
     try {
-      // Get current user for explicit filtering
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
+      if (!user) { setLoading(false); return; }
       const { data, error } = await supabase.from("customers").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
       if (error) throw error;
       setCustomers(data || []);
@@ -69,19 +93,42 @@ const Customers = () => {
     }
   };
 
+  const fetchCustomerSales = async (customerId: string) => {
+    try {
+      const { data: sales, error } = await supabase
+        .from("sales")
+        .select("id, sale_number, total_amount, amount_paid, balance_amount, status, sale_date, vehicle_id")
+        .eq("customer_id", customerId)
+        .order("sale_date", { ascending: false });
+      if (error) throw error;
+      if (!sales || sales.length === 0) { setCustomerSales([]); return; }
+
+      const vehicleIds = [...new Set(sales.map(s => s.vehicle_id))];
+      const { data: vehicles } = await supabase
+        .from("vehicles")
+        .select("id, brand, model, variant")
+        .in("id", vehicleIds);
+
+      const vehicleMap = new Map(
+        (vehicles || []).map(v => [v.id, `${v.brand} ${v.model}${v.variant ? ` ${v.variant}` : ""}`])
+      );
+
+      setCustomerSales(
+        sales.map(s => ({ ...s, vehicle_name: vehicleMap.get(s.vehicle_id) || "Unknown Vehicle" }))
+      );
+    } catch {
+      setCustomerSales([]);
+    }
+  };
+
   const generateCode = () => `CUS${Date.now().toString(36).toUpperCase()}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsSubmitting(false);
-      return;
-    }
-
+    if (!user) { setIsSubmitting(false); return; }
     try {
       if (selectedCustomer) {
         const { error } = await supabase.from("customers").update(formData).eq("id", selectedCustomer.id);
@@ -131,96 +178,41 @@ const Customers = () => {
   const openDetailDialog = (customer: Customer) => {
     setSelectedCustomer(customer);
     setDetailDialogOpen(true);
+    fetchCustomerSales(customer.id);
   };
 
   const needsUpdate = (customer: Customer) => {
-  if (!customer.converted_from_lead) return false;
-
-  // Only check essential fields for lead-converted customers
-  const essentialFields = [
-    customer.address,
-    customer.id_proof_type,
-    customer.id_proof_number,
-  ];
-
-  // All essential fields must be empty for "update needed"
-  return essentialFields.every(
-    (field) => !field || field.trim?.() === ""
-  );
-};
-
+    if (!customer.converted_from_lead) return false;
+    const essentialFields = [customer.address, customer.id_proof_type, customer.id_proof_number];
+    return essentialFields.every((field) => !field || field.trim?.() === "");
+  };
 
   const exportCustomers = () => {
-  if (customers.length === 0) {
-    toast({ title: "No customers to export" });
-    return;
-  }
-
-  const headers = [
-    "Code",
-    "Full Name",
-    "Phone",
-    "Email",
-    "Status",
-    "Address",
-    "ID Proof Type",
-    "ID Proof Number",
-    "Driving License",
-    "Created At",
-  ];
-
-  const rows = customers.map((c) => [
-    c.code,
-    c.full_name,
-    c.phone,
-    c.email ?? "",
-    c.is_active ? "Active" : "Inactive",
-    c.address ?? "",
-    c.id_proof_type ?? "",
-    c.id_proof_number ?? "",
-    c.driving_license_number ?? "",
-    new Date(c.created_at).toLocaleDateString(),
-  ]);
-
-  const csv =
-    [headers, ...rows]
-      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `customers_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-
-  URL.revokeObjectURL(url);
-};
-
+    if (customers.length === 0) { toast({ title: "No customers to export" }); return; }
+    const headers = ["Code", "Full Name", "Phone", "Email", "Status", "Address", "ID Proof Type", "ID Proof Number", "Driving License", "Created At"];
+    const rows = customers.map((c) => [c.code, c.full_name, c.phone, c.email ?? "", c.is_active ? "Active" : "Inactive", c.address ?? "", c.id_proof_type ?? "", c.id_proof_number ?? "", c.driving_license_number ?? "", new Date(c.created_at).toLocaleDateString()]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `customers_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const resetForm = () => {
     setSelectedCustomer(null);
-    setFormData({
-      full_name: "",
-      phone: "",
-      email: "",
-      address: "",
-      id_proof_type: "",
-      id_proof_number: "",
-      driving_license_number: "",
-      notes: "",
-      is_active: true,
-    });
+    setFormData({ full_name: "", phone: "", email: "", address: "", id_proof_type: "", id_proof_number: "", driving_license_number: "", notes: "", is_active: true });
   };
 
   const filteredCustomers = customers.filter((c) =>
     `${c.full_name} ${c.phone} ${c.email || ""} ${c.code}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
-    return <PageSkeleton />;
-  }
+  const formatCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -230,15 +222,11 @@ const Customers = () => {
           <p className="text-muted-foreground">Manage your customer database</p>
         </div>
         <div className="flex gap-2">
-  <Button variant="outline" onClick={exportCustomers}>
-    Export
-  </Button>
-
-  <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="gap-2">
-    <Plus className="h-4 w-4" /> Add Customer
-  </Button>
-</div>
-
+          <Button variant="outline" onClick={exportCustomers}>Export</Button>
+          <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="gap-2">
+            <Plus className="h-4 w-4" /> Add Customer
+          </Button>
+        </div>
       </div>
 
       <Card className="border border-border">
@@ -256,86 +244,103 @@ const Customers = () => {
         </CardHeader>
         <CardContent>
           {viewMode === "list" ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(customer)}>
-                    <TableCell className="font-mono text-sm">{customer.code}</TableCell>
-                    <TableCell className="font-medium">{customer.full_name}</TableCell>
-                    <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.email || "-"}</TableCell>
-                    <TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(customer)}>
+                      <TableCell className="font-mono text-sm">{customer.code}</TableCell>
+                      <TableCell className="font-medium">{customer.full_name}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{customer.email || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge className={customer.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
+                            {customer.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                          {customer.converted_from_lead && (
+                            <Badge className="bg-purple-500/10 text-purple-600">Lead</Badge>
+                          )}
+                          {needsUpdate(customer) && (
+                            <Badge className="bg-amber-500/10 text-amber-600 animate-pulse-fade">Update Needed</Badge>
+                          )}
+                          {isProfileIncomplete(customer) && (
+                            <span className="relative flex h-2.5 w-2.5" title="Profile incomplete">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredCustomers.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No customers found</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {filteredCustomers.map((customer) => {
+                const city = getCity(customer.address);
+                return (
+                  <Card key={customer.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(customer)}>
+                    <CardContent className="p-3 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Badge className={customer.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0 text-sm">
+                          {customer.full_name.charAt(0)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1">
+                            <p className="font-semibold text-foreground truncate text-sm">{customer.full_name}</p>
+                            {isProfileIncomplete(customer) && (
+                              <span className="relative flex h-2 w-2 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-mono">{customer.code}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-0.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{customer.phone}</span>
+                        </div>
+                        {city && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{city}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Badge className={`text-[10px] px-1.5 py-0 ${customer.is_active ? "bg-chart-2 text-white" : "bg-muted"}`}>
                           {customer.is_active ? "Active" : "Inactive"}
                         </Badge>
                         {customer.converted_from_lead && (
-                          <Badge className="bg-purple-500/10 text-purple-600">Lead</Badge>
-                        )}
-                        {needsUpdate(customer) && (
-                          <Badge className="bg-amber-500/10 text-amber-600 animate-pulse-fade">Update Needed</Badge>
+                          <Badge className="bg-purple-500/10 text-purple-600 text-[10px] px-1.5 py-0">Lead</Badge>
                         )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredCustomers.length === 0 && (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No customers found</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredCustomers.map((customer) => (
-              <Card key={customer.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(customer)}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
-                      {customer.full_name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-foreground truncate">{customer.full_name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{customer.code}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{customer.phone}</span>
-                    </div>
-                    {customer.email && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{customer.email}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={customer.is_active ? "bg-chart-2 text-white text-xs" : "bg-muted text-xs"}>
-                      {customer.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                    {customer.converted_from_lead && (
-                      <Badge className="bg-purple-500/10 text-purple-600 text-xs">Lead</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filteredCustomers.length === 0 && (
-              <div className="col-span-full text-center py-8 text-muted-foreground">No customers found</div>
-            )}
-          </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {filteredCustomers.length === 0 && (
+                <div className="col-span-full text-center py-8 text-muted-foreground">No customers found</div>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -436,49 +441,22 @@ const Customers = () => {
 
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-  <DialogContent
-    className="
-      w-[calc(100%-16px)]
-      sm:max-w-2xl
-      max-h-[90vh]
-      overflow-y-auto
-      rounded-lg
-    "
-  >
-
+        <DialogContent className="w-[calc(100%-16px)] sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg">
           {selectedCustomer && (
             <>
               <DialogHeader>
-  <DialogTitle className="flex items-center justify-between">
-    <span>{selectedCustomer.full_name}</span>
-
-    <div className="flex gap-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        tabIndex={-1}
-        onClick={() => {
-          setDetailDialogOpen(false);
-          openEditDialog(selectedCustomer);
-        }}
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        tabIndex={-1}
-        onClick={() => {
-          setDetailDialogOpen(false);
-          openDeleteDialog(selectedCustomer.id);
-        }}
-      >
-        <Trash2 className="h-4 w-4 text-destructive" />
-      </Button>
-    </div>
-  </DialogTitle>
-</DialogHeader>
+                <DialogTitle className="flex items-center justify-between">
+                  <span>{selectedCustomer.full_name}</span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" tabIndex={-1} onClick={() => { setDetailDialogOpen(false); openEditDialog(selectedCustomer); }}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" tabIndex={-1} onClick={() => { setDetailDialogOpen(false); openDeleteDialog(selectedCustomer.id); }}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
 
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -487,9 +465,17 @@ const Customers = () => {
                   </div>
                   <div>
                     <p className="font-mono text-sm text-muted-foreground">{selectedCustomer.code}</p>
-                    <Badge className={selectedCustomer.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
-                      {selectedCustomer.is_active ? "Active" : "Inactive"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={selectedCustomer.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
+                        {selectedCustomer.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      {isProfileIncomplete(selectedCustomer) && (
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -521,6 +507,57 @@ const Customers = () => {
                     <p className="font-mono">{selectedCustomer.driving_license_number || "-"}</p>
                   </div>
                 </div>
+
+                {/* Vehicles Sold Section */}
+                {customerSales.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Car className="h-4 w-4" /> Vehicles Sold
+                    </h3>
+                    <div className="space-y-2">
+                      {customerSales.map((sale) => (
+                        <div key={sale.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{sale.vehicle_name}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{sale.sale_number} • {new Date(sale.sale_date).toLocaleDateString("en-IN")}</p>
+                          </div>
+                          <div className="text-right shrink-0 ml-3">
+                            <p className="text-sm font-semibold">{formatCurrency(sale.total_amount)}</p>
+                            <div className="flex items-center gap-1 justify-end">
+                              {sale.balance_amount > 0 ? (
+                                <Badge className="bg-amber-500/10 text-amber-600 text-[10px] px-1.5 py-0 gap-1">
+                                  <AlertCircle className="h-2.5 w-2.5" />
+                                  {formatCurrency(sale.balance_amount)} pending
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-chart-2/10 text-chart-2 text-[10px] px-1.5 py-0">Paid</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-sm p-2 bg-muted rounded-md">
+                      <span className="text-muted-foreground">Total</span>
+                      <div className="text-right">
+                        <span className="font-semibold">{formatCurrency(customerSales.reduce((s, c) => s + c.total_amount, 0))}</span>
+                        {customerSales.reduce((s, c) => s + c.balance_amount, 0) > 0 && (
+                          <p className="text-xs text-amber-600">
+                            {formatCurrency(customerSales.reduce((s, c) => s + c.balance_amount, 0))} pending
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {customerSales.length === 0 && (
+                  <div className="text-center py-4 text-sm text-muted-foreground bg-muted/30 rounded-lg">
+                    <Car className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                    No vehicles sold to this customer
+                  </div>
+                )}
+
                 {selectedCustomer.notes && (
                   <div>
                     <p className="text-sm text-muted-foreground">Notes</p>
@@ -528,12 +565,18 @@ const Customers = () => {
                   </div>
                 )}
               </div>
-              {needsUpdate(selectedCustomer) && (
-  <div className="p-3 rounded-md bg-amber-500/10 text-amber-700 text-sm animate-fade-in">
-    ⚠️ This customer profile is incomplete. Please update missing details.
-  </div>
-)}
 
+              {isProfileIncomplete(selectedCustomer) && (
+                <div className="p-3 rounded-md bg-amber-500/10 text-amber-700 text-sm animate-fade-in">
+                  ⚠️ This customer profile is incomplete. Please update missing details.
+                </div>
+              )}
+
+              {needsUpdate(selectedCustomer) && !isProfileIncomplete(selectedCustomer) && (
+                <div className="p-3 rounded-md bg-amber-500/10 text-amber-700 text-sm animate-fade-in">
+                  ⚠️ This customer was converted from a lead. Please update missing details.
+                </div>
+              )}
             </>
           )}
         </DialogContent>
