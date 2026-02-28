@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { User } from "@supabase/supabase-js";
-import { Wifi, WifiOff, Info, LayoutDashboard, Car, ShoppingCart, Receipt, BarChart3, Settings, Menu, UserPlus, CreditCard, ReceiptText, CalendarClock, FileText, Bell, LogOut } from "lucide-react";
+import { Wifi, WifiOff, Info, LayoutDashboard, Car, ShoppingCart, Receipt, BarChart3, Settings, Menu, UserPlus, CreditCard, ReceiptText, CalendarClock, FileText, Bell, LogOut, UsersRound, UserCircle, Store } from "lucide-react";
 import { Calculator } from "lucide-react";
 import EMICalculatorDialog from "@/components/EMICalculatorDialog";
 import {
@@ -172,6 +172,9 @@ const Layout = ({ children }: LayoutProps) => {
   ];
 
   const moreMenuItems = [
+    { title: "Customers", icon: UsersRound, url: "/customers" },
+    { title: "Vendors", icon: UserCircle, url: "/vendors" },
+    { title: "Leads", icon: UserPlus, url: "/leads" },
     { title: "Purchases", icon: ShoppingCart, url: "/purchases" },
     { title: "Payments", icon: CreditCard, url: "/payments" },
     { title: "Expenses", icon: ReceiptText, url: "/expenses" },
@@ -179,7 +182,7 @@ const Layout = ({ children }: LayoutProps) => {
     { title: "Documents", icon: FileText, url: "/documents" },
     { title: "Reports", icon: BarChart3, url: "/reports" },
     { title: "Catalogue Analytics", icon: BarChart3, url: "/analytics/public-page" },
-    { title: "Marketplace Hub", icon: BarChart3, url: "/marketplace-hub" },
+    { title: "Marketplace Hub", icon: Store, url: "/marketplace-hub" },
     { title: "Alerts", icon: Bell, url: "/alerts" },
     { title: "Settings", icon: Settings, url: "/settings" },
   ];
