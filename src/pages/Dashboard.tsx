@@ -16,6 +16,7 @@ import {
   PerformingVehicleWidget,
   QuickOverviewWidget,
   OutstandingPaymentsWidget,
+  UpcomingTestDrivesWidget,
 } from "@/components/dashboard/DashboardWidgets";
 
 const COLORS = ['hsl(221, 83%, 53%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(262, 83%, 58%)', 'hsl(339, 90%, 51%)'];
@@ -52,6 +53,7 @@ const Dashboard = () => {
     catalogue_enquiries: 0,
   });
   const [outstandingPayments, setOutstandingPayments] = useState<any[]>([]);
+  const [upcomingTestDrives, setUpcomingTestDrives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -160,10 +162,10 @@ const Dashboard = () => {
       const lostCount = leads.filter(l => l.status === "lost").length;
 
       setSalesFunnelData([
-        { name: "Leads", count: totalLeads, percent: 100, color: COLORS[0] },
+        { name: "Leads", count: totalLeads, percent: totalLeads > 0 ? 100 : 0, color: COLORS[0] },
         { name: "Qualified", count: qualifiedLeads, percent: totalLeads > 0 ? Math.round((qualifiedLeads / totalLeads) * 100) : 0, color: COLORS[1] },
-        { name: "Sold", count: soldCount, percent: qualifiedLeads > 0 ? Math.round((soldCount / qualifiedLeads) * 100) : 0, color: COLORS[2] },
-        { name: "Lost", count: lostCount, percent: qualifiedLeads > 0 ? Math.round((lostCount / qualifiedLeads) * 100) : 0, color: COLORS[4] },
+        { name: "Sold", count: soldCount, percent: totalLeads > 0 ? Math.round((soldCount / totalLeads) * 100) : 0, color: COLORS[2] },
+        { name: "Lost", count: lostCount, percent: totalLeads > 0 ? Math.round((lostCount / totalLeads) * 100) : 0, color: COLORS[4] },
       ]);
 
       // Upcoming Follow-ups
@@ -175,6 +177,30 @@ const Dashboard = () => {
 
       // Recent Leads
       setRecentLeads(leads.slice(0, 5));
+
+      // Upcoming Test Drives - parse from notes
+      const now2 = new Date();
+      const testDriveLeads = leads
+        .filter(l => {
+          if (!l.notes) return false;
+          const match = l.notes.match(/TEST DRIVE REQUESTED:\s*(\d{4}-\d{2}-\d{2})/);
+          if (!match) return false;
+          return new Date(match[1]) >= now2;
+        })
+        .map(l => {
+          const match = l.notes!.match(/TEST DRIVE REQUESTED:\s*(\d{4}-\d{2}-\d{2})(?:\s*at\s*(.+?))?[\]\n]/);
+          return {
+            id: l.id,
+            customer_name: l.customer_name,
+            phone: l.phone,
+            test_drive_date: match?.[1] || '',
+            test_drive_time: match?.[2]?.trim() || '',
+            vehicle_interest: l.vehicle_interest,
+          };
+        })
+        .sort((a, b) => new Date(a.test_drive_date).getTime() - new Date(b.test_drive_date).getTime())
+        .slice(0, 5);
+      setUpcomingTestDrives(testDriveLeads);
 
       // Today's Overview
       const todayStart = startOfDay(now);
@@ -394,6 +420,7 @@ const Dashboard = () => {
         <PerformingVehicleWidget vehicle={topMarketplaceVehicle} type="marketplace" />
         <PerformingVehicleWidget vehicle={topCatalogueVehicle} type="catalogue" />
         <OutstandingPaymentsWidget payments={outstandingPayments} pendingAmount={stats.pendingPayments} />
+        <UpcomingTestDrivesWidget testDrives={upcomingTestDrives} />
       </div>
 
       {/* Charts Row */}

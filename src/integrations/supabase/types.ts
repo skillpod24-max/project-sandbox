@@ -1565,6 +1565,7 @@ export type Database = {
         | "delivery_note"
         | "id_proof"
         | "driving_license"
+        | "company"
       emi_status: "pending" | "paid" | "overdue" | "partially_paid"
       fuel_type: "petrol" | "diesel" | "electric" | "hybrid" | "cng" | "lpg"
       payment_mode: "cash" | "bank_transfer" | "cheque" | "upi" | "card" | "emi"
@@ -1717,6 +1718,7 @@ export const Constants = {
         "delivery_note",
         "id_proof",
         "driving_license",
+        "company",
       ],
       emi_status: ["pending", "paid", "overdue", "partially_paid"],
       fuel_type: ["petrol", "diesel", "electric", "hybrid", "cng", "lpg"],

@@ -225,8 +225,8 @@ export function AppSidebar() {
   ], [newLeadsCount]);
 
   const marketplaceMenuItems = useMemo(() => [
-    { title: "Marketplace Hub", icon: Store, url: "/marketplace-hub", badge: marketplaceEnquiryCount },
-  ], [marketplaceEnquiryCount]);
+    { title: "Marketplace Hub", icon: Store, url: "/marketplace-hub", badge: 0 },
+  ], []);
 
   return (
     <Sidebar collapsible="icon" className="will-change-transform border-r border-border/30 overflow-x-hidden">
