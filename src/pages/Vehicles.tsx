@@ -180,11 +180,13 @@ const [featuresText, setFeaturesText] = useState("");
     manufacturing_year: new Date().getFullYear(),
     purchase_price: 0,
     selling_price: 0,
+    purchase_status: "listing",
     is_public: false,
+    marketplace_status: "unlisted",
     show_engine_number: false,
     show_chassis_number: false,
     number_of_owners: 1,
-  });
+  } as any);
 
   const availableBrands = getBrandsForType(formData.vehicle_type || "car");
   const availableModels = getModelsForBrand(formData.vehicle_type || "car", formData.brand || "");
@@ -346,6 +348,10 @@ if (hasPurchasePayment) {
       if (formData.is_public && !formData.public_page_id) {
         vehicleData.public_page_id = generatePublicPageId();
       }
+
+      const marketplaceStatus = (vehicleData as any).marketplace_status;
+      const isMarketplaceListed = marketplaceStatus === "approved" || marketplaceStatus === "featured" || marketplaceStatus === "listed";
+      (vehicleData as any).marketplace_status = isMarketplaceListed ? marketplaceStatus : "unlisted";
       
       if (selectedVehicle) {
         const { error } = await supabase
@@ -1693,36 +1699,16 @@ setVehicleImages(prev => ({
                         <p className="text-sm text-muted-foreground">List this vehicle on the public marketplace</p>
                       </div>
                       <Switch 
-                        checked={(formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured'} 
+                        checked={
+                          (formData as any).marketplace_status === 'approved' ||
+                          (formData as any).marketplace_status === 'featured' ||
+                          (formData as any).marketplace_status === 'listed'
+                        }
                         onCheckedChange={(v) => setFormData({ ...formData, marketplace_status: v ? 'approved' : 'unlisted' } as any)} 
                       />
                     </div>
 
-                    {/* Sync Button - syncs content fields, not toggles */}
-                    <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border border-dashed border-border">
-                      <p className="text-xs text-muted-foreground flex-1">Enable both catalogue & marketplace together</p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 text-xs"
-                        onClick={() => {
-                          const catalogueOn = formData.is_public || false;
-                          const marketplaceOn = (formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured';
-                          const bothOn = catalogueOn && marketplaceOn;
-                          setFormData({
-                            ...formData,
-                            is_public: !bothOn,
-                            marketplace_status: !bothOn ? 'approved' : 'unlisted',
-                          } as any);
-                          toast({ title: !bothOn ? "Both enabled" : "Both disabled" });
-                        }}
-                      >
-                        <Copy className="h-3 w-3" /> Sync
-                      </Button>
-                    </div>
-
-                    {(formData.is_public || (formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured') && (
+                    {(formData.is_public || (formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured' || (formData as any).marketplace_status === 'listed') && (
                       <>
                         <Separator />
                         
