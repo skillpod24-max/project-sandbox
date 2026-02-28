@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, MapPin, Building, User, History, Car, IndianRupee } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, MapPin, Building, User, History, Car, IndianRupee, Filter, X } from "lucide-react";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,28 @@ type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 
 type VendorType = "company" | "individual";
 
+// Helper to parse address stored as "line1||city||state||pincode"
+const parseAddress = (address: string | null) => {
+  if (!address) return { line1: "", city: "", state: "", pincode: "" };
+  const parts = address.split("||");
+  return {
+    line1: parts[0] || "",
+    city: parts[1] || "",
+    state: parts[2] || "",
+    pincode: parts[3] || "",
+  };
+};
+
+const formatAddress = (addr: { line1: string; city: string; state: string; pincode: string }) => {
+  return [addr.line1, addr.city, addr.state, addr.pincode].join("||");
+};
+
+const displayAddress = (address: string | null) => {
+  if (!address) return "";
+  const p = parseAddress(address);
+  return [p.line1, p.city, p.state, p.pincode].filter(Boolean).join(", ");
+};
+
 const Vendors = () => {
   const { toast } = useToast();
   const { viewMode, setViewMode } = useViewMode("vendors");
@@ -42,6 +65,16 @@ const Vendors = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Filter states
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Address fields for form
+  const [addressFields, setAddressFields] = useState({ line1: "", city: "", state: "", pincode: "" });
+
   const [formData, setFormData] = useState<Partial<VendorInsert>>({
     name: "",
     contact_person: "",
@@ -57,25 +90,16 @@ const Vendors = () => {
   });
 
   useEffect(() => {
-  fetchData();
-
-  const handler = () => fetchData();
-  window.addEventListener("vendor-updated", handler);
-
-  return () => {
-    window.removeEventListener("vendor-updated", handler);
-  };
-}, []);
-
+    fetchData();
+    const handler = () => fetchData();
+    window.addEventListener("vendor-updated", handler);
+    return () => window.removeEventListener("vendor-updated", handler);
+  }, []);
 
   const fetchData = async () => {
     try {
-      // Get current user for explicit filtering
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) { setLoading(false); return; }
 
       const [vendorsRes, purchasesRes, vehiclesRes] = await Promise.all([
         supabase.from("vendors").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
@@ -95,29 +119,17 @@ const Vendors = () => {
   const generateCode = () => `VEN${Date.now().toString(36).toUpperCase()}`;
 
   const detectVendorType = (vendor: Vendor): VendorType => {
-    if (vendor.gst_number || (vendor.contact_person && vendor.contact_person !== vendor.name)) {
-      return "company";
-    }
+    if (vendor.gst_number || (vendor.contact_person && vendor.contact_person !== vendor.name)) return "company";
     return "individual";
   };
 
-  const needsUpdateVendor = (vendor: Vendor) => {
-  // Only vendors converted from leads
-  if (!vendor.converted_from_lead) return false;
-
-  const requiredFields = [
-    vendor.address,
-    vendor.phone,
-    vendor.vendor_type === "company" ? vendor.gst_number : "ok",
-    vendor.bank_account_number,
-    vendor.bank_ifsc,
-  ];
-
-  return requiredFields.some(
-    (field) => !field || field.trim?.() === ""
-  );
-};
-
+  const isProfileIncomplete = (vendor: Vendor) => {
+    const requiredFields = [vendor.address, vendor.phone];
+    if ((vendor.vendor_type as string) === "company") {
+      requiredFields.push(vendor.gst_number);
+    }
+    return requiredFields.some((field) => !field || field.trim?.() === "");
+  };
 
   const getVendorHistory = (vendorId: string) => {
     const vendorPurchases = purchases.filter(p => p.vendor_id === vendorId);
@@ -136,25 +148,35 @@ const Vendors = () => {
     };
   };
 
+  const hasAssociatedPurchases = (vendorId: string) => {
+    return purchases.some(p => p.vendor_id === vendorId);
+  };
+
+  const hasPendingPayment = (vendorId: string) => {
+    return purchases.some(p => p.vendor_id === vendorId && Number(p.balance_amount) > 0);
+  };
+
+  // Get unique cities for filter
+  const uniqueCities = [...new Set(
+    vendors
+      .map(v => parseAddress(v.address).city)
+      .filter(Boolean)
+  )].sort();
+
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-  if (isSubmitting) return; // 🔒 prevent double submit
-  setIsSubmitting(true);
-
-const { data: { user } } = await supabase.auth.getUser();
-if (!user) {
-  setIsSubmitting(false); // 🔓 unlock
-  return;
-}
-
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setIsSubmitting(false); return; }
 
     try {
-      //const dataToSubmit = { ...formData };
       const dataToSubmit = {
-  ...formData,
-  vendor_type: vendorType,
-};
+        ...formData,
+        vendor_type: vendorType,
+        address: formatAddress(addressFields),
+      };
 
       if (vendorType === "individual" && !dataToSubmit.contact_person) {
         dataToSubmit.contact_person = dataToSubmit.name;
@@ -174,10 +196,9 @@ if (!user) {
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
-    finally {
-  setIsSubmitting(false); // 🔓 unlock button
-}
   };
 
   const handleDelete = async () => {
@@ -204,6 +225,7 @@ if (!user) {
     setSelectedVendor(vendor);
     setFormData(vendor);
     setVendorType(vendor.vendor_type as VendorType);
+    setAddressFields(parseAddress(vendor.address));
     setDialogOpen(true);
   };
 
@@ -215,28 +237,50 @@ if (!user) {
   const resetForm = () => {
     setSelectedVendor(null);
     setVendorType("individual");
+    setAddressFields({ line1: "", city: "", state: "", pincode: "" });
     setFormData({
-      name: "",
-      contact_person: "",
-      phone: "",
-      email: "",
-      address: "",
-      gst_number: "",
-      bank_name: "",
-      bank_account_number: "",
-      bank_ifsc: "",
-      notes: "",
-      is_active: true,
+      name: "", contact_person: "", phone: "", email: "", address: "",
+      gst_number: "", bank_name: "", bank_account_number: "", bank_ifsc: "",
+      notes: "", is_active: true,
     });
   };
 
-  const filteredVendors = vendors.filter((v) =>
-    `${v.name} ${v.contact_person || ""} ${v.phone || ""} ${v.code}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Apply filters
+  const filteredVendors = vendors.filter((v) => {
+    const matchesSearch = `${v.name} ${v.contact_person || ""} ${v.phone || ""} ${v.code}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || (filterStatus === "active" ? v.is_active : !v.is_active);
+    const matchesCity = filterCity === "all" || parseAddress(v.address).city === filterCity;
+    const matchesType = filterType === "all" || (v.vendor_type as string) === filterType;
+    return matchesSearch && matchesStatus && matchesCity && matchesType;
+  });
 
-  if (loading) {
-    return <PageSkeleton />;
-  }
+  const activeFilterCount = [filterStatus, filterCity, filterType].filter(f => f !== "all").length;
+
+  if (loading) return <PageSkeleton />;
+
+  const AddressFormFields = () => (
+    <div className="space-y-3">
+      <Label>Address</Label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="md:col-span-2 space-y-1">
+          <Label className="text-xs text-muted-foreground">Address Line 1</Label>
+          <Input value={addressFields.line1} onChange={(e) => setAddressFields({ ...addressFields, line1: e.target.value })} placeholder="Street / Area" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">City</Label>
+          <Input value={addressFields.city} onChange={(e) => setAddressFields({ ...addressFields, city: e.target.value })} placeholder="City" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">State</Label>
+          <Input value={addressFields.state} onChange={(e) => setAddressFields({ ...addressFields, state: e.target.value })} placeholder="State" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Pincode</Label>
+          <Input value={addressFields.pincode} onChange={(e) => setAddressFields({ ...addressFields, pincode: e.target.value })} placeholder="Pincode" maxLength={6} />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -259,9 +303,60 @@ if (!user) {
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search vendors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
+              <Button variant="outline" size="icon" className="relative" onClick={() => setShowFilters(!showFilters)}>
+                <Filter className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
               <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
+
+          {/* Filter bar */}
+          {showFilters && (
+            <div className="flex flex-wrap gap-3 mt-4 p-3 bg-muted/50 rounded-lg border border-border">
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">City</Label>
+                <Select value={filterCity} onValueChange={setFilterCity}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Type</Label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="company">Company</SelectItem>
+                    <SelectItem value="individual">Individual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {activeFilterCount > 0 && (
+                <Button variant="ghost" size="sm" className="self-end text-xs gap-1" onClick={() => { setFilterStatus("all"); setFilterCity("all"); setFilterType("all"); }}>
+                  <X className="h-3 w-3" /> Clear
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {viewMode === "list" ? (
@@ -273,14 +368,18 @@ if (!user) {
                   <TableHead>Type</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Contact</TableHead>
+                  <TableHead>City</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>GST</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredVendors.map((vendor) => {
                   const type = vendor.vendor_type as VendorType;
+                  const stats = getVendorStats(vendor.id);
+                  const pending = stats.pendingAmount > 0;
+                  const canDelete = !hasAssociatedPurchases(vendor.id);
                   return (
                     <TableRow key={vendor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(vendor)}>
                       <TableCell className="font-mono text-sm">{vendor.code}</TableCell>
@@ -290,64 +389,93 @@ if (!user) {
                           <span className="capitalize text-sm">{type}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{vendor.name}</TableCell>
-                      <TableCell>{vendor.contact_person || "-"}</TableCell>
-                      <TableCell>{vendor.phone || "-"}</TableCell>
-                      <TableCell className="font-mono text-sm">{vendor.gst_number || "-"}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
+                          {vendor.name}
+                          {isProfileIncomplete(vendor) && (
+                            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse inline-block" title="Incomplete profile" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{vendor.contact_person || "-"}</TableCell>
+                      <TableCell className="text-sm">{parseAddress(vendor.address).city || "-"}</TableCell>
+                      <TableCell>{vendor.phone || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge className={vendor.is_active ? "bg-chart-2 text-white" : "bg-muted text-muted-foreground"}>
                             {vendor.is_active ? "Active" : "Inactive"}
                           </Badge>
                           {vendor.converted_from_lead && (
-                            <Badge className="bg-purple-500/10 text-purple-600">Lead</Badge>
+                            <Badge className="bg-purple-500/10 text-purple-600 text-[10px]">Lead</Badge>
                           )}
-                          {needsUpdateVendor(vendor) && (
-                            <Badge className="bg-amber-500/10 text-amber-600 animate-pulse-fade">Update Needed</Badge>
+                          {pending && (
+                            <Badge className="bg-destructive/10 text-destructive text-[10px]">₹ Pending</Badge>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {canDelete && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDeleteDialog(vendor.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
                 })}
                 {filteredVendors.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No vendors found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No vendors found</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {filteredVendors.map((vendor) => {
               const type = vendor.vendor_type as VendorType;
+              const stats = getVendorStats(vendor.id);
+              const pending = stats.pendingAmount > 0;
+              const incomplete = isProfileIncomplete(vendor);
               return (
-                <Card key={vendor.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(vendor)}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        {type === "company" ? <Building className="h-5 w-5 text-primary" /> : <User className="h-5 w-5 text-primary" />}
+                <Card key={vendor.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border relative" onClick={() => openDetailDialog(vendor)}>
+                  {/* Incomplete profile indicator */}
+                  {incomplete && (
+                    <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" title="Incomplete profile" />
+                  )}
+                  <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        {type === "company" ? <Building className="h-4 w-4 sm:h-5 sm:w-5 text-primary" /> : <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-foreground truncate">{vendor.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{vendor.code}</p>
+                        <p className="font-semibold text-foreground truncate text-sm sm:text-base">{vendor.name}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground font-mono">{vendor.code}</p>
                       </div>
                     </div>
-                    <div className="space-y-1 text-sm">
+                    <div className="space-y-1 text-xs sm:text-sm">
                       {vendor.phone && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
                           <Phone className="h-3 w-3 shrink-0" />
-                          <span>{vendor.phone}</span>
+                          <span className="truncate">{vendor.phone}</span>
                         </div>
                       )}
-                      {vendor.contact_person && (
-                        <p className="text-xs text-muted-foreground">Contact: {vendor.contact_person}</p>
+                      {parseAddress(vendor.address).city && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{parseAddress(vendor.address).city}</span>
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={vendor.is_active ? "bg-chart-2 text-white text-xs" : "bg-muted text-xs"}>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge className={`${vendor.is_active ? "bg-chart-2 text-white" : "bg-muted text-muted-foreground"} text-[10px]`}>
                         {vendor.is_active ? "Active" : "Inactive"}
                       </Badge>
-                      <span className="capitalize text-xs text-muted-foreground">{type}</span>
+                      {vendor.converted_from_lead && (
+                        <Badge className="bg-purple-500/10 text-purple-600 text-[10px]">Lead</Badge>
+                      )}
+                      {pending && (
+                        <Badge className="bg-destructive/10 text-destructive text-[10px]">₹ Due</Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -382,11 +510,7 @@ if (!user) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-3">
               <Label className="text-base font-medium">Vendor Type</Label>
-              <RadioGroup
-                value={vendorType}
-                onValueChange={(v) => setVendorType(v as VendorType)}
-                className="flex gap-4"
-              >
+              <RadioGroup value={vendorType} onValueChange={(v) => setVendorType(v as VendorType)} className="flex gap-4">
                 <div className="flex items-center space-x-2 border border-border rounded-lg p-4 flex-1 cursor-pointer hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="company" id="company" />
                   <Label htmlFor="company" className="flex items-center gap-2 cursor-pointer flex-1">
@@ -434,10 +558,7 @@ if (!user) {
                     <Input value={formData.gst_number || ""} onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })} placeholder="GST registration number" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Textarea value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows={2} placeholder="Company address" />
-                </div>
+                <AddressFormFields />
                 <div className="p-4 bg-muted/50 rounded-lg space-y-4">
                   <Label className="font-medium">Bank Details</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -474,10 +595,7 @@ if (!user) {
                     <Input type="email" value={formData.email || ""} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Email address" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Textarea value={formData.address || ""} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows={2} placeholder="Residential address" />
-                </div>
+                <AddressFormFields />
                 <div className="p-4 bg-muted/50 rounded-lg space-y-4">
                   <Label className="font-medium">Bank Details (Optional)</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -506,15 +624,8 @@ if (!user) {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
-  {isSubmitting
-    ? selectedVendor
-      ? "Updating..."
-      : "Adding..."
-    : selectedVendor
-      ? "Update"
-      : "Add"} Vendor
-</Button>
-
+                {isSubmitting ? (selectedVendor ? "Updating..." : "Adding...") : (selectedVendor ? "Update" : "Add")} Vendor
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -522,50 +633,24 @@ if (!user) {
 
       {/* Detail Dialog with History */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent
-  className="
-    w-[calc(100%-16px)]
-    sm:max-w-3xl
-    max-h-[90vh]
-    overflow-y-auto
-    rounded-lg
-  "
->
-
+        <DialogContent className="w-[calc(100%-16px)] sm:max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg">
           <div className="px-4 sm:px-6">
           {selectedVendor && (
             <>
               <DialogHeader className="flex flex-row items-center justify-between">
-  <DialogTitle>{selectedVendor.name}</DialogTitle>
+                <DialogTitle>{selectedVendor.name}</DialogTitle>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="icon" tabIndex={-1} onClick={() => { setDetailDialogOpen(false); openEditDialog(selectedVendor); }}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  {!hasAssociatedPurchases(selectedVendor.id) && (
+                    <Button variant="ghost" size="icon" tabIndex={-1} onClick={() => { setDetailDialogOpen(false); openDeleteDialog(selectedVendor.id); }}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                </div>
+              </DialogHeader>
 
-  <div className="flex gap-2">
-    <Button
-      variant="ghost"
-      size="icon"
-      tabIndex={-1}
-      onClick={() => {
-        setDetailDialogOpen(false);
-        openEditDialog(selectedVendor);
-      }}
-    >
-      <Pencil className="h-4 w-4" />
-    </Button>
-
-    <Button
-      variant="ghost"
-      size="icon"
-      tabIndex={-1}
-      onClick={() => {
-        setDetailDialogOpen(false);
-        openDeleteDialog(selectedVendor.id);
-      }}
-    >
-      <Trash2 className="h-4 w-4 text-destructive" />
-    </Button>
-  </div>
-</DialogHeader>
-
-              
               <Tabs defaultValue="details" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="details" className="gap-2"><User className="h-4 w-4" /> Details</TabsTrigger>
@@ -574,14 +659,22 @@ if (!user) {
 
                 <TabsContent value="details" className="space-y-6 mt-4">
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center relative">
                       {detectVendorType(selectedVendor) === "company" ? <Building className="h-8 w-8" /> : <User className="h-8 w-8" />}
+                      {isProfileIncomplete(selectedVendor) && (
+                        <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-amber-500 animate-pulse border-2 border-background" />
+                      )}
                     </div>
                     <div>
                       <p className="font-mono text-sm text-muted-foreground">{selectedVendor.code}</p>
-                      <Badge className={selectedVendor.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
-                        {selectedVendor.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={selectedVendor.is_active ? "bg-chart-2 text-white" : "bg-muted"}>
+                          {selectedVendor.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                        {selectedVendor.converted_from_lead && (
+                          <Badge className="bg-purple-500/10 text-purple-600">From Lead</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -604,7 +697,7 @@ if (!user) {
                         </Card>
                         <Card className="border border-border">
                           <CardContent className="p-4 text-center">
-                            <p className="text-2xl font-bold text-chart-3">₹{formatIndianNumber(stats.pendingAmount)}</p>
+                            <p className={`text-2xl font-bold ${stats.pendingAmount > 0 ? "text-destructive" : "text-chart-3"}`}>₹{formatIndianNumber(stats.pendingAmount)}</p>
                             <p className="text-xs text-muted-foreground">Pending</p>
                           </CardContent>
                         </Card>
@@ -631,10 +724,10 @@ if (!user) {
                         <span>{selectedVendor.email}</span>
                       </div>
                     )}
-                    {selectedVendor.address && (
+                    {selectedVendor.address && displayAddress(selectedVendor.address) && (
                       <div className="flex items-start gap-2 md:col-span-2">
                         <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                        <span>{selectedVendor.address}</span>
+                        <span>{displayAddress(selectedVendor.address)}</span>
                       </div>
                     )}
                   </div>
@@ -645,46 +738,35 @@ if (!user) {
                     </div>
                   )}
                   {(selectedVendor.bank_name || selectedVendor.bank_account_number) && (
-  <div className="p-4 bg-muted rounded-lg space-y-3">
-    <p className="text-sm text-muted-foreground font-medium">Bank Details</p>
-
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div>
-        <p className="text-xs text-muted-foreground">Bank Name</p>
-        <p className="font-medium break-words">
-          {selectedVendor.bank_name || "-"}
-        </p>
-      </div>
-
-      <div>
-        <p className="text-xs text-muted-foreground">Account No</p>
-        <p className="font-mono break-all">
-          {selectedVendor.bank_account_number || "-"}
-        </p>
-      </div>
-
-      <div>
-        <p className="text-xs text-muted-foreground">IFSC</p>
-        <p className="font-mono break-all">
-          {selectedVendor.bank_ifsc || "-"}
-        </p>
-      </div>
-    </div>
-  </div>
-)}
-
+                    <div className="p-4 bg-muted rounded-lg space-y-3">
+                      <p className="text-sm text-muted-foreground font-medium">Bank Details</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Bank Name</p>
+                          <p className="font-medium break-words">{selectedVendor.bank_name || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Account No</p>
+                          <p className="font-mono break-all">{selectedVendor.bank_account_number || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">IFSC</p>
+                          <p className="font-mono break-all">{selectedVendor.bank_ifsc || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {selectedVendor.notes && (
                     <div>
                       <p className="text-sm text-muted-foreground">Notes</p>
                       <p>{selectedVendor.notes}</p>
                     </div>
                   )}
-                  {needsUpdateVendor(selectedVendor) && (
-  <div className="p-3 rounded-md bg-amber-500/10 text-amber-700 text-sm animate-fade-in">
-    ⚠️ This vendor profile is incomplete. Please update missing details.
-  </div>
-)}
-
+                  {isProfileIncomplete(selectedVendor) && (
+                    <div className="p-3 rounded-md bg-amber-500/10 text-amber-700 text-sm animate-fade-in">
+                      ⚠️ This vendor profile is incomplete. Please update missing details.
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="history" className="mt-4">
@@ -710,7 +792,7 @@ if (!user) {
                                 <div className="text-right">
                                   <p className="font-bold text-chart-2">₹{formatIndianNumber(purchase.purchase_price)}</p>
                                   {Number(purchase.balance_amount) > 0 && (
-                                    <p className="text-sm text-chart-3">Pending: ₹{formatIndianNumber(purchase.balance_amount)}</p>
+                                    <p className="text-sm text-destructive">Pending: ₹{formatIndianNumber(purchase.balance_amount)}</p>
                                   )}
                                 </div>
                               </div>
