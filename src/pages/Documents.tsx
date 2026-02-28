@@ -72,6 +72,7 @@ const Documents = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [docViewerOpen, setDocViewerOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
 
@@ -169,7 +170,11 @@ const Documents = () => {
     }
   };
 
-  const filteredDocuments = selectedVehicle === "all" ? documents : documents.filter(d => d.reference_id === selectedVehicle);
+  const filteredDocuments = documents.filter(d => {
+    const matchesVehicle = selectedVehicle === "all" || d.reference_id === selectedVehicle;
+    const matchesCategory = categoryFilter === "all" || d.document_type === categoryFilter;
+    return matchesVehicle && matchesCategory;
+  });
 
   if (loading) return <PageSkeleton />;
 
@@ -180,12 +185,21 @@ const Documents = () => {
           <h1 className="text-3xl font-bold">Documents</h1>
           <p className="text-muted-foreground">Manage all documents</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-            <SelectTrigger className="w-64"><SelectValue placeholder="Filter by vehicle" /></SelectTrigger>
+            <SelectTrigger className="w-52"><SelectValue placeholder="Filter by vehicle" /></SelectTrigger>
             <SelectContent className="max-h-64 overflow-y-auto">
-              <SelectItem value="all">All Documents</SelectItem>
+              <SelectItem value="all">All Vehicles</SelectItem>
               {vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.brand} {v.model} ({v.code})</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Filter by category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {documentTypes.map(dt => (
+                <SelectItem key={dt.value} value={dt.value}>{dt.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button onClick={() => setAddDialogOpen(true)} className="gap-2"><Plus className="h-4 w-4" /> Add Document</Button>

@@ -420,12 +420,11 @@ const Dashboard = () => {
         <PerformingVehicleWidget vehicle={topMarketplaceVehicle} type="marketplace" />
         <PerformingVehicleWidget vehicle={topCatalogueVehicle} type="catalogue" />
         <OutstandingPaymentsWidget payments={outstandingPayments} pendingAmount={stats.pendingPayments} />
-        <UpcomingTestDrivesWidget testDrives={upcomingTestDrives} />
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <Card className="lg:col-span-2 border border-border bg-card rounded-xl">
+        <Card className="lg:col-span-1 border border-border bg-card rounded-xl">
           <CardHeader>
             <CardTitle className="text-base font-semibold">Cash Flow Trend</CardTitle>
           </CardHeader>
@@ -489,6 +488,9 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
+        {/* Test Drive Widget in charts row - third column */}
+        <UpcomingTestDrivesWidget testDrives={upcomingTestDrives} />
       </div>
 
       {/* Funnel Chart */}
