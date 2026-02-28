@@ -1,0 +1,1 @@
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS annual_interest_rate numeric DEFAULT NULL;
