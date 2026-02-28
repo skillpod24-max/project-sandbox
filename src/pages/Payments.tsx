@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Eye } from "lucide-react";
+import { formatIndianNumber, formatCurrency } from "@/lib/formatters";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -213,7 +214,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
                     )}
                   </TableCell>
                   <TableCell className="capitalize">{p.payment_mode.replace("_", " ")}</TableCell>
-                  <TableCell className="font-bold">₹{p.amount.toLocaleString()}</TableCell>
+                  <TableCell className="font-bold">{formatCurrency(p.amount)}</TableCell>
                   <TableCell>
                     <Button size="icon" variant="ghost" onClick={() => setSelectedPayment(p)}>
                       <Eye className="h-4 w-4" />
@@ -232,7 +233,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
                     <span className="font-mono text-xs text-muted-foreground">{p.payment_number}</span>
                     <Badge className={getPaymentTypeBadge(p.payment_type) + " text-xs"}>{p.payment_type.replace("_", " ")}</Badge>
                   </div>
-                  <p className="font-bold text-lg">₹{p.amount.toLocaleString()}</p>
+                  <p className="font-bold text-lg">{formatCurrency(p.amount)}</p>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="capitalize">{p.payment_mode.replace("_", " ")}</span>
                     <span>{format(new Date(p.payment_date), "dd MMM yyyy")}</span>
@@ -261,8 +262,8 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
           </form>
         </DialogContent>
       </Dialog>
-      <Dialog open={!!selectedPayment} onOpenChange={(open) => { if (!open) setSelectedPayment(null); }} modal>
-  <DialogContent className="max-w-md rounded-2xl" onAnimationEnd={(e) => e.stopPropagation()}>
+      <Dialog open={!!selectedPayment} onOpenChange={(open) => { if (!open) setSelectedPayment(null); }}>
+  <DialogContent className="max-w-md rounded-2xl">
     <DialogHeader>
       <DialogTitle>Payment Breakdown</DialogTitle>
     </DialogHeader>
@@ -275,7 +276,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total Amount</span>
-          <span className="font-bold text-lg">₹{selectedPayment.amount.toLocaleString()}</span>
+          <span className="font-bold text-lg">{formatCurrency(selectedPayment.amount)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Payment Type</span>
@@ -318,21 +319,21 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
         {selectedPayment.principal_amount > 0 && (
           <div className="flex justify-between text-blue-600">
             <span>Principal</span>
-            <span>₹{selectedPayment.principal_amount.toLocaleString()}</span>
+            <span>{formatCurrency(selectedPayment.principal_amount)}</span>
           </div>
         )}
 
         {selectedPayment.interest_amount > 0 && (
           <div className="flex justify-between text-green-600">
             <span>Interest (Unlocked)</span>
-            <span>₹{selectedPayment.interest_amount.toLocaleString()}</span>
+            <span>{formatCurrency(selectedPayment.interest_amount)}</span>
           </div>
         )}
 
         {selectedPayment.profit_amount !== 0 && (
           <div className="flex justify-between text-purple-600">
             <span>Profit Impact</span>
-            <span>₹{selectedPayment.profit_amount.toLocaleString()}</span>
+            <span>{formatCurrency(selectedPayment.profit_amount)}</span>
           </div>
         )}
 

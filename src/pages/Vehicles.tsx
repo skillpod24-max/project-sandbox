@@ -2219,9 +2219,11 @@ setVehicleImages(prev => ({
                     <Separator />
 
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDetailDialogOpen(false); openEditDialog(selectedVehicle); }}>
-                        <Pencil className="h-3.5 w-3.5" /> Edit
-                      </Button>
+                      {selectedVehicle.status !== "sold" && (
+                        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setDetailDialogOpen(false); openEditDialog(selectedVehicle); }}>
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </Button>
+                      )}
                       {selectedVehicle.status !== "sold" && (
                         <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => { setDetailDialogOpen(false); openDeleteDialog(selectedVehicle.id); }}>
                           <Trash2 className="h-3.5 w-3.5" /> Delete
