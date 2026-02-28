@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
-import { ArrowLeft, Car, User, DollarSign, Calendar, CreditCard, Settings2, Plus, Search } from "lucide-react";
+import { ArrowLeft, Car, User, DollarSign, Calendar, CreditCard, Settings2, Plus, Search, AlertTriangle } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import type { Database } from "@/integrations/supabase/types";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -66,6 +67,7 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
     tenure: 12,
     interestRate: 10,
     startDate: new Date().toISOString().split('T')[0],
+    adjustmentMethod: 'last_emi' as 'last_emi' | 'spread' | 'closing_charge',
   });
   
   // Payment form
@@ -196,6 +198,7 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
       tenure: 12,
       interestRate: 10,
       startDate: new Date().toISOString().split('T')[0],
+      adjustmentMethod: 'last_emi',
     });
     setConfigDialogOpen(true);
   };
@@ -230,38 +233,71 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
   const emiAmount = calculateEMI(principal, annualRate, tenure);
   const startDate = new Date(emiConfig.startDate);
 
+  // First pass: calculate raw schedule to find closing difference
+  let tempRemaining = principal;
+  const rawSchedule: { interest: number; principal: number }[] = [];
+
+  for (let i = 1; i <= tenure; i++) {
+    const interest = Math.round(tempRemaining * monthlyRate);
+    let princ = i === tenure ? tempRemaining : Math.round(emiAmount - interest);
+    tempRemaining = Math.max(tempRemaining - princ, 0);
+    rawSchedule.push({ interest, principal: princ });
+  }
+
+  // Calculate closing adjustment
+  const totalRawEmi = emiAmount * (tenure - 1) + rawSchedule[tenure - 1].interest + rawSchedule[tenure - 1].principal;
+  const closingDiff = rawSchedule[tenure - 1].principal + rawSchedule[tenure - 1].interest - emiAmount;
+
+  // Apply adjustment method
+  let adjustedEmiAmounts = new Array(tenure).fill(emiAmount);
+
+  if (emiConfig.adjustmentMethod === 'last_emi') {
+    // Default: adjust last EMI
+    adjustedEmiAmounts[tenure - 1] = rawSchedule[tenure - 1].interest + rawSchedule[tenure - 1].principal;
+  } else if (emiConfig.adjustmentMethod === 'spread') {
+    // Spread: round EMI up by 1 to minimize final difference
+    const spreadEmi = emiAmount + 1;
+    adjustedEmiAmounts = new Array(tenure).fill(spreadEmi);
+    // Recalculate with spread EMI
+    adjustedEmiAmounts[tenure - 1] = emiAmount; // will be recalculated below
+  }
+
+  // Generate final schedule
   let remainingPrincipal = principal;
   const schedules: any[] = [];
 
   for (let i = 1; i <= tenure; i++) {
-  const interestComponent = Math.round(remainingPrincipal * monthlyRate);
+    const interestComponent = Math.round(remainingPrincipal * monthlyRate);
+    let principalComponent: number;
+    let thisEmiAmount: number;
 
-  // 🔑 DEFAULT principal
-  let principalComponent = Math.round(emiAmount - interestComponent);
+    if (i === tenure) {
+      // Last EMI: close out remaining principal
+      principalComponent = remainingPrincipal;
+      thisEmiAmount = principalComponent + interestComponent;
+    } else if (emiConfig.adjustmentMethod === 'spread') {
+      thisEmiAmount = emiAmount + 1;
+      principalComponent = thisEmiAmount - interestComponent;
+    } else {
+      thisEmiAmount = emiAmount;
+      principalComponent = Math.round(thisEmiAmount - interestComponent);
+    }
 
-  // 🔒 LAST EMI FORCE ADJUSTMENT
-  if (i === tenure) {
-    principalComponent = remainingPrincipal;
+    remainingPrincipal = Math.max(remainingPrincipal - principalComponent, 0);
+
+    schedules.push({
+      sale_id: selectedSaleForConfig.id,
+      user_id: user.id,
+      emi_number: i,
+      emi_amount: thisEmiAmount,
+      principal_component: principalComponent,
+      interest_component: interestComponent,
+      interest_paid: 0,
+      due_date: addMonths(startDate, i).toISOString().split("T")[0],
+      status: "pending",
+      amount_paid: 0,
+    });
   }
-
-  remainingPrincipal = Math.max(
-    remainingPrincipal - principalComponent,
-    0
-  );
-
-  schedules.push({
-    sale_id: selectedSaleForConfig.id,
-    user_id: user.id,
-    emi_number: i,
-    emi_amount: emiAmount,
-    principal_component: principalComponent,
-    interest_component: interestComponent,
-    interest_paid: 0,
-    due_date: addMonths(startDate, i).toISOString().split("T")[0],
-    status: "pending",
-    amount_paid: 0,
-  });
-}
 
 
   try {
@@ -1277,6 +1313,20 @@ const needsFinalConfirmation =
     emiConfig.tenure
   );
 
+  // Calculate closing adjustment
+  const monthlyRate = emiConfig.interestRate / 12 / 100;
+  let tempBal = principal;
+  let lastEmiActual = emi;
+  for (let i = 1; i <= emiConfig.tenure; i++) {
+    const interest = Math.round(tempBal * monthlyRate);
+    const princ = i === emiConfig.tenure ? tempBal : Math.round(emi - interest);
+    if (i === emiConfig.tenure) {
+      lastEmiActual = tempBal + interest;
+    }
+    tempBal = Math.max(tempBal - princ, 0);
+  }
+  const closingDiff = Math.abs(lastEmiActual - emi);
+
   return (
     <>
       <div>
@@ -1292,11 +1342,49 @@ const needsFinalConfirmation =
           {formatCurrency(emi * emiConfig.tenure)}
         </p>
       </div>
+
+      {/* Closing Adjustment Warning */}
+      {closingDiff > 5 && (
+        <div className="col-span-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm font-medium text-amber-800 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Closing Adjustment: {formatCurrency(closingDiff)}
+          </p>
+          <p className="text-xs text-amber-600 mt-1">
+            Due to EMI rounding, the final installment will differ by {formatCurrency(closingDiff)}.
+          </p>
+        </div>
+      )}
     </>
   );
 })()}
 
 </div>
+
+              {/* Adjustment Method Selection */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Rounding Adjustment Method</Label>
+                <RadioGroup
+                  value={emiConfig.adjustmentMethod}
+                  onValueChange={(v) => setEmiConfig({ ...emiConfig, adjustmentMethod: v as any })}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-2 p-2 rounded-lg border border-border hover:bg-muted/50">
+                    <RadioGroupItem value="last_emi" id="last_emi" />
+                    <Label htmlFor="last_emi" className="cursor-pointer flex-1">
+                      <span className="text-sm font-medium">Adjust in Last EMI</span>
+                      <span className="text-xs text-muted-foreground block">Final EMI absorbs rounding difference (Recommended)</span>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-2 rounded-lg border border-border hover:bg-muted/50">
+                    <RadioGroupItem value="spread" id="spread" />
+                    <Label htmlFor="spread" className="cursor-pointer flex-1">
+                      <span className="text-sm font-medium">Spread across all EMIs</span>
+                      <span className="text-xs text-muted-foreground block">Round up EMI by ₹1 to reduce final mismatch</span>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
 
             </div>
           )}

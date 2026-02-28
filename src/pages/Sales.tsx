@@ -144,9 +144,18 @@ const paymentExceedsBalance =
 ) => {
   const vehicleStatus = saleStatus === "completed" ? "sold" : "reserved";
 
+  const updateData: any = { status: vehicleStatus };
+
+  // When sold, disable catalogue & marketplace visibility and expire links
+  if (vehicleStatus === "sold") {
+    updateData.is_public = false;
+    updateData.marketplace_status = "unlisted";
+    updateData.public_page_id = null;
+  }
+
   await supabase
     .from("vehicles")
-    .update({ status: vehicleStatus })
+    .update(updateData)
     .eq("id", vehicleId);
 };
 
