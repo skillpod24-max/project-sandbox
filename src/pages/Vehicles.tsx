@@ -717,10 +717,11 @@ setVehicleImages(prev => ({
       selling_price: 0,
       purchase_status: "listing",
       is_public: false,
+      marketplace_status: "unlisted",
       show_engine_number: false,
       show_chassis_number: false,
       number_of_owners: 1,
-    });
+    } as any);
     setPurchasePriceDisplay("");
     setSellingPriceDisplay("");
     setStrikeoutPriceDisplay("");
