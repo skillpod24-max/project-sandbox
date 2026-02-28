@@ -434,36 +434,49 @@ const Purchases = () => {
             </Table>
           </div>
           ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredPurchases.map((purchase) => (
-              <Card key={purchase.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(purchase)}>
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <VehicleThumbnail vehicleId={purchase.vehicle_id} />
-                      <span className="font-mono text-xs text-muted-foreground">{purchase.purchase_number}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {purchase.balance_amount > 0 && (
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-3 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-chart-3"></span>
-                        </span>
+          <div className="grid grid-cols-1 gap-3">
+            {filteredPurchases.map((purchase) => {
+              const imgUrl = getVehicleImage(purchase.vehicle_id);
+              return (
+                <Card key={purchase.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(purchase)}>
+                  <CardContent className="p-0 flex">
+                    {/* Vehicle image */}
+                    <div className="w-28 sm:w-36 flex-shrink-0 bg-muted overflow-hidden rounded-l-lg">
+                      {imgUrl ? (
+                        <img src={imgUrl} alt="Vehicle" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full min-h-[100px] flex items-center justify-center text-muted-foreground text-xs">
+                          No image
+                        </div>
                       )}
-                      <Badge className={purchase.balance_amount > 0 ? "bg-chart-3 text-white text-xs" : "bg-chart-2 text-white text-xs"}>
-                        {purchase.balance_amount > 0 ? `₹${purchase.balance_amount.toLocaleString("en-IN")} Due` : "Paid"}
-                      </Badge>
                     </div>
-                  </div>
-                  <p className="font-semibold text-foreground truncate text-sm">{getVehicleName(purchase.vehicle_id)}</p>
-                  <p className="text-sm text-muted-foreground truncate">{getVendorName(purchase.vendor_id)}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold text-primary">₹{purchase.purchase_price.toLocaleString("en-IN")}</span>
-                    <span className="text-xs text-muted-foreground">{format(new Date(purchase.purchase_date), "dd MMM yyyy")}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    {/* Details */}
+                    <div className="flex-1 p-3 space-y-1.5 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-muted-foreground">{purchase.purchase_number}</span>
+                        <div className="flex items-center gap-1.5">
+                          {purchase.balance_amount > 0 && (
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-3 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-chart-3"></span>
+                            </span>
+                          )}
+                          <Badge className={purchase.balance_amount > 0 ? "bg-chart-3 text-white text-xs" : "bg-chart-2 text-white text-xs"}>
+                            {purchase.balance_amount > 0 ? `₹${purchase.balance_amount.toLocaleString("en-IN")} Due` : "Paid"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-foreground truncate text-sm">{getVehicleName(purchase.vehicle_id)}</p>
+                      <p className="text-sm text-muted-foreground truncate">{getVendorName(purchase.vendor_id)}</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-primary">₹{purchase.purchase_price.toLocaleString("en-IN")}</span>
+                        <span className="text-xs text-muted-foreground">{format(new Date(purchase.purchase_date), "dd MMM yyyy")}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
             {filteredPurchases.length === 0 && (
               <div className="col-span-full text-center py-8 text-muted-foreground">No purchases found</div>
             )}
