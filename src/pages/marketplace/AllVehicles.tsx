@@ -45,8 +45,8 @@ const AllVehicles = () => {
         .from("vehicles")
         .select("*")
         .in("user_id", dealerIds)
-        .eq("is_public", true)
-        .eq("status", "in_stock");
+        .eq("status", "in_stock")
+        .in("marketplace_status", ["approved", "featured"]);
 
       const vehicleIds = (vehicles || []).map(v => v.id);
       const { data: images } = await supabase

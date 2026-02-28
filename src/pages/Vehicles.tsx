@@ -1693,26 +1693,28 @@ setVehicleImages(prev => ({
                       </div>
                       <Switch 
                         checked={(formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured'} 
-                        onCheckedChange={(v) => setFormData({ ...formData, marketplace_status: v ? 'approved' : 'unlisted', is_public: v ? true : formData.is_public } as any)} 
+                        onCheckedChange={(v) => setFormData({ ...formData, marketplace_status: v ? 'approved' : 'unlisted' } as any)} 
                       />
                     </div>
 
-                    {/* Sync Button */}
+                    {/* Sync Button - syncs content fields, not toggles */}
                     <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border border-dashed border-border">
-                      <p className="text-xs text-muted-foreground flex-1">Sync both toggles to same state</p>
+                      <p className="text-xs text-muted-foreground flex-1">Enable both catalogue & marketplace together</p>
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
                         className="gap-1 text-xs"
                         onClick={() => {
-                          const isPublic = formData.is_public || false;
+                          const catalogueOn = formData.is_public || false;
+                          const marketplaceOn = (formData as any).marketplace_status === 'approved' || (formData as any).marketplace_status === 'featured';
+                          const bothOn = catalogueOn && marketplaceOn;
                           setFormData({
                             ...formData,
-                            is_public: !isPublic,
-                            marketplace_status: !isPublic ? 'approved' : 'unlisted',
+                            is_public: !bothOn,
+                            marketplace_status: !bothOn ? 'approved' : 'unlisted',
                           } as any);
-                          toast({ title: !isPublic ? "Both enabled" : "Both disabled" });
+                          toast({ title: !bothOn ? "Both enabled" : "Both disabled" });
                         }}
                       >
                         <Copy className="h-3 w-3" /> Sync

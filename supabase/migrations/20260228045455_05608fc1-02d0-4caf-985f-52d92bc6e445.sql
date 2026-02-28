@@ -1,0 +1,2 @@
+ALTER TABLE vehicles DROP CONSTRAINT IF EXISTS marketplace_status_check;
+ALTER TABLE vehicles ADD CONSTRAINT marketplace_status_check CHECK (marketplace_status IN ('pending', 'approved', 'rejected', 'suspended', 'featured', 'listed', 'unlisted'));

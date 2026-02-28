@@ -94,9 +94,9 @@ const fetchMarketplaceData = async () => {
     const { data: vehiclesData } = await supabase
       .from("vehicles")
       .select("*")
-      .eq("is_public", true)
       .in("user_id", dealerIds)
-      .eq("status", "in_stock");
+      .eq("status", "in_stock")
+      .in("marketplace_status", ["approved", "featured"]);
 
     // Fetch ALL images for vehicles (not just primary)
     const vehicleIds = (vehiclesData || []).map(v => v.id);
