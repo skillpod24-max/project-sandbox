@@ -612,12 +612,11 @@ const interestPending = totalInterest - interestCollected;
 const progress =
   totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
 
-// Interest rate (derived from first EMI)
+// Interest rate (derived from first EMI's interest / loan principal)
 const interestRate =
-  saleEmis.length > 0 && saleEmis[0].principal_component
+  saleEmis.length > 0 && principal > 0
     ? (
-        ((saleEmis[0].interest_component || 0) /
-          saleEmis[0].principal_component) *
+        ((saleEmis[0].interest_component || 0) / principal) *
         12 *
         100
       ).toFixed(1)
