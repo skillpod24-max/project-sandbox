@@ -315,7 +315,7 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
     // ✅ MARK EMI AS CONFIGURED
 await supabase
   .from("sales")
-  .update({ emi_configured: true })
+  .update({ emi_configured: true, annual_interest_rate: Number(emiConfig.interestRate) } as any)
   .eq("id", selectedSaleForConfig.id);
 
 
@@ -612,14 +612,11 @@ const interestPending = totalInterest - interestCollected;
 const progress =
   totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
 
-// Interest rate (derived from first EMI's interest / loan principal)
-const interestRate =
-  saleEmis.length > 0 && principal > 0
-    ? (
-        ((saleEmis[0].interest_component || 0) / principal) *
-        12 *
-        100
-      ).toFixed(1)
+// Interest rate: use stored value, fallback to derivation for legacy data
+const interestRate = (sale as any)?.annual_interest_rate
+  ? Number((sale as any).annual_interest_rate).toFixed(1)
+  : saleEmis.length > 0 && principal > 0
+    ? (((saleEmis[0].interest_component || 0) / principal) * 12 * 100).toFixed(1)
     : "0";
 
     const isLoanFullyPaid =
