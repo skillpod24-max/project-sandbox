@@ -258,7 +258,7 @@ const Vendors = () => {
 
   if (loading) return <PageSkeleton />;
 
-  const AddressFormFields = () => (
+  const addressFormFields = (
     <div className="space-y-3">
       <Label>Address</Label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -558,7 +558,7 @@ const Vendors = () => {
                     <Input value={formData.gst_number || ""} onChange={(e) => setFormData({ ...formData, gst_number: e.target.value })} placeholder="GST registration number" />
                   </div>
                 </div>
-                <AddressFormFields />
+                {addressFormFields}
                 <div className="p-4 bg-muted/50 rounded-lg space-y-4">
                   <Label className="font-medium">Bank Details</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -595,7 +595,7 @@ const Vendors = () => {
                     <Input type="email" value={formData.email || ""} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Email address" />
                   </div>
                 </div>
-                <AddressFormFields />
+                {addressFormFields}
                 <div className="p-4 bg-muted/50 rounded-lg space-y-4">
                   <Label className="font-medium">Bank Details (Optional)</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
