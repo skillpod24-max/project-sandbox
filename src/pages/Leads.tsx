@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, User, Car, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, Phone, Mail, User, Car, MapPin, Filter, CalendarCheck } from "lucide-react";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +17,13 @@ import { format } from "date-fns";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { formatCurrency } from "@/lib/formatters";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Indian number formatting
 const formatIndian = (value: string) => {
   if (!value) return "";
   const num = value.replace(/,/g, "");
   if (isNaN(Number(num))) return value;
-
   return Number(num).toLocaleString("en-IN");
 };
 
@@ -45,8 +45,21 @@ const formatIST = (date: string | null | undefined) => {
   });
 };
 
+// All possible sources including external ones
+const allSources = [
+  { value: "walk_in", label: "Walk-in" },
+  { value: "phone", label: "Phone" },
+  { value: "website", label: "Website" },
+  { value: "referral", label: "Referral" },
+  { value: "social_media", label: "Social Media" },
+  { value: "advertisement", label: "Advertisement" },
+  { value: "marketplace", label: "Marketplace" },
+  { value: "public_dealer_page", label: "Catalogue" },
+  { value: "public_vehicle_page", label: "Vehicle Page" },
+  { value: "other", label: "Other" },
+];
 
-
+const manualLeadSources = ["walk_in", "phone", "website", "referral", "social_media", "advertisement", "other"];
 
 interface Lead {
   id: string;
@@ -73,18 +86,25 @@ interface Lead {
   converted_from_lead?: boolean | null;
 }
 
-const leadSources = ["walk_in", "phone", "website", "referral", "social_media", "advertisement", "other"] as const;
 const leadStatuses = ["new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"] as const;
 const leadPriorities = ["low", "medium", "high", "urgent"] as const;
 
+const getSourceLabel = (source: string) => {
+  return allSources.find(s => s.value === source)?.label || source.replace("_", " ");
+};
+
 const Leads = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const { viewMode, setViewMode } = useViewMode("leads");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -92,8 +112,8 @@ const Leads = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [budgetMinInput, setBudgetMinInput] = useState("");
-const [budgetMaxInput, setBudgetMaxInput] = useState("");
-const [isConverting, setIsConverting] = useState(false);
+  const [budgetMaxInput, setBudgetMaxInput] = useState("");
+  const [isConverting, setIsConverting] = useState(false);
   const [formData, setFormData] = useState<Partial<Lead>>({
     customer_name: "",
     phone: "",
@@ -108,36 +128,22 @@ const [isConverting, setIsConverting] = useState(false);
 
   useEffect(() => {
     fetchLeads();
-
-    // Realtime subscription for instant updates
     const channel = supabase
       .channel("leads-page-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "leads" },
-        () => fetchLeads()
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => fetchLeads())
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const fetchLeads = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
+      if (!user) { setLoading(false); return; }
       const { data, error } = await supabase
         .from("leads")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      
       if (error) throw error;
       setLeads(data || []);
     } catch (error) {
@@ -147,29 +153,30 @@ const [isConverting, setIsConverting] = useState(false);
     }
   };
 
-  const generateCustomerCode = () =>
-  `CUS${Date.now().toString(36).toUpperCase()}`;
+  // Dynamic city list from leads
+  const uniqueCities = Array.from(
+    new Set(leads.map(l => l.city?.trim()).filter(Boolean))
+  ).sort((a, b) => a!.localeCompare(b!)) as string[];
 
+  // Dynamic source list from leads
+  const uniqueSources = Array.from(
+    new Set(leads.map(l => l.source).filter(Boolean))
+  ).sort();
 
+  const generateCustomerCode = () => `CUS${Date.now().toString(36).toUpperCase()}`;
   const generateLeadNumber = () => `LD${Date.now().toString(36).toUpperCase()}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    
     setIsSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsSubmitting(false);
-      return;
-    }
+    if (!user) { setIsSubmitting(false); return; }
 
     try {
       if (selectedLead) {
-        // Build notes with test drive info for edit too
         let finalNotes = formData.notes || "";
         const fd = formData as any;
-        // Remove old test drive info from notes
         finalNotes = finalNotes.replace(/\nTEST DRIVE REQUESTED:.*$/m, "").replace(/^TEST DRIVE REQUESTED:.*$/m, "").trim();
         if (fd.__testDriveRequested) {
           const tdDate = fd.__testDriveDate || new Date().toISOString().split("T")[0];
@@ -199,7 +206,6 @@ const [isConverting, setIsConverting] = useState(false);
         if (error) throw error;
         toast({ title: "Lead updated successfully" });
       } else {
-        // Build notes with test drive info if requested
         let finalNotes = formData.notes || "";
         const fd = formData as any;
         if (fd.__testDriveRequested) {
@@ -227,6 +233,8 @@ const [isConverting, setIsConverting] = useState(false);
             notes: finalNotes || null,
             city: formData.city || null,
             lead_type: formData.lead_type || "buying",
+            // Mark manually added leads as already viewed so no red indicator
+            last_viewed_at: new Date().toISOString(),
           }]);
         if (error) throw error;
         toast({ title: "Lead added successfully" });
@@ -243,28 +251,20 @@ const [isConverting, setIsConverting] = useState(false);
   };
 
   const handleDelete = async () => {
-  if (!leadToDelete) return;
-
-  try {
-    const { error } = await supabase
-      .from("leads")
-      .delete()
-      .eq("id", leadToDelete);
-
-    if (error) throw error;
-
-    toast({ title: "Lead deleted successfully" });
-
-    setDetailDialogOpen(false); // 👈 safety
-    fetchLeads();
-  } catch (error: any) {
-    toast({ title: "Error", description: error.message, variant: "destructive" });
-  } finally {
-    setDeleteDialogOpen(false);
-    setLeadToDelete(null);
-  }
-};
-
+    if (!leadToDelete) return;
+    try {
+      const { error } = await supabase.from("leads").delete().eq("id", leadToDelete);
+      if (error) throw error;
+      toast({ title: "Lead deleted successfully" });
+      setDetailDialogOpen(false);
+      fetchLeads();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setLeadToDelete(null);
+    }
+  };
 
   const openDeleteDialog = (id: string) => {
     setLeadToDelete(id);
@@ -287,35 +287,24 @@ const [isConverting, setIsConverting] = useState(false);
 
   const openEditDialog = (lead: Lead) => {
     setSelectedLead(lead);
-    
-    // Parse test drive info from notes
     const notes = lead.notes || "";
     const hasTestDrive = notes.includes("TEST DRIVE REQUESTED");
     const dateMatch = notes.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
     const timeMatch = notes.match(/at (\d{2}:\d{2})/);
-    
     setFormData({
       ...lead,
       __testDriveRequested: hasTestDrive,
       __testDriveDate: dateMatch?.[1] || "",
       __testDriveTime: timeMatch?.[1] || "",
     } as any);
-
-    setBudgetMinInput(
-      lead.budget_min ? formatIndian(String(lead.budget_min)) : ""
-    );
-    setBudgetMaxInput(
-      lead.budget_max ? formatIndian(String(lead.budget_max)) : ""
-    );
-
+    setBudgetMinInput(lead.budget_min ? formatIndian(String(lead.budget_min)) : "");
+    setBudgetMaxInput(lead.budget_max ? formatIndian(String(lead.budget_max)) : "");
     setDialogOpen(true);
   };
 
   const openDetailDialog = async (lead: Lead) => {
     setSelectedLead(lead);
     setDetailDialogOpen(true);
-    
-    // Mark as viewed - update last_viewed_at
     if (lead.status === "new" && !lead.last_viewed_at) {
       await supabase
         .from("leads")
@@ -337,71 +326,32 @@ const [isConverting, setIsConverting] = useState(false);
       city: "",
       lead_type: "buying",
     });
-
-     setBudgetMinInput("");
-  setBudgetMaxInput("");
-
+    setBudgetMinInput("");
+    setBudgetMaxInput("");
   };
 
   const filteredLeads = leads.filter((l) => {
     const matchesSearch = `${l.customer_name} ${l.phone} ${l.lead_number} ${l.vehicle_interest || ""} ${l.city || ""}`.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || l.status === statusFilter;
+    const matchesCity = cityFilter === "all" || (l.city || "").toLowerCase() === cityFilter.toLowerCase();
+    const matchesSource = sourceFilter === "all" || l.source === sourceFilter;
     const matchesDate = !dateFilter || l.created_at.startsWith(dateFilter);
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesCity && matchesSource && matchesDate;
   });
 
   const exportLeads = () => {
-  if (leads.length === 0) {
-    toast({ title: "No leads to export" });
-    return;
-  }
-
-  const headers = [
-    "Lead Number",
-    "Customer Name",
-    "Phone",
-    "Email",
-    "City",
-    "Type",
-    "Vehicle Interest",
-    "Source",
-    "Priority",
-    "Status",
-    "Created At",
-  ];
-
-  const rows = leads.map((l) => [
-    l.lead_number,
-    l.customer_name,
-    l.phone,
-    l.email ?? "",
-    l.city ?? "",
-    l.lead_type ?? "",
-    l.vehicle_interest ?? "",
-    l.source,
-    l.priority,
-    l.status,
-    new Date(l.created_at).toLocaleDateString(),
-  ]);
-
-  const csvContent =
-    [headers, ...rows]
-      .map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
-      )
-      .join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `leads_${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-
-  URL.revokeObjectURL(url);
-};
-
+    if (leads.length === 0) { toast({ title: "No leads to export" }); return; }
+    const headers = ["Lead Number","Customer Name","Phone","Email","City","Type","Vehicle Interest","Source","Priority","Status","Created At"];
+    const rows = leads.map((l) => [l.lead_number, l.customer_name, l.phone, l.email ?? "", l.city ?? "", l.lead_type ?? "", l.vehicle_interest ?? "", l.source, l.priority, l.status, new Date(l.created_at).toLocaleDateString()]);
+    const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `leads_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -431,106 +381,135 @@ const [isConverting, setIsConverting] = useState(false);
     return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
   };
 
+  const getSourceBadge = (source: string, size: "sm" | "xs" = "sm") => {
+    const cls = size === "xs" ? "text-[10px]" : "text-xs";
+    switch (source) {
+      case "marketplace": return <Badge className={`bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 ${cls}`}>Marketplace</Badge>;
+      case "website": return <Badge className={`bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 ${cls}`}>Website</Badge>;
+      case "public_dealer_page": return <Badge className={`bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 ${cls}`}>Catalogue</Badge>;
+      case "public_vehicle_page": return <Badge className={`bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 ${cls}`}>Vehicle Page</Badge>;
+      case "walk_in": return <Badge className={`bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ${cls}`}>Walk-in</Badge>;
+      case "referral": return <Badge className={`bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 ${cls}`}>Referral</Badge>;
+      case "phone": return <Badge className={`bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 ${cls}`}>Phone</Badge>;
+      case "social_media": return <Badge className={`bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 ${cls}`}>Social</Badge>;
+      default: return <span className="text-muted-foreground text-xs capitalize">{source.replace("_", " ")}</span>;
+    }
+  };
+
   const stats = {
-  total: leads.length,
-  new: leads.filter(l => l.status === "new").length,
-  contacted: leads.filter(l => l.status === "contacted").length,
-  qualified: leads.filter(l => l.status === "qualified").length,
-  proposal: leads.filter(l => l.status === "proposal").length,
-  negotiation: leads.filter(l => l.status === "negotiation").length,
-  won: leads.filter(l => l.status === "won").length,
-  lost: leads.filter(l => l.status === "lost").length,
-};
+    total: leads.length,
+    new: leads.filter(l => l.status === "new").length,
+    contacted: leads.filter(l => l.status === "contacted").length,
+    qualified: leads.filter(l => l.status === "qualified").length,
+    proposal: leads.filter(l => l.status === "proposal").length,
+    negotiation: leads.filter(l => l.status === "negotiation").length,
+    won: leads.filter(l => l.status === "won").length,
+    lost: leads.filter(l => l.status === "lost").length,
+  };
 
+  if (loading) return <PageSkeleton />;
 
-  if (loading) {
-    return <PageSkeleton />;
-  }
+  const convertLead = async (lead: Lead) => {
+    if (isConverting) return;
+    setIsConverting(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-const convertLead = async (lead: Lead) => {
-  if (isConverting) return; // 🔒 hard lock
-  setIsConverting(true);
+    try {
+      if (lead.status === "qualified" || lead.status === "won") {
+        toast({ title: "Lead already converted" });
+        return;
+      }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+      if (lead.lead_type === "buying") {
+        await supabase.from("customers").insert([{
+          user_id: user.id,
+          code: generateCustomerCode(),
+          full_name: lead.customer_name,
+          phone: lead.phone,
+          email: lead.email,
+          is_active: true,
+          lead_id: lead.id,
+          converted_from_lead: true,
+        }]);
+        toast({ title: "Lead converted to Customer 🎉" });
+      }
 
-  try {
-    // 🚫 Prevent double conversion
-    if (lead.status === "qualified") {
-      toast({ title: "Lead already converted" });
-      return;
+      if (lead.lead_type === "selling") {
+        const { data, error } = await supabase
+          .from("vendors")
+          .insert([{
+            user_id: user.id,
+            code: `VEN${Date.now().toString(36).toUpperCase()}`,
+            name: lead.customer_name,
+            contact_person: lead.customer_name,
+            phone: lead.phone,
+            email: lead.email,
+            vendor_type: "individual",
+            is_active: true,
+            lead_id: lead.id,
+            converted_from_lead: true,
+          }])
+          .select()
+          .single();
+        if (error) throw error;
+        toast({ title: "Lead converted to Vendor 🎉" });
+      }
+
+      await supabase
+        .from("leads")
+        .update({ status: "won", converted_from_lead: true })
+        .eq("id", lead.id);
+
+      setDetailDialogOpen(false);
+      window.dispatchEvent(new Event("vendor-updated"));
+      fetchLeads();
+    } catch (err: any) {
+      toast({ title: "Conversion failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsConverting(false);
     }
+  };
 
-    if (lead.lead_type === "buying") {
-      // ✅ Convert to CUSTOMER
-      await supabase.from("customers").insert([{
-        user_id: user.id,
-        code: generateCustomerCode(),
-        full_name: lead.customer_name,
-        phone: lead.phone,
-        email: lead.email,
-        is_active: true,
-        lead_id: lead.id,
-        converted_from_lead: true,
-      }]);
+  // Determine which sources to show in edit dialog
+  const editSourceOptions = selectedLead
+    ? allSources // Show all sources when editing so marketplace etc. are visible
+    : allSources.filter(s => manualLeadSources.includes(s.value)); // Only manual sources for new leads
 
-      toast({ title: "Lead converted to Customer 🎉" });
-    }
+  const activeFilterCount = [statusFilter !== "all", cityFilter !== "all", sourceFilter !== "all", !!dateFilter].filter(Boolean).length;
 
-    if (lead.lead_type === "selling") {
-  const { data, error } = await supabase
-    .from("vendors")
-    .insert([{
-      user_id: user.id,
-      code: `VEN${Date.now().toString(36).toUpperCase()}`,
-      name: lead.customer_name,
-      contact_person: lead.customer_name,
-      phone: lead.phone,
-      email: lead.email,
-      vendor_type: "individual",
-      is_active: true,
-      lead_id: lead.id,
-      converted_from_lead: true,
-    }])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Vendor insert failed:", error);
-    throw error;
-  }
-
-  console.log("Vendor created:", data);
-
-  toast({ title: "Lead converted to Vendor 🎉" });
-}
-
-
-    // 🔁 Mark lead as converted
-    await supabase
-  .from("leads")
-  .update({
-    status: "qualified",
-    converted_from_lead: true,
-  })
-  .eq("id", lead.id);
-
-
-    setDetailDialogOpen(false);
-    window.dispatchEvent(new Event("vendor-updated"));
-    fetchLeads();
-
-  } catch (err: any) {
-    toast({
-      title: "Conversion failed",
-      description: err.message,
-      variant: "destructive",
-    });
-  } finally {
-    setIsConverting(false);
-  }
-};
-
+  const filterControls = (
+    <>
+      <Input
+        type="date"
+        value={dateFilter}
+        onChange={(e) => setDateFilter(e.target.value)}
+        className="w-full sm:w-36"
+        placeholder="Filter by date"
+      />
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="Status" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Status</SelectItem>
+          {leadStatuses.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={cityFilter} onValueChange={setCityFilter}>
+        <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="City" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Cities</SelectItem>
+          {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={sourceFilter} onValueChange={setSourceFilter}>
+        <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="Source" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Sources</SelectItem>
+          {uniqueSources.map(s => <SelectItem key={s} value={s}>{getSourceLabel(s)}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </>
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -540,15 +519,11 @@ const convertLead = async (lead: Lead) => {
           <p className="text-muted-foreground">Manage your sales leads and follow-ups</p>
         </div>
         <div className="flex gap-2">
-  <Button variant="outline" onClick={exportLeads}>
-    Export
-  </Button>
-
-  <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="gap-2">
-    <Plus className="h-4 w-4" /> Add Lead
-  </Button>
-</div>
-
+          <Button variant="outline" onClick={exportLeads}>Export</Button>
+          <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="gap-2">
+            <Plus className="h-4 w-4" /> Add Lead
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -572,14 +547,11 @@ const convertLead = async (lead: Lead) => {
           </CardContent>
         </Card>
         <Card className="border border-border">
-  <CardContent className="p-3 sm:p-4 text-center">
-    <p className="text-xl sm:text-2xl font-bold text-orange-500">
-      {stats.proposal}
-    </p>
-    <p className="text-xs text-muted-foreground uppercase">Proposal</p>
-  </CardContent>
-</Card>
-
+          <CardContent className="p-3 sm:p-4 text-center">
+            <p className="text-xl sm:text-2xl font-bold text-orange-500">{stats.proposal}</p>
+            <p className="text-xs text-muted-foreground uppercase">Proposal</p>
+          </CardContent>
+        </Card>
         <Card className="border border-border">
           <CardContent className="p-3 sm:p-4 text-center">
             <p className="text-xl sm:text-2xl font-bold text-chart-4">{stats.qualified}</p>
@@ -587,14 +559,11 @@ const convertLead = async (lead: Lead) => {
           </CardContent>
         </Card>
         <Card className="border border-border">
-  <CardContent className="p-3 sm:p-4 text-center">
-    <p className="text-xl sm:text-2xl font-bold text-cyan-500">
-      {stats.negotiation}
-    </p>
-    <p className="text-xs text-muted-foreground uppercase">Negotiation</p>
-  </CardContent>
-</Card>
-
+          <CardContent className="p-3 sm:p-4 text-center">
+            <p className="text-xl sm:text-2xl font-bold text-cyan-500">{stats.negotiation}</p>
+            <p className="text-xs text-muted-foreground uppercase">Negotiation</p>
+          </CardContent>
+        </Card>
         <Card className="border border-border">
           <CardContent className="p-3 sm:p-4 text-center">
             <p className="text-xl sm:text-2xl font-bold text-chart-2">{stats.won}</p>
@@ -611,104 +580,102 @@ const convertLead = async (lead: Lead) => {
 
       <Card className="border border-border">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <CardTitle>All Leads ({filteredLeads.length})</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative max-w-xs">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <CardTitle>All Leads ({filteredLeads.length})</CardTitle>
+              <div className="flex items-center gap-2">
+                {isMobile && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setFiltersOpen(!filtersOpen)}
+                    className="relative"
+                  >
+                    <Filter className="h-4 w-4" />
+                    {activeFilterCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </Button>
+                )}
+                <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
               </div>
-              <Input 
-                type="date" 
-                value={dateFilter} 
-                onChange={(e) => setDateFilter(e.target.value)} 
-                className="w-36"
-                placeholder="Filter by date"
-              />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {leadStatuses.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
+
+            {/* Search bar always visible */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+            </div>
+
+            {/* Desktop: always show filters. Mobile: collapsible */}
+            {isMobile ? (
+              filtersOpen && (
+                <div className="grid grid-cols-2 gap-2 animate-fade-in">
+                  {filterControls}
+                </div>
+              )
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                {filterControls}
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           {viewMode === "list" ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Lead #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Vehicle Interest</TableHead>
-                  <TableHead>Source</TableHead>
-                   <TableHead>Priority</TableHead>
-                   <TableHead>Status</TableHead>
-                   <TableHead>Test Drive</TableHead>
-                   <TableHead>Follow Up</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLeads.map((lead) => (
-                  <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(lead)}>
-                    <TableCell className="font-mono text-sm">{lead.lead_number}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{lead.customer_name}</p>
-                        <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getLeadTypeColor(lead.lead_type)}>
-                        {lead.lead_type === "selling" ? "Selling" : "Buying"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{lead.city || "-"}</TableCell>
-                    <TableCell>{lead.vehicle_interest || "-"}</TableCell>
-                    <TableCell>
-                      {lead.source === "marketplace" ? (
-                        <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">Marketplace</Badge>
-                      ) : lead.source === "website" ? (
-                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Website</Badge>
-                      ) : lead.source === "public_dealer_page" ? (
-                        <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">Catalogue</Badge>
-                      ) : lead.source === "public_vehicle_page" ? (
-                        <Badge className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">Vehicle Page</Badge>
-                      ) : lead.source === "walk_in" ? (
-                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Walk-in</Badge>
-                      ) : lead.source === "referral" ? (
-                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Referral</Badge>
-                      ) : lead.source === "phone" ? (
-                        <Badge className="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">Phone</Badge>
-                      ) : lead.source === "social_media" ? (
-                        <Badge className="bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400">Social</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell><Badge className={getPriorityColor(lead.priority)}>{lead.priority}</Badge></TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Select value={lead.status} onValueChange={(v) => handleStatusChange(lead.id, v)}>
-                        <SelectTrigger className="w-[130px] p-0 border-0 bg-transparent">
-                          <Badge className={getStatusColor(lead.status)}>{lead.status}</Badge>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {leadStatuses.map((s) => (
-                            <SelectItem key={s} value={s} className="capitalize">
-                              <Badge className={getStatusColor(s)}>{s}</Badge>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {lead.notes?.includes("TEST DRIVE REQUESTED") ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Lead #</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>City</TableHead>
+                    <TableHead>Vehicle Interest</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Test Drive</TableHead>
+                    <TableHead>Follow Up</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLeads.map((lead) => (
+                    <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetailDialog(lead)}>
+                      <TableCell className="font-mono text-sm">{lead.lead_number}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{lead.customer_name}</p>
+                          <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getLeadTypeColor(lead.lead_type)}>
+                          {lead.lead_type === "selling" ? "Selling" : "Buying"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{lead.city || "-"}</TableCell>
+                      <TableCell>{lead.vehicle_interest || "-"}</TableCell>
+                      <TableCell>{getSourceBadge(lead.source)}</TableCell>
+                      <TableCell><Badge className={getPriorityColor(lead.priority)}>{lead.priority}</Badge></TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Select value={lead.status} onValueChange={(v) => handleStatusChange(lead.id, v)}>
+                          <SelectTrigger className="w-[130px] p-0 border-0 bg-transparent">
+                            <Badge className={getStatusColor(lead.status)}>{lead.status}</Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {leadStatuses.map((s) => (
+                              <SelectItem key={s} value={s} className="capitalize">
+                                <Badge className={getStatusColor(s)}>{s}</Badge>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {lead.notes?.includes("TEST DRIVE REQUESTED") ? (
                           <div>
                             <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">Yes</Badge>
                             {(() => {
@@ -721,77 +688,74 @@ const convertLead = async (lead: Lead) => {
                         ) : (
                           <span className="text-xs text-muted-foreground">No</span>
                         )}
-                    </TableCell>
-                    <TableCell>{lead.follow_up_date ? format(new Date(lead.follow_up_date), "dd MMM") : "-"}</TableCell>
-                  </TableRow>
-                ))}
-                {filteredLeads.length === 0 && (
-                  <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No leads found</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                      </TableCell>
+                      <TableCell>{lead.follow_up_date ? format(new Date(lead.follow_up_date), "dd MMM") : "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredLeads.length === 0 && (
+                    <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No leads found</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredLeads.map((lead) => (
-              <Card key={lead.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(lead)}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-foreground truncate">{lead.customer_name}</p>
-                    <div className="flex items-center gap-1">
-                      {lead.source === "marketplace" ? (
-                        <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 text-[10px]">Marketplace</Badge>
-                      ) : lead.source === "public_dealer_page" ? (
-                        <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 text-[10px]">Catalogue</Badge>
-                      ) : lead.source === "walk_in" ? (
-                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">Walk-in</Badge>
-                      ) : lead.source === "referral" ? (
-                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px]">Referral</Badge>
-                      ) : lead.source === "phone" ? (
-                        <Badge className="bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 text-[10px]">Phone</Badge>
-                      ) : lead.source === "social_media" ? (
-                        <Badge className="bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 text-[10px]">Social</Badge>
-                      ) : lead.source === "website" ? (
-                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px]">Website</Badge>
-                      ) : null}
-                      <Badge className={getPriorityColor(lead.priority) + " text-[10px]"}>{lead.priority}</Badge>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-3 w-3 shrink-0" />
-                      <span>{lead.phone}</span>
-                    </div>
-                    {lead.vehicle_interest && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Car className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{lead.vehicle_interest}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+              {filteredLeads.map((lead) => {
+                const hasTestDrive = lead.notes?.includes("TEST DRIVE REQUESTED");
+                const tdDateMatch = lead.notes?.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
+                return (
+                  <Card key={lead.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDetailDialog(lead)}>
+                    <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                      <div className="flex items-start justify-between gap-1">
+                        <p className="font-semibold text-foreground truncate text-sm sm:text-base">{lead.customer_name}</p>
+                        <Badge className={getPriorityColor(lead.priority) + " text-[10px] shrink-0"}>{lead.priority}</Badge>
                       </div>
-                    )}
-                    {lead.city && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-3 w-3 shrink-0" />
-                        <span>{lead.city}</span>
+                      <div className="space-y-1 text-xs sm:text-sm">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{lead.phone}</span>
+                        </div>
+                        {lead.vehicle_interest && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Car className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{lead.vehicle_interest}</span>
+                          </div>
+                        )}
+                        {lead.city && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{lead.city}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge className={getStatusColor(lead.status) + " text-xs"}>{lead.status}</Badge>
-                    <Badge className={getLeadTypeColor(lead.lead_type) + " text-xs"}>
-                      {lead.lead_type === "selling" ? "Selling" : "Buying"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-mono">{lead.lead_number}</span>
-                    {lead.follow_up_date && <span>Follow: {format(new Date(lead.follow_up_date), "dd MMM")}</span>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filteredLeads.length === 0 && (
-              <div className="col-span-full text-center py-8 text-muted-foreground">No leads found</div>
-            )}
-          </div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Badge className={getStatusColor(lead.status) + " text-[10px]"}>{lead.status}</Badge>
+                        <Badge className={getLeadTypeColor(lead.lead_type) + " text-[10px]"}>
+                          {lead.lead_type === "selling" ? "Selling" : "Buying"}
+                        </Badge>
+                        {getSourceBadge(lead.source, "xs")}
+                      </div>
+                      {/* Test Drive indicator */}
+                      {hasTestDrive && (
+                        <div className="flex items-center gap-1.5">
+                          <CalendarCheck className="h-3 w-3 text-emerald-600" />
+                          <span className="text-[10px] sm:text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                            Test Drive {tdDateMatch ? format(new Date(tdDateMatch[1]), "dd MMM") : ""}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
+                        <span className="font-mono">{lead.lead_number}</span>
+                        {lead.follow_up_date && <span>Follow: {format(new Date(lead.follow_up_date), "dd MMM")}</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {filteredLeads.length === 0 && (
+                <div className="col-span-full text-center py-8 text-muted-foreground">No leads found</div>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -846,58 +810,52 @@ const convertLead = async (lead: Lead) => {
               <div className="space-y-2">
                 <Label>Budget Min</Label>
                 <Input
-  inputMode="numeric"
-  placeholder="e.g. 5,00,000"
-  value={budgetMinInput}
-  onChange={(e) => {
-    const raw = e.target.value.replace(/[^0-9,]/g, "");
-    const formatted = formatIndian(raw);
-
-    setBudgetMinInput(formatted);
-    setFormData({
-      ...formData,
-      budget_min: parseIndian(formatted),
-    });
-  }}
-/>
-
+                  inputMode="numeric"
+                  placeholder="e.g. 5,00,000"
+                  value={budgetMinInput}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9,]/g, "");
+                    const formatted = formatIndian(raw);
+                    setBudgetMinInput(formatted);
+                    setFormData({ ...formData, budget_min: parseIndian(formatted) });
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Budget Max</Label>
                 <Input
-  inputMode="numeric"
-  placeholder="e.g. 8,00,000"
-  value={budgetMaxInput}
-  onChange={(e) => {
-    const raw = e.target.value.replace(/[^0-9,]/g, "");
-    const formatted = formatIndian(raw);
-
-    setBudgetMaxInput(formatted);
-    setFormData({
-      ...formData,
-      budget_max: parseIndian(formatted),
-    });
-  }}
-/>
-
+                  inputMode="numeric"
+                  placeholder="e.g. 8,00,000"
+                  value={budgetMaxInput}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9,]/g, "");
+                    const formatted = formatIndian(raw);
+                    setBudgetMaxInput(formatted);
+                    setFormData({ ...formData, budget_max: parseIndian(formatted) });
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Source</Label>
-                <Select value={formData.source} onValueChange={(v) => setFormData({ ...formData, source: v })}>
+                <Select value={formData.source || "walk_in"} onValueChange={(v) => setFormData({ ...formData, source: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{leadSources.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace("_", " ")}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {editSourceOptions.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                <Select value={formData.status || "new"} onValueChange={(v) => setFormData({ ...formData, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{leadStatuses.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Priority</Label>
-                <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
+                <Select value={formData.priority || "medium"} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{leadPriorities.map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}</SelectContent>
                 </Select>
@@ -914,9 +872,7 @@ const convertLead = async (lead: Lead) => {
                   <input
                     type="checkbox"
                     checked={(formData as any).__testDriveRequested || false}
-                    onChange={(e) => {
-                      setFormData({ ...formData, __testDriveRequested: e.target.checked } as any);
-                    }}
+                    onChange={(e) => setFormData({ ...formData, __testDriveRequested: e.target.checked } as any)}
                     className="rounded"
                   />
                   <span className="text-sm">Customer wants a test drive</span>
@@ -955,29 +911,23 @@ const convertLead = async (lead: Lead) => {
           {selectedLead && (
             <>
               <DialogHeader>
-  <DialogTitle className="flex items-center justify-between">
-  <span>Lead Details - {selectedLead.lead_number}</span>
+                <DialogTitle className="flex items-center justify-between">
+                  <span>Lead Details - {selectedLead.lead_number}</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setDetailDialogOpen(false);
+                        setTimeout(() => openDeleteDialog(selectedLead.id), 50);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
 
-  <div className="flex items-center gap-2">
-    {/* DELETE */}
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => {
-        setDetailDialogOpen(false);
-        setTimeout(() => openDeleteDialog(selectedLead.id), 50);
-      }}
-    >
-      <Trash2 className="h-4 w-4 text-destructive" />
-    </Button>
-
-    
-  </div>
-</DialogTitle>
-
-</DialogHeader>
-
-              
               <div className="space-y-4">
                 <Card>
                   <CardHeader className="pb-2">
@@ -1005,19 +955,13 @@ const convertLead = async (lead: Lead) => {
                       </div>
                     )}
                     <div>
-  <p className="text-xs text-muted-foreground uppercase">Created At</p>
-  <p className="font-medium">
-    {formatIST(selectedLead.created_at)}
-  </p>
-</div>
-
-<div>
-  <p className="text-xs text-muted-foreground uppercase">Last Updated</p>
-  <p className="font-medium">
-    {formatIST(selectedLead.updated_at)}
-  </p>
-</div>
-
+                      <p className="text-xs text-muted-foreground uppercase">Created At</p>
+                      <p className="font-medium">{formatIST(selectedLead.created_at)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase">Last Updated</p>
+                      <p className="font-medium">{formatIST(selectedLead.updated_at)}</p>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1033,14 +977,14 @@ const convertLead = async (lead: Lead) => {
                     <div>
                       <p className="text-xs text-muted-foreground uppercase">Budget Range</p>
                       <p className="font-medium">
-                        {selectedLead.budget_min || selectedLead.budget_max 
+                        {selectedLead.budget_min || selectedLead.budget_max
                           ? `${formatCurrency(selectedLead.budget_min || 0)} - ${selectedLead.budget_max ? formatCurrency(selectedLead.budget_max) : "∞"}`
                           : "-"}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase">Source</p>
-                      <p className="font-medium capitalize">{selectedLead.source.replace("_", " ")}</p>
+                      <p className="font-medium">{getSourceLabel(selectedLead.source)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground uppercase">Priority</p>
@@ -1059,40 +1003,29 @@ const convertLead = async (lead: Lead) => {
                     </CardContent>
                   </Card>
                 )}
-                
+
                 {!selectedLead.converted_from_lead && (
-  <Button
-    disabled={isConverting}
-    onClick={() => convertLead(selectedLead)}
-    className={`flex-1 text-white transition-all duration-300
-      ${isConverting
-        ? "bg-emerald-400 cursor-not-allowed opacity-70"
-        : "bg-emerald-600 hover:bg-emerald-700"
-      }`}
-  >
-    {isConverting ? (
-      <span className="flex items-center gap-2">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-        Converting…
-      </span>
-    ) : (
-      selectedLead.lead_type === "selling"
-        ? "Convert to Vendor"
-        : "Convert to Customer"
-    )}
-  </Button>
-)}
-{selectedLead.converted_from_lead && (
-  <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">
-    <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
-    <span className="text-sm font-medium">
-      Lead already converted
-    </span>
-  </div>
-)}
-
-
-
+                  <Button
+                    disabled={isConverting}
+                    onClick={() => convertLead(selectedLead)}
+                    className={`flex-1 text-white transition-all duration-300 ${isConverting ? "bg-emerald-400 cursor-not-allowed opacity-70" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                  >
+                    {isConverting ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Converting…
+                      </span>
+                    ) : (
+                      selectedLead.lead_type === "selling" ? "Convert to Vendor" : "Convert to Customer"
+                    )}
+                  </Button>
+                )}
+                {selectedLead.converted_from_lead && (
+                  <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                    <span className="text-sm font-medium">Lead already converted</span>
+                  </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button className="flex-1" onClick={() => { setDetailDialogOpen(false); openEditDialog(selectedLead); }}>
