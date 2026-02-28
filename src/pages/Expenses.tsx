@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -303,6 +305,8 @@ toast({ title: "Expense added successfully" });
 
   return matchesSearch && matchesCategory && matchesDate;
 });
+
+  const { displayedItems: displayedExpenses, hasMore: hasMoreExpenses, loaderRef: expensesLoaderRef } = useInfiniteScroll(filteredExpenses, 30);
 
 
   // Stats calculations
@@ -641,7 +645,7 @@ const visibleCategories = showAllCategories
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredExpenses.map((expense) => {
+                {displayedExpenses.map((expense) => {
                   const cat = getCategoryInfo(expense.category);
                   const catColor = CATEGORY_COLORS[expense.category] || CATEGORY_COLORS.miscellaneous;
                   const pmColor = PAYMENT_MODE_COLORS[expense.payment_mode] || PAYMENT_MODE_COLORS.cash;
@@ -672,7 +676,7 @@ const visibleCategories = showAllCategories
           </div>
           ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {filteredExpenses.map((expense) => {
+            {displayedExpenses.map((expense) => {
               const cat = getCategoryInfo(expense.category);
               const catColor = CATEGORY_COLORS[expense.category] || CATEGORY_COLORS.miscellaneous;
               const pmColor = PAYMENT_MODE_COLORS[expense.payment_mode] || PAYMENT_MODE_COLORS.cash;
@@ -702,6 +706,7 @@ const visibleCategories = showAllCategories
             )}
           </div>
           )}
+          <ScrollLoader ref={expensesLoaderRef} hasMore={hasMoreExpenses} />
         </CardContent>
       </Card>
 

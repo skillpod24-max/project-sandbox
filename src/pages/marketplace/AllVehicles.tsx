@@ -1,4 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import ScrollLoader from "@/components/ScrollLoader";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -159,6 +161,8 @@ const AllVehicles = () => {
 
     return result;
   }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, cityFilter, sortBy, getDealerCity, selectedBrands, transmissionFilter]);
+
+  const { displayedItems: displayedVehicles, hasMore: hasMoreMarketplace, loaderRef: marketplaceLoaderRef } = useInfiniteScroll(filteredVehicles, 18);
 
   const compareVehicles = useMemo(() => {
     return vehicles.filter(v => compareList.includes(v.id));
@@ -452,7 +456,7 @@ const AllVehicles = () => {
 
             {/* Vehicle Grid - 3 columns */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredVehicles.map((vehicle, index) => (
+              {displayedVehicles.map((vehicle, index) => (
                 <div
                   key={vehicle.id}
                   className="animate-fade-in"
@@ -469,6 +473,7 @@ const AllVehicles = () => {
                 </div>
               ))}
             </div>
+            <ScrollLoader ref={marketplaceLoaderRef} hasMore={hasMoreMarketplace} />
 
             {/* Empty State */}
             {filteredVehicles.length === 0 && (
