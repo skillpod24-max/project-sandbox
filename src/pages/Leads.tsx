@@ -458,7 +458,7 @@ const Leads = () => {
 
       await supabase
         .from("leads")
-        .update({ status: "won", converted_from_lead: true })
+        .update({ status: "qualified", converted_from_lead: true })
         .eq("id", lead.id);
 
       setDetailDialogOpen(false);

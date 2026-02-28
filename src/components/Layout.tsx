@@ -197,7 +197,7 @@ const Layout = ({ children }: LayoutProps) => {
           <AppSidebar />
         </div>
 
-        <div className="flex-1 flex flex-col w-full min-w-0 overflow-x-hidden">
+        <div className="flex-1 flex flex-col w-full min-w-0 overflow-x-hidden max-w-full">
           {/* Zoho-style Top Header */}
           <header className="h-14 border-b border-border bg-card flex items-center px-2 sm:px-4 md:px-6 sticky top-0 z-[60] shadow-sm min-w-0 overflow-x-hidden">
             {!isOnline && (
@@ -277,7 +277,7 @@ const Layout = ({ children }: LayoutProps) => {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 p-4 sm:p-6 overflow-auto transition-[opacity] duration-200 scrollbar-hide bg-muted/30">
+          <main className="flex-1 p-4 sm:p-6 overflow-x-hidden overflow-y-auto transition-[opacity] duration-200 scrollbar-hide bg-muted/30">
             <div className="max-w-[1920px] mx-auto">
               {children}
             </div>

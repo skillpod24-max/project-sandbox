@@ -84,7 +84,7 @@ const Purchases = () => {
         supabase.from("vehicle_purchases").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("vehicles").select("*").eq("user_id", user.id),
         supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("vehicle_images").select("*").eq("user_id", user.id).eq("is_primary", true),
+        supabase.from("vehicle_images").select("*").eq("user_id", user.id),
       ]);
       setPurchases(purchasesRes.data || []);
       setVehicles(vehiclesRes.data || []);
@@ -105,8 +105,11 @@ const Purchases = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getVehicleImage = (vehicleId: string): string | null => {
-    const img = vehicleImages.find(i => i.vehicle_id === vehicleId);
-    return img?.image_url || null;
+    // Prefer primary image, fallback to first image for the vehicle
+    const primaryImg = vehicleImages.find(i => i.vehicle_id === vehicleId && i.is_primary);
+    if (primaryImg) return primaryImg.image_url;
+    const anyImg = vehicleImages.find(i => i.vehicle_id === vehicleId);
+    return anyImg?.image_url || null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
