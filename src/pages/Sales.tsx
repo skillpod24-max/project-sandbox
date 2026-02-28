@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Eye, FileText, Download } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Pencil, Trash2, Search, Eye, FileText, Download, X } from "lucide-react";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +73,8 @@ const paymentExceedsBalance =
   selectedSale && paymentAmount > selectedSale.balance_amount;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [enableTax, setEnableTax] = useState(false);
+  const [additionalCharges, setAdditionalCharges] = useState<{name: string; amount: number; display: string}[]>([]);
   const [displayValues, setDisplayValues] = useState({
   selling_price: "",
   discount: "",
@@ -130,8 +133,9 @@ const paymentExceedsBalance =
   const calculateTotal = () => {
     const sellingPrice = formData.selling_price || 0;
     const discount = formData.discount || 0;
-    const taxAmount = formData.tax_amount || 0;
-    return sellingPrice - discount + taxAmount;
+    const taxAmount = enableTax ? (formData.tax_amount || 0) : 0;
+    const additionalTotal = additionalCharges.reduce((sum, c) => sum + c.amount, 0);
+    return sellingPrice - discount + taxAmount + additionalTotal;
   };
 
   const updateVehicleStatusFromSale = async (
@@ -441,6 +445,8 @@ if (selectedSale.is_emi) {
 
   const resetForm = () => {
     setSelectedSale(null);
+    setEnableTax(false);
+    setAdditionalCharges([]);
     setFormData({
       vehicle_id: "",
       customer_id: "",
@@ -455,6 +461,7 @@ if (selectedSale.is_emi) {
       is_emi: false,
       notes: "",
     });
+    setDisplayValues({ selling_price: "", discount: "", tax_amount: "", down_payment: "", amount_paid: "" });
   };
 
   const getVehicle = (id: string) => vehicles.find((v) => v.id === id);
@@ -815,21 +822,31 @@ const isEmiNotConfigured = (sale: Sale) => {
 
               </div>
               <div className="space-y-2">
-                <Label>Tax Amount</Label>
-                <Input
-  value={displayValues.tax_amount}
-  onChange={(e) => {
-    const formatted = formatIndianInput(e.target.value);
-    setDisplayValues({ ...displayValues, tax_amount: formatted });
-    setFormData({
-      ...formData,
-      tax_amount: parseIndianInput(formatted),
-    });
-  }}
-  inputMode="numeric"
-  placeholder="₹0"
-/>
-
+                <div className="flex items-center justify-between">
+                  <Label>Tax</Label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-muted-foreground">Enable Tax</label>
+                    <Switch checked={enableTax} onCheckedChange={(v) => {
+                      setEnableTax(v);
+                      if (!v) {
+                        setDisplayValues({ ...displayValues, tax_amount: "" });
+                        setFormData({ ...formData, tax_amount: 0 });
+                      }
+                    }} />
+                  </div>
+                </div>
+                {enableTax && (
+                  <Input
+                    value={displayValues.tax_amount}
+                    onChange={(e) => {
+                      const formatted = formatIndianInput(e.target.value);
+                      setDisplayValues({ ...displayValues, tax_amount: formatted });
+                      setFormData({ ...formData, tax_amount: parseIndianInput(formatted) });
+                    }}
+                    inputMode="numeric"
+                    placeholder="₹0"
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Total Amount</Label>
@@ -838,61 +855,86 @@ const isEmiNotConfigured = (sale: Sale) => {
   readOnly
   className="bg-muted"
 />
-
               </div>
-              {formData.is_emi && (
-  <div className="space-y-2">
-    <Label>Down Payment</Label>
-    <Input
-      value={displayValues.down_payment}
-      onChange={(e) => {
-        const formatted = formatIndianInput(e.target.value);
-        setDisplayValues({ ...displayValues, down_payment: formatted });
-        setFormData({
-          ...formData,
-          down_payment: parseIndianInput(formatted),
-        });
-      }}
-      inputMode="numeric"
-      placeholder="₹0"
-    />
-    {formData.is_emi &&
-  parseIndianInput(displayValues.down_payment) > calculateTotal() && (
-    <p className="text-xs text-red-500 font-medium">
-      Down payment cannot exceed total amount
-    </p>
-)}
+            </div>
 
-  </div>
-)}
+            {/* Additional Charges */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Additional Charges</Label>
+                <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setAdditionalCharges([...additionalCharges, { name: "", amount: 0, display: "" }])}>
+                  <Plus className="h-3 w-3" /> Add Charge
+                </Button>
+              </div>
+              {additionalCharges.map((charge, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    placeholder="Charge name"
+                    value={charge.name}
+                    onChange={(e) => {
+                      const updated = [...additionalCharges];
+                      updated[i].name = e.target.value;
+                      setAdditionalCharges(updated);
+                    }}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="₹0"
+                    inputMode="numeric"
+                    value={charge.display}
+                    onChange={(e) => {
+                      const formatted = formatIndianInput(e.target.value);
+                      const updated = [...additionalCharges];
+                      updated[i].display = formatted;
+                      updated[i].amount = parseIndianInput(formatted);
+                      setAdditionalCharges(updated);
+                    }}
+                    className="w-32"
+                  />
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalCharges(additionalCharges.filter((_, j) => j !== i))}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {formData.is_emi && (
+                <div className="space-y-2">
+                  <Label>Down Payment</Label>
+                  <Input
+                    value={displayValues.down_payment}
+                    onChange={(e) => {
+                      const formatted = formatIndianInput(e.target.value);
+                      setDisplayValues({ ...displayValues, down_payment: formatted });
+                      setFormData({ ...formData, down_payment: parseIndianInput(formatted) });
+                    }}
+                    inputMode="numeric"
+                    placeholder="₹0"
+                  />
+                  {formData.is_emi && parseIndianInput(displayValues.down_payment) > calculateTotal() && (
+                    <p className="text-xs text-red-500 font-medium">Down payment cannot exceed total amount</p>
+                  )}
+                </div>
+              )}
 
               {!formData.is_emi && (
-  <div className="space-y-2">
-    <Label>Amount Paid</Label>
-    <Input
-      value={displayValues.amount_paid}
-      onChange={(e) => {
-        const formatted = formatIndianInput(e.target.value);
-        setDisplayValues({ ...displayValues, amount_paid: formatted });
-        setFormData({
-          ...formData,
-          amount_paid: parseIndianInput(formatted),
-        });
-      }}
-      inputMode="numeric"
-      placeholder="₹0"
-    />
-
-    {!formData.is_emi &&
-  parseIndianInput(displayValues.amount_paid) > calculateTotal() && (
-    <p className="text-xs text-red-500 font-medium">
-      Amount paid cannot exceed total amount
-    </p>
-)}
-
-
-  </div>
-)}
+                <div className="space-y-2">
+                  <Label>Amount Paid</Label>
+                  <Input
+                    value={displayValues.amount_paid}
+                    onChange={(e) => {
+                      const formatted = formatIndianInput(e.target.value);
+                      setDisplayValues({ ...displayValues, amount_paid: formatted });
+                      setFormData({ ...formData, amount_paid: parseIndianInput(formatted) });
+                    }}
+                    inputMode="numeric"
+                    placeholder="₹0"
+                  />
+                  {!formData.is_emi && parseIndianInput(displayValues.amount_paid) > calculateTotal() && (
+                    <p className="text-xs text-red-500 font-medium">Amount paid cannot exceed total amount</p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Payment Mode</Label>
@@ -903,7 +945,6 @@ const isEmiNotConfigured = (sale: Sale) => {
                   </SelectContent>
                 </Select>
               </div>
-              
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -945,7 +986,7 @@ const isEmiNotConfigured = (sale: Sale) => {
 
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedSale && (
             <>
               <DialogHeader className="flex flex-row items-center justify-between">
@@ -1008,10 +1049,10 @@ const isEmiNotConfigured = (sale: Sale) => {
                     <p className="font-bold text-chart-2">{formatCurrency(selectedSale.total_amount)}</p>
                   </div>
                 </div>
-                <div className="relative grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
   <div>
     <p className="text-sm text-muted-foreground">Down Payment</p>
-    <p className="text-xl font-bold">
+    <p className="text-lg sm:text-xl font-bold">
       {formatCurrency(selectedSale.down_payment || 0)}
     </p>
   </div>
@@ -1020,14 +1061,14 @@ const isEmiNotConfigured = (sale: Sale) => {
   <>
     <div>
       <p className="text-sm text-muted-foreground">Down Payment</p>
-      <p className="text-xl font-bold">
+      <p className="text-lg sm:text-xl font-bold">
         {formatCurrency(selectedSale.down_payment || 0)}
       </p>
     </div>
 
-    <div className="col-span-2">
+    <div className="sm:col-span-2">
       <p className="text-sm text-muted-foreground">Pending (Principal)</p>
-      <p className="text-xl font-bold text-chart-5">
+      <p className="text-lg sm:text-xl font-bold text-chart-5">
         {formatCurrency(getEffectiveBalance(selectedSale.balance_amount))}
       </p>
       <p className="text-xs text-muted-foreground mt-1">
@@ -1039,17 +1080,16 @@ const isEmiNotConfigured = (sale: Sale) => {
   <>
     <div>
       <p className="text-sm text-muted-foreground">Amount Paid</p>
-      <p className="text-xl font-bold text-chart-2">
+      <p className="text-lg sm:text-xl font-bold text-chart-2">
         {formatCurrency(selectedSale.amount_paid)}
       </p>
     </div>
 
     <div>
       <p className="text-sm text-muted-foreground">Balance</p>
-      <p className="text-xl font-bold text-chart-5">
-  {formatCurrency(getEffectiveBalance(selectedSale.balance_amount))}
-</p>
-
+      <p className="text-lg sm:text-xl font-bold text-chart-5">
+        {formatCurrency(getEffectiveBalance(selectedSale.balance_amount))}
+      </p>
     </div>
   </>
 )}
