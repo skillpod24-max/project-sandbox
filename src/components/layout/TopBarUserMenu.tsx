@@ -102,17 +102,17 @@ const TopBarUserMenu = ({ shopName, userEmail }: TopBarUserMenuProps) => {
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-4 w-4 text-primary" />
             </div>
-            <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-foreground leading-none">
+            <div className="hidden lg:block text-left max-w-[160px]">
+              <p className="text-sm font-medium text-foreground leading-none truncate">
                 {shopName || "My Account"}
               </p>
               {userEmail && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-32">
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {userEmail}
                 </p>
               )}
             </div>
-            <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:block" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground hidden lg:block" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">

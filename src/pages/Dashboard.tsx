@@ -360,7 +360,7 @@ const Dashboard = () => {
       </div>
 
       {/* Primary KPI Cards - Always Visible */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {primaryCards.map((stat, index) => (
           <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer border border-border bg-card rounded-xl">
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3 px-3 sm:px-4">

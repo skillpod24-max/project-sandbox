@@ -185,11 +185,11 @@ const GlobalSearch = () => {
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Search vehicles, customers, dealers..."
+          placeholder="Search vehicles, customers..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
           onFocus={() => setIsOpen(true)}
-          className="w-64 lg:w-80 pl-9 pr-8 h-9 bg-muted/50 border-transparent focus:border-primary focus:bg-background transition-colors"
+          className="w-48 md:w-64 lg:w-80 pl-9 pr-8 h-9 bg-muted/50 border-transparent focus:border-primary focus:bg-background transition-colors"
         />
         {query && (
           <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded">

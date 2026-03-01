@@ -80,7 +80,7 @@ const DealerCatalogueSkeleton = () => (
 );
 
 const DealerPublicPage = () => {
-  const { pageId } = useParams();
+  const { pageId, dealerSlug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -129,16 +129,36 @@ const DealerPublicPage = () => {
   const accent = getAccent(dealerInfo?.public_page_theme);
 
   useEffect(() => {
-    if (pageId) fetchDealerData();
-  }, [pageId]);
+    if (pageId || dealerSlug) fetchDealerData();
+  }, [pageId, dealerSlug]);
 
   const fetchDealerData = async () => {
     try {
-      const { data: settings, error } = await supabase
-        .from("settings").select("*")
-        .eq("public_page_id", pageId).eq("public_page_enabled", true).single();
-
-      if (error || !settings) { setLoading(false); return; }
+      let settings: any = null;
+      
+      if (pageId) {
+        // Legacy route: /d/:pageId
+        const { data, error } = await supabase
+          .from("settings").select("*")
+          .eq("public_page_id", pageId).eq("public_page_enabled", true).single();
+        if (error || !data) { setLoading(false); return; }
+        settings = data;
+      } else if (dealerSlug) {
+        // New catalogue route: /catalogue/:dealerSlug
+        // Search by dealer name slug match
+        const { data: allSettings } = await supabase
+          .from("settings").select("*")
+          .eq("public_page_enabled", true);
+        
+        settings = (allSettings || []).find(s => {
+          const slug = (s.dealer_name || '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 30);
+          return slug === dealerSlug;
+        });
+        
+        if (!settings) { setLoading(false); return; }
+      }
+      
+      if (!settings) { setLoading(false); return; }
       setDealerInfo(settings);
 
       await trackPublicEvent({ eventType: "page_view", dealerUserId: settings.user_id, publicPageId: pageId! });
@@ -221,8 +241,15 @@ const DealerPublicPage = () => {
     finally { setSubmittingRating(false); }
   };
 
+  // Generate catalogue slug from dealer name
+  const catalogueSlug = dealerInfo?.dealer_name
+    ? dealerInfo.dealer_name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 30)
+    : pageId;
+
   const handleVehicleClick = (vehicle: any) => {
-    if (vehicle.public_page_id) navigate(`/v/${vehicle.public_page_id}`);
+    // Use 6-digit vehicle code for catalogue URLs
+    const vehicleSlug = vehicle.code?.slice(-6) || vehicle.id.slice(0, 6);
+    navigate(`/catalogue/${catalogueSlug}/${vehicleSlug}`);
   };
 
   if (loading) return <DealerCatalogueSkeleton />;

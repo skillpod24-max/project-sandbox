@@ -5,6 +5,7 @@ import { AlertTriangle, FileWarning, Calendar, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addDays, isBefore } from "date-fns";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { formatIndianNumber } from "@/lib/formatters";
 
 const Alerts = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -116,7 +117,7 @@ vehiclesRes.data?.forEach((v) => {
 
     // Low stock alert
     if ((vehiclesRes.data?.length || 0) < 5) {
-      alertsList.push({ type: "warning", icon: AlertTriangle, title: "Low Stock", message: `Only ${vehiclesRes.data?.length || 0} vehicles in stock` });
+      alertsList.push({ type: "warning", icon: AlertTriangle, title: "Low Stock", message: `Only ${formatIndianNumber(vehiclesRes.data?.length || 0)} vehicles in stock` });
     }
 
     // 🚗 Idle inventory alert (30+ days unsold)
@@ -210,7 +211,7 @@ if ((emis.data?.length || 0) > 10) {
       type: s.balance_amount > 50000 ? "danger" : "info",
       icon: Calendar,
       title: s.balance_amount > 50000 ? "High Pending Payment" : "Pending Payment",
-      message: `₹${s.balance_amount.toLocaleString()} pending for ${s.sale_number}`,
+      message: `₹${formatIndianNumber(s.balance_amount)} pending for ${s.sale_number}`,
     });
   }
 });

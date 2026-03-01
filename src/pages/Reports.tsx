@@ -575,32 +575,31 @@ completedSalesAll.forEach((sale) => {
 
   if (vehicleProfit <= 0) return;
 
-  // 🔹 TOTAL EXPECTED COLLECTION (principal only)
-  const totalExpectedCollection =
-  Number(sale.total_amount || 0);
-
-
-
+  const totalExpectedCollection = sellingPrice;
   if (totalExpectedCollection <= 0) return;
 
-  // 🔹 CASH COLLECTED SO FAR
-  const cashCollected =
-  emis
-    .filter(e => e.sale_id === sale.id)
-    .reduce((sum, e) => sum + Number(e.principal_paid || 0), 0)
-  +
-  payments
+  // CASH COLLECTED: down payment + EMI principal paid
+  const downPaymentCollected = payments
     .filter(p =>
       p.reference_id === sale.id &&
       p.payment_purpose === "down_payment"
     )
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    .reduce((sum, p) => sum + Number(p.principal_amount || p.amount || 0), 0);
 
+  const emiPrincipalCollected = emis
+    .filter(e => e.sale_id === sale.id)
+    .reduce((sum, e) => sum + Number(e.principal_paid || 0), 0);
 
-  // 🔹 PROFIT RATIO
+  // For non-EMI sales, use amount_paid from sale directly
+  const saleEmis = emis.filter(e => e.sale_id === sale.id);
+  const cashCollected = saleEmis.length > 0
+    ? downPaymentCollected + emiPrincipalCollected
+    : Number(sale.amount_paid || 0);
+
+  // PROFIT RATIO
   const profitRatio = vehicleProfit / totalExpectedCollection;
 
-// 🔒 CAP PER SALE (PROPERLY ROUNDED)
+  // CAP PER SALE
   const saleProfit = Math.round(
     Math.min(cashCollected * profitRatio, vehicleProfit) * 100
   ) / 100;

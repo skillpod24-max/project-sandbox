@@ -140,7 +140,7 @@ const VehicleCatalogueSkeleton = () => (
 );
 
 const PublicVehiclePage = () => {
-  const { pageId } = useParams<{ pageId: string }>();
+  const { pageId, vehicleId, dealerSlug, vehicleCode } = useParams<{ pageId?: string; vehicleId?: string; dealerSlug?: string; vehicleCode?: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [vehicle, setVehicle] = useState<PublicVehicle | null>(null);
@@ -185,8 +185,8 @@ const PublicVehiclePage = () => {
     : "bg-white border-gray-300 text-gray-900 placeholder:text-gray-400";
 
   useEffect(() => {
-    if (pageId) fetchVehicle();
-  }, [pageId]);
+    if (pageId || vehicleCode) fetchVehicle();
+  }, [pageId, vehicleCode]);
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -198,10 +198,23 @@ const PublicVehiclePage = () => {
 
   const fetchVehicle = async () => {
     try {
-      const { data: vehicleData, error: vehicleError } = await supabase
-        .from("vehicles").select("*").eq("public_page_id", pageId).eq("is_public", true).single();
+      let vehicleData: any = null;
+      
+      if (vehicleCode) {
+        // New catalogue route: /catalogue/:dealerSlug/:vehicleCode
+        // Match by last 6 chars of code
+        const { data: vehicles } = await supabase
+          .from("vehicles").select("*").eq("is_public", true);
+        vehicleData = (vehicles || []).find(v => v.code?.slice(-6) === vehicleCode);
+      } else if (pageId) {
+        // Legacy route: /v/:pageId or /d/:pageId/:vehicleId
+        const lookupId = vehicleId || pageId;
+        const { data } = await supabase
+          .from("vehicles").select("*").eq("public_page_id", lookupId).eq("is_public", true).single();
+        vehicleData = data;
+      }
 
-      if (vehicleError || !vehicleData) { setLoading(false); return; }
+      if (!vehicleData) { setLoading(false); return; }
       setVehicle(vehicleData as PublicVehicle);
 
       const { data: settingsData } = await supabase
