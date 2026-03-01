@@ -739,7 +739,6 @@ export type Database = {
       sales: {
         Row: {
           amount_paid: number
-          annual_interest_rate: number | null
           balance_amount: number
           created_at: string
           customer_id: string
@@ -762,7 +761,6 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number
-          annual_interest_rate?: number | null
           balance_amount?: number
           created_at?: string
           customer_id: string
@@ -785,7 +783,6 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
-          annual_interest_rate?: number | null
           balance_amount?: number
           created_at?: string
           customer_id?: string
