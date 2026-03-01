@@ -92,6 +92,9 @@ const App = () => (
           <Route path="/v/:pageId" element={<PublicVehicle />} />
           <Route path="/d/:pageId" element={<DealerPublicPage />} />
           <Route path="/d/:pageId/:vehicleId" element={<PublicVehicle />} />
+          {/* Catalogue routes: dealer-name-based slugs */}
+          <Route path="/catalogue/:dealerSlug" element={<DealerPublicPage />} />
+          <Route path="/catalogue/:dealerSlug/:vehicleCode" element={<PublicVehicle />} />
 
           {/* ---------- Protected / Sidebar Layout ---------- */}
           <Route

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Phone, Mail, MapPin, Car, IndianRupee, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Phone, Mail, MapPin, Car, IndianRupee, AlertCircle, Filter, X } from "lucide-react";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -206,9 +206,24 @@ const Customers = () => {
     setFormData({ full_name: "", phone: "", email: "", address: "", id_proof_type: "", id_proof_number: "", driving_license_number: "", notes: "", is_active: true });
   };
 
-  const filteredCustomers = customers.filter((c) =>
-    `${c.full_name} ${c.phone} ${c.email || ""} ${c.code}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
+
+  // Unique cities for filter
+  const uniqueCities = Array.from(
+    new Set(customers.map(c => getCity(c.address)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b)) as string[];
+
+  const activeFilterCount = [filterStatus, filterCity].filter(f => f !== "all").length;
+
+  const filteredCustomers = customers.filter((c) => {
+    const matchesSearch = `${c.full_name} ${c.phone} ${c.email || ""} ${c.code}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || (filterStatus === "active" ? c.is_active : !c.is_active);
+    const matchesCity = filterCity === "all" || getCity(c.address) === filterCity;
+    return matchesSearch && matchesStatus && matchesCity;
+  });
 
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
 
@@ -238,9 +253,49 @@ const Customers = () => {
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search customers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
+              <Button variant="outline" size="icon" className="relative" onClick={() => setShowFilters(!showFilters)}>
+                <Filter className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
               <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
             </div>
           </div>
+
+          {/* Filter bar */}
+          {showFilters && (
+            <div className="flex flex-wrap gap-3 mt-4 p-3 bg-muted/50 rounded-lg border border-border">
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">City</Label>
+                <Select value={filterCity} onValueChange={setFilterCity}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {uniqueCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {activeFilterCount > 0 && (
+                <Button variant="ghost" size="sm" className="self-end text-xs gap-1" onClick={() => { setFilterStatus("all"); setFilterCity("all"); }}>
+                  <X className="h-3 w-3" /> Clear
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {viewMode === "list" ? (

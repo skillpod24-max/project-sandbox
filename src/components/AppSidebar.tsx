@@ -31,6 +31,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Memoized menu item component for performance
 const MemoizedMenuItem = memo(({ 
@@ -45,33 +46,49 @@ const MemoizedMenuItem = memo(({
   url: string; 
   badge?: number; 
   isCollapsed: boolean;
-}) => (
-  <SidebarMenuItem>
-    <SidebarMenuButton asChild>
-      <NavLink
-        to={url}
-        className={({ isActive }) =>
-          `hover:bg-sidebar-accent text-sidebar-foreground will-change-transform
-          ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : ""}`
-        }
+}) => {
+  const linkContent = (
+    <NavLink
+      to={url}
+      className={({ isActive }) =>
+        `hover:bg-sidebar-accent text-sidebar-foreground will-change-transform
+        ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : ""}`
+      }
+    >
+      <Icon className="h-5 w-5 flex-shrink-0" />
+      <span
+        className={`transition-opacity duration-150 whitespace-nowrap ${
+          isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
+        }`}
       >
-        <Icon className="h-5 w-5 flex-shrink-0" />
-        <span
-          className={`transition-opacity duration-150 whitespace-nowrap ${
-            isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
-          }`}
-        >
-          {title}
+        {title}
+      </span>
+      {badge > 0 && !isCollapsed && (
+        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium px-1">
+          {badge}
         </span>
-        {badge > 0 && !isCollapsed && (
-          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-medium px-1">
-            {badge}
-          </span>
+      )}
+    </NavLink>
+  );
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        {isCollapsed ? (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              {title}
+              {badge > 0 && <span className="ml-1 text-destructive">({badge})</span>}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          linkContent
         )}
-      </NavLink>
-    </SidebarMenuButton>
-  </SidebarMenuItem>
-));
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+});
 
 MemoizedMenuItem.displayName = "MemoizedMenuItem";
 
