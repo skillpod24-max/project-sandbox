@@ -23,7 +23,7 @@ const MarketplaceDealerCard = memo(({ dealer, vehicleCount, rating }: Props) => 
 
   return (
     <Link to={`/marketplace/dealer/${dealer.user_id}`} className="block">
-      <Card className="p-5 md:hover:shadow-2xl transition-all duration-500 md:hover:-translate-y-2 border-0 shadow-md bg-card md:hover:bg-blue-50 rounded-2xl min-w-[300px] md:min-w-[340px] group overflow-hidden relative">
+      <Card className="p-5 md:hover:shadow-2xl transition-all duration-500 md:hover:-translate-y-2 border-0 shadow-md bg-card md:hover:bg-blue-50/50 rounded-2xl min-w-[300px] md:min-w-[340px] group overflow-hidden relative">
         {/* Decorative gradient background */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-500/10 via-transparent to-transparent rounded-full -translate-y-1/2 translate-x-1/2 md:group-hover:scale-150 transition-transform duration-700" />
         
@@ -69,15 +69,14 @@ const MarketplaceDealerCard = memo(({ dealer, vehicleCount, rating }: Props) => 
             {/* Stats Row */}
             <div className="flex items-center gap-3 mt-3">
               {dealer.google_reviews_rating > 0 ? (
-                <div className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2.5 py-1 rounded-lg">
-                  <MapPin className="h-3 w-3" />
-                  <Star className="h-3.5 w-3.5 fill-current" />
+                <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-lg">
+                  <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
                   <span className="font-semibold text-xs">{Number(dealer.google_reviews_rating).toFixed(1)}</span>
                   {dealer.google_reviews_count > 0 && <span className="text-[10px] opacity-70">({dealer.google_reviews_count})</span>}
                 </div>
               ) : rating > 0 ? (
                 <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-lg">
-                  <Star className="h-3.5 w-3.5 fill-current" />
+                  <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
                   <span className="font-semibold text-xs">{rating.toFixed(1)}</span>
                 </div>
               ) : null}

@@ -55,7 +55,7 @@ const MemoizedMenuItem = memo(({
         ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : ""}`
       }
     >
-      <Icon className="h-5 w-5 flex-shrink-0" />
+      <Icon className="h-4 w-4 flex-shrink-0" />
       <span
         className={`transition-opacity duration-150 whitespace-nowrap ${
           isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"
@@ -251,8 +251,8 @@ export function AppSidebar() {
         {/* Logo - Zoho Style */}
         <div className="p-4 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm flex-shrink-0">
-              <Car className="h-4 w-4 text-primary-foreground" />
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm flex-shrink-0">
+              <Car className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
             <span
               className={`text-base font-bold text-sidebar-foreground tracking-tight transition-opacity duration-150 whitespace-nowrap

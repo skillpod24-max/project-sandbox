@@ -332,9 +332,19 @@ const MarketplaceVehicle = () => {
 
   const getBadgeStyle = () => {
     if (vehicle?.image_badge_color) {
-      return { backgroundColor: vehicle.image_badge_color };
+      const colorMap: Record<string, string> = {
+        red: '#EF4444', orange: '#F97316', amber: '#F59E0B', yellow: '#EAB308',
+        lime: '#84CC16', green: '#22C55E', emerald: '#10B981', teal: '#14B8A6',
+        cyan: '#06B6D4', sky: '#0EA5E9', blue: '#3B82F6', indigo: '#6366F1',
+        violet: '#8B5CF6', purple: '#A855F7', fuchsia: '#D946EF', pink: '#EC4899',
+        rose: '#F43F5E', slate: '#64748B', gray: '#6B7280', zinc: '#71717A',
+      };
+      const color = colorMap[vehicle.image_badge_color.toLowerCase()];
+      if (color) return { backgroundColor: color };
+      if (vehicle.image_badge_color.startsWith('#')) return { backgroundColor: vehicle.image_badge_color };
+      return { backgroundColor: '#10B981' };
     }
-    return {};
+    return { backgroundColor: '#10B981' };
   };
 
   if (loading) {
