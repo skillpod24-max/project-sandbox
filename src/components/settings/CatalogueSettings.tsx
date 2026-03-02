@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Store, Globe, Upload, Copy, ExternalLink, Eye, MessageCircle, CheckCircle2 } from "lucide-react";
+import { getCatalogueUrl } from "@/lib/catalogueUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -53,8 +54,8 @@ const CatalogueSettings = ({ settings, setSettings, uploadingLogo, setUploadingL
   };
 
   const copyPublicLink = () => {
-    if (settings.public_page_id) {
-      const url = `${window.location.origin}/d/${settings.public_page_id}`;
+    if (settings.dealer_name) {
+      const url = `${window.location.origin}${getCatalogueUrl(settings.dealer_name)}`;
       navigator.clipboard.writeText(url);
       toast({ title: "Link copied to clipboard" });
     }
@@ -83,17 +84,17 @@ const CatalogueSettings = ({ settings, setSettings, uploadingLogo, setUploadingL
             />
           </div>
 
-          {settings.public_page_enabled && settings.public_page_id && (
+          {settings.public_page_enabled && settings.dealer_name && (
             <div className="flex flex-col sm:flex-row gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-900">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Globe className="h-5 w-5 text-emerald-600 shrink-0" />
-                <code className="text-sm truncate font-mono">{window.location.origin}/d/{settings.public_page_id}</code>
+                <code className="text-sm truncate font-mono">{window.location.origin}{getCatalogueUrl(settings.dealer_name)}</code>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={copyPublicLink} className="gap-1.5">
                   <Copy className="h-4 w-4" /> Copy
                 </Button>
-                <a href={`/d/${settings.public_page_id}`} target="_blank" rel="noopener noreferrer">
+                <a href={getCatalogueUrl(settings.dealer_name)} target="_blank" rel="noopener noreferrer">
                   <Button size="sm" variant="outline" className="gap-1.5">
                     <ExternalLink className="h-4 w-4" /> Preview
                   </Button>

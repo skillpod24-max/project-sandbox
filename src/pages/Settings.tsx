@@ -18,6 +18,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { FormSkeleton } from "@/components/ui/page-skeleton";
 import CatalogueSettings from "@/components/settings/CatalogueSettings";
+import { getCatalogueUrl } from "@/lib/catalogueUrl";
 import MarketplaceSettings from "@/components/settings/MarketplaceSettings";
 
 type Settings = Database["public"]["Tables"]["settings"]["Row"];
@@ -425,8 +426,8 @@ const Settings = () => {
   };
 
   const copyPublicLink = () => {
-    if (settings.public_page_id) {
-      const url = `${window.location.origin}/d/${settings.public_page_id}`;
+    if (settings.dealer_name) {
+      const url = `${window.location.origin}${getCatalogueUrl(settings.dealer_name)}`;
       navigator.clipboard.writeText(url);
       toast({ title: "Link copied to clipboard" });
     }

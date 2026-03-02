@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, memo } from "react";
+import { getCatalogueUrl } from "@/lib/catalogueUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -163,6 +164,7 @@ const PublicPageAnalytics = () => {
   const [publicEnabled, setPublicEnabled] = useState(false);
   const [dealerUserId, setDealerUserId] = useState<string | null>(null);
   const [publicPageId, setPublicPageId] = useState<string | null>(null);
+  const [dealerName, setDealerName] = useState<string | null>(null);
 
   const [stats, setStats] = useState<InsightStats | null>(null);
   const [trend, setTrend] = useState<TrendRow[]>([]);
@@ -183,7 +185,7 @@ const PublicPageAnalytics = () => {
 
     const { data: settings } = await supabase
       .from("settings")
-      .select("public_page_enabled, user_id, public_page_id")
+      .select("public_page_enabled, user_id, public_page_id, dealer_name")
       .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
       .maybeSingle();
 
@@ -196,6 +198,7 @@ const PublicPageAnalytics = () => {
     setPublicEnabled(true);
     setDealerUserId(settings.user_id);
     setPublicPageId(settings.public_page_id);
+    setDealerName(settings.dealer_name);
 
     await Promise.all([
       fetchStats(settings.user_id),
@@ -455,7 +458,7 @@ const PublicPageAnalytics = () => {
     ].filter(d => d.value > 0);
   }, [stats]);
 
-  const publicPageUrl = publicPageId ? `${window.location.origin}/d/${publicPageId}` : "";
+  const publicPageUrl = dealerName ? `${window.location.origin}${getCatalogueUrl(dealerName)}` : "";
 
   if (loading) return <AnalyticsSkeleton />;
 

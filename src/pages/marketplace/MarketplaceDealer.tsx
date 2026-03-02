@@ -9,6 +9,7 @@ import {
   Building2, Clock, ExternalLink, Shield, CheckCircle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { getCatalogueUrl } from "@/lib/catalogueUrl";
 import { trackPublicEvent } from "@/lib/publicAnalytics";
 import { DealerPageSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import DealerEnquiryForm from "@/components/public/DealerEnquiryForm";
@@ -427,10 +428,10 @@ const MarketplaceDealer = () => {
             </div>
 
             {/* Public page link */}
-            {dealer.public_page_id && (
+            {dealer.dealer_name && (
               <Card className="p-4 border-0 shadow-sm rounded-xl">
                 <Link 
-                  to={`/d/${dealer.public_page_id}`}
+                  to={getCatalogueUrl(dealer.dealer_name)}
                   className="flex items-center justify-between text-blue-600 hover:text-blue-700"
                 >
                   <span className="text-sm font-medium">Visit Dealer's Website</span>
