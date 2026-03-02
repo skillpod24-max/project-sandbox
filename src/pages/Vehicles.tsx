@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, Eye, ChevronLeft, ChevronRight, Upload, X, Image, FileText, Download, ExternalLink, Globe, Copy, Link, Printer, Store } from "lucide-react";
+import { getVehicleCatalogueUrl, getCatalogueUrl } from "@/lib/catalogueUrl";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Badge } from "@/components/ui/badge";
@@ -135,7 +136,7 @@ const Vehicles = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [hasPurchasePayment, setHasPurchasePayment] = useState(false);
-
+  const [dealerName, setDealerName] = useState<string | null>(null);
   const [pendingDocs, setPendingDocs] = useState<
   { file: File; type: DocumentType }[]
 >([]);
@@ -219,12 +220,14 @@ const [featuresText, setFeaturesText] = useState("");
         return;
       }
 
-      const [vehiclesRes, vendorsRes, imagesRes, docsRes] = await Promise.all([
+      const [vehiclesRes, vendorsRes, imagesRes, docsRes, settingsRes] = await Promise.all([
         supabase.from("vehicles").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
         supabase.from("vehicle_images").select("*").eq("user_id", user.id),
         supabase.from("documents").select("*").eq("reference_type", "vehicle").eq("user_id", user.id),
+        supabase.from("settings").select("dealer_name").eq("user_id", user.id).maybeSingle(),
       ]);
+      setDealerName(settingsRes.data?.dealer_name || null);
 
       setVehicles(vehiclesRes.data || []);
       setVendors(vendorsRes.data || []);
@@ -1717,12 +1720,12 @@ setVehicleImages(prev => ({
                       <>
                         <Separator />
                         
-                        {(selectedVehicle?.public_page_id || formData.public_page_id) && (
+                        {dealerName && (selectedVehicle?.id || formData.public_page_id) && (
                           <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                             <Globe className="h-5 w-5 text-green-600" />
-                            <code className="flex-1 text-sm">{window.location.origin}/d/{selectedVehicle?.public_page_id || formData.public_page_id}/{selectedVehicle?.id || "new"}</code>
+                            <code className="flex-1 text-sm">{window.location.origin}{getVehicleCatalogueUrl(dealerName, selectedVehicle?.code || '', selectedVehicle?.id || "new")}</code>
                             <Button size="sm" variant="outline" onClick={() => {
-                              const url = `${window.location.origin}/d/${selectedVehicle?.public_page_id || formData.public_page_id}/${selectedVehicle?.id || "new"}`;
+                              const url = `${window.location.origin}${getVehicleCatalogueUrl(dealerName, selectedVehicle?.code || '', selectedVehicle?.id || "new")}`;
                               navigator.clipboard.writeText(url);
                               toast({ title: "Link copied to clipboard" });
                             }} className="gap-1">
@@ -2188,22 +2191,22 @@ setVehicleImages(prev => ({
 
                   {/* More Tab - Public Links & Actions */}
                   <TabsContent value="more" className="px-4 pb-4 mt-0 pt-3 space-y-3">
-                    {selectedVehicle.is_public && selectedVehicle.public_page_id && (
+                    {selectedVehicle.is_public && dealerName && (
                       <div className="p-3 bg-muted/50 rounded-lg border border-border/50 space-y-2">
                         <div className="flex items-center gap-2">
                           <Globe className="h-4 w-4 text-green-600 shrink-0" />
                           <p className="text-xs font-medium">Public Page</p>
                         </div>
-                        <code className="text-[11px] text-muted-foreground block truncate">{window.location.origin}/d/{selectedVehicle.public_page_id}/{selectedVehicle.id}</code>
+                        <code className="text-[11px] text-muted-foreground block truncate">{window.location.origin}{getVehicleCatalogueUrl(dealerName, selectedVehicle.code, selectedVehicle.id)}</code>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => {
-                            const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
+                            const url = `${window.location.origin}${getVehicleCatalogueUrl(dealerName, selectedVehicle.code, selectedVehicle.id)}`;
                             navigator.clipboard.writeText(url);
                             toast({ title: "Link copied" });
                           }}>
                             <Copy className="h-3 w-3" /> Copy
                           </Button>
-                          <a href={`/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`} target="_blank" rel="noopener noreferrer">
+                          <a href={getVehicleCatalogueUrl(dealerName, selectedVehicle.code, selectedVehicle.id)} target="_blank" rel="noopener noreferrer">
                             <Button size="sm" variant="outline" className="text-xs h-7 gap-1">
                               <ExternalLink className="h-3 w-3" /> View
                             </Button>
@@ -2234,9 +2237,9 @@ setVehicleImages(prev => ({
                           <Trash2 className="h-3.5 w-3.5" /> Delete
                         </Button>
                       )}
-                      {selectedVehicle.is_public && selectedVehicle.public_page_id && (
+                      {selectedVehicle.is_public && dealerName && (
                         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
-                          const url = `${window.location.origin}/d/${selectedVehicle.public_page_id}/${selectedVehicle.id}`;
+                          const url = `${window.location.origin}${getVehicleCatalogueUrl(dealerName, selectedVehicle.code, selectedVehicle.id)}`;
                           navigator.clipboard.writeText(url);
                           toast({ title: "Link copied" });
                         }}>

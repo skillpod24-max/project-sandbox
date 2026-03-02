@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { formatIndianNumber } from "@/lib/formatters";
+import { getCatalogueUrl } from "@/lib/catalogueUrl";
 import { useToast } from "@/hooks/use-toast";
 import {
   ChevronLeft, ChevronRight, Phone, Mail, MapPin, Car, Fuel, Calendar,
@@ -307,8 +308,8 @@ const PublicVehiclePage = () => {
       <header className={`${isPremium ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"} border-b sticky top-0 z-50`}>
         <div className="px-4 py-3 flex items-center justify-between gap-3 max-w-7xl mx-auto">
           <div className="flex items-center gap-3 min-w-0">
-            {dealer?.public_page_id && (
-              <Button variant="ghost" size="icon" onClick={() => navigate(`/d/${dealer.public_page_id}`)} className="shrink-0">
+            {dealer?.dealer_name && (
+              <Button variant="ghost" size="icon" onClick={() => navigate(getCatalogueUrl(dealer.dealer_name))} className="shrink-0">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
