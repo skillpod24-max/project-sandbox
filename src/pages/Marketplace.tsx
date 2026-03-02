@@ -24,7 +24,7 @@ import CompareBar from "@/components/marketplace/CompareBar";
 import LiveSearchSuggestions from "@/components/marketplace/LiveSearchSuggestions";
 import AutoShowroomHero from "@/components/marketplace/AutoShowroomHero";
 import HeroCarousel from "@/components/marketplace/HeroCarousel";
-import LocationSelector from "@/components/marketplace/LocationSelector";
+import LocationSelector, { MAJOR_CITIES, getDistanceKm, findNearestMajorCity } from "@/components/marketplace/LocationSelector";
 import HighDemandCard from "@/components/marketplace/HighDemandCard";
 import RecentlyViewedSection from "@/components/marketplace/RecentlyViewedSection";
 import OffersDealsSection from "@/components/marketplace/OffersDealsSection";
@@ -162,6 +162,7 @@ const Marketplace = () => {
   const [fuelType, setFuelType] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Body types for cars
   const carBodyTypes = ["All", "Sedan", "Hatchback", "SUV", "MUV", "Luxury", "Compact SUV"];
@@ -179,15 +180,25 @@ const Marketplace = () => {
   const testimonials = data?.testimonials || [];
   const salesCount = data?.salesCount || {};
 
-  // Get unique cities from dealers
+  // Use major cities only for the dropdown
   const availableCities = useMemo(() => {
-    const cities = dealers
-      .map(d => {
-        const parts = (d.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
-        return parts.length >= 2 ? parts[1] : null;
-      })
-      .filter(Boolean);
-    return [...new Set(cities)];
+    return MAJOR_CITIES.map(c => c.name);
+  }, []);
+
+  // Map dealer address to nearest major city for filtering
+  const getDealerMajorCity = useCallback((userId: string) => {
+    const dealer = dealers.find(d => d.user_id === userId);
+    if (!dealer?.dealer_address) return null;
+    const parts = dealer.dealer_address.split(",").map((s: string) => s.trim()).filter(Boolean);
+    const dealerCity = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+    if (!dealerCity) return null;
+    // Match to nearest major city
+    const match = MAJOR_CITIES.find(c => 
+      c.name.toLowerCase() === dealerCity.toLowerCase() ||
+      dealerCity.toLowerCase().includes(c.name.toLowerCase()) ||
+      c.name.toLowerCase().includes(dealerCity.toLowerCase())
+    );
+    return match?.name || null;
   }, [dealers]);
 
   const getDealerForVehicle = useCallback((userId: string) => {
@@ -204,12 +215,7 @@ const Marketplace = () => {
     return vehicles.filter(v => v.user_id === userId).length;
   }, [vehicles]);
 
-  const getDealerCity = useCallback((userId: string) => {
-    const dealer = dealers.find(d => d.user_id === userId);
-    if (!dealer?.dealer_address) return null;
-    const parts = dealer.dealer_address.split(",").map((s: string) => s.trim()).filter(Boolean);
-    return parts.length >= 2 ? parts[1] : null;
-  }, [dealers]);
+
 
   const filteredVehicles = useMemo(() => {
     return vehicles.filter(v => {
@@ -218,8 +224,22 @@ const Marketplace = () => {
       const matchesType = vehicleType === "all" || v.vehicle_type === vehicleType;
       const matchesFuel = fuelType === "all" || v.fuel_type === fuelType;
       
-      // City filter
-      const matchesCity = cityFilter === "all" || getDealerCity(v.user_id) === cityFilter;
+      // City filter - match within 100km radius
+      let matchesCity = true;
+      if (cityFilter !== "all") {
+        const selectedMajor = MAJOR_CITIES.find(c => c.name === cityFilter);
+        const dealerMajor = getDealerMajorCity(v.user_id);
+        if (selectedMajor && dealerMajor) {
+          const dealerCoords = MAJOR_CITIES.find(c => c.name === dealerMajor);
+          if (dealerCoords) {
+            matchesCity = getDistanceKm(selectedMajor.lat, selectedMajor.lng, dealerCoords.lat, dealerCoords.lng) <= 100;
+          } else {
+            matchesCity = false;
+          }
+        } else {
+          matchesCity = false;
+        }
+      }
       
       // Body type matching for cars
       let matchesBody = true;
@@ -258,7 +278,7 @@ const Marketplace = () => {
       
       return matchesSearch && matchesType && matchesFuel && matchesPrice && matchesBody && matchesCity;
     });
-  }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, bodyType, cityFilter, getDealerCity]);
+  }, [vehicles, searchTerm, vehicleType, fuelType, priceRange, bodyType, cityFilter, getDealerMajorCity]);
 
   // Featured dealers (admin controlled - show only 4-5)
   const topDealers = useMemo(() => {
@@ -332,6 +352,10 @@ const Marketplace = () => {
                 selectedCity={cityFilter}
                 onCityChange={setCityFilter}
                 availableCities={availableCities}
+                onLocationDetected={(lat, lng, city) => {
+                  setUserCoords({ lat, lng });
+                  setCityFilter(city);
+                }}
               />
             </div>
 
