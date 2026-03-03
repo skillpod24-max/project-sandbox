@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,9 +80,25 @@ const paymentModes = ["cash", "bank_transfer", "cheque", "upi", "card"] as const
 
 const Expenses = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("expenses");
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: expenses = [] as Expense[], isLoading: loading } = useQuery({
+    queryKey: ['expenses'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [] as Expense[];
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("expense_date", { ascending: false });
+      if (error) throw error;
+      return (data || []) as Expense[];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -91,14 +108,12 @@ const Expenses = () => {
   const [isDialogSubmitting, setIsDialogSubmitting] = useState(false);
 
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-const [selectedExpenseDetail, setSelectedExpenseDetail] = useState<Expense | null>(null);
-const [showAllCategories, setShowAllCategories] = useState(false);
-const [showFilters, setShowFilters] = useState(false);
-const isMobile = useIsMobile();
+  const [selectedExpenseDetail, setSelectedExpenseDetail] = useState<Expense | null>(null);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile();
 
-const [dateFilter, setDateFilter] = useState<DateRange | undefined>(
-  undefined
-);
+  const [dateFilter, setDateFilter] = useState<DateRange | undefined>(undefined);
 
   const [formData, setFormData] = useState<Partial<ExpenseInsert>>({
     amount: 0,
@@ -108,33 +123,6 @@ const [dateFilter, setDateFilter] = useState<DateRange | undefined>(
     payment_mode: "cash",
     notes: "",
   });
-
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
-
-  const fetchExpenses = async () => {
-    try {
-      // Get current user for explicit filtering
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("expense_date", { ascending: false });
-      if (error) throw error;
-      setExpenses(data || []);
-    } catch (error) {
-      console.error("Error fetching expenses:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const generateExpenseNumber = () => `EXP${Date.now().toString(36).toUpperCase()}`;
 
@@ -206,7 +194,7 @@ toast({ title: "Expense added successfully" });
 
       }
       setDialogOpen(false);
-      fetchExpenses();
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -237,7 +225,7 @@ toast({ title: "Expense added successfully" });
       description: "Linked payment entry was also removed",
     });
 
-    fetchExpenses();
+    queryClient.invalidateQueries({ queryKey: ['expenses'] });
   } catch (error: any) {
     toast({
       title: "Delete failed",

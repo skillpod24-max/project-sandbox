@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
@@ -244,7 +245,7 @@ const Leads = () => {
 
       setDialogOpen(false);
       resetForm();
-      fetchLeads();
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -259,7 +260,7 @@ const Leads = () => {
       if (error) throw error;
       toast({ title: "Lead deleted successfully" });
       setDetailDialogOpen(false);
-      fetchLeads();
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -281,7 +282,7 @@ const Leads = () => {
         .eq("id", leadId);
       if (error) throw error;
       toast({ title: "Status updated" });
-      fetchLeads();
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -467,7 +468,7 @@ const Leads = () => {
 
       setDetailDialogOpen(false);
       window.dispatchEvent(new Event("vendor-updated"));
-      fetchLeads();
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (err: any) {
       toast({ title: "Conversion failed", description: err.message, variant: "destructive" });
     } finally {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
@@ -120,12 +121,48 @@ const documentTypes: { value: DocumentType; label: string }[] = [
 
 const Vehicles = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("vehicles");
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [vehicleImages, setVehicleImages] = useState<Record<string, VehicleImage[]>>({});
-  const [vehicleDocs, setVehicleDocs] = useState<Record<string, Document[]>>({});
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: pageData, isLoading: loading } = useQuery({
+    queryKey: ['vehicles-page'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const [vehiclesRes, vendorsRes, imagesRes, docsRes, settingsRes] = await Promise.all([
+        supabase.from("vehicles").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
+        supabase.from("vehicle_images").select("*").eq("user_id", user.id),
+        supabase.from("documents").select("*").eq("reference_type", "vehicle").eq("user_id", user.id),
+        supabase.from("settings").select("dealer_name").eq("user_id", user.id).maybeSingle(),
+      ]);
+      const imagesMap: Record<string, VehicleImage[]> = {};
+      (imagesRes.data || []).forEach((img) => {
+        if (!imagesMap[img.vehicle_id]) imagesMap[img.vehicle_id] = [];
+        imagesMap[img.vehicle_id].push(img);
+      });
+      const docsMap: Record<string, Document[]> = {};
+      (docsRes.data || []).forEach((doc) => {
+        if (!docsMap[doc.reference_id]) docsMap[doc.reference_id] = [];
+        docsMap[doc.reference_id].push(doc);
+      });
+      return {
+        vehicles: (vehiclesRes.data || []) as Vehicle[],
+        vehicleImages: imagesMap,
+        vehicleDocs: docsMap,
+        vendors: (vendorsRes.data || []) as Vendor[],
+        dealerName: settingsRes.data?.dealer_name || null,
+      };
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const vehicles = pageData?.vehicles || [];
+  const vehicleImages: Record<string, VehicleImage[]> = pageData?.vehicleImages || {};
+  const vehicleDocs: Record<string, Document[]> = pageData?.vehicleDocs || {};
+  const vendors = pageData?.vendors || [];
+  const dealerName = pageData?.dealerName || null;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -136,7 +173,6 @@ const Vehicles = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [hasPurchasePayment, setHasPurchasePayment] = useState(false);
-  const [dealerName, setDealerName] = useState<string | null>(null);
   const [pendingDocs, setPendingDocs] = useState<
   { file: File; type: DocumentType }[]
 >([]);
@@ -207,50 +243,7 @@ const [featuresText, setFeaturesText] = useState("");
     return () => clearInterval(interval);
   }, [detailDialogOpen, selectedVehicle, vehicleImages]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      // Get current user for explicit filtering
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const [vehiclesRes, vendorsRes, imagesRes, docsRes, settingsRes] = await Promise.all([
-        supabase.from("vehicles").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("vehicle_images").select("*").eq("user_id", user.id),
-        supabase.from("documents").select("*").eq("reference_type", "vehicle").eq("user_id", user.id),
-        supabase.from("settings").select("dealer_name").eq("user_id", user.id).maybeSingle(),
-      ]);
-      setDealerName(settingsRes.data?.dealer_name || null);
-
-      setVehicles(vehiclesRes.data || []);
-      setVendors(vendorsRes.data || []);
-      
-      const imagesMap: Record<string, VehicleImage[]> = {};
-      (imagesRes.data || []).forEach((img) => {
-        if (!imagesMap[img.vehicle_id]) imagesMap[img.vehicle_id] = [];
-        imagesMap[img.vehicle_id].push(img);
-      });
-      setVehicleImages(imagesMap);
-
-      const docsMap: Record<string, Document[]> = {};
-      (docsRes.data || []).forEach((doc) => {
-        if (!docsMap[doc.reference_id]) docsMap[doc.reference_id] = [];
-        docsMap[doc.reference_id].push(doc);
-      });
-      setVehicleDocs(docsMap);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const invalidateVehicles = () => queryClient.invalidateQueries({ queryKey: ['vehicles-page'] });
 
   const generateCode = () => `VH${Date.now().toString(36).toUpperCase()}`;
   const generatePurchaseCode = () => `PUR${Date.now().toString(36).toUpperCase()}`;
@@ -410,7 +403,7 @@ if (hasPurchasePayment) {
       setDialogOpen(false);
       setPendingImages([]);
       setPendingDocs([]);
-      fetchData();
+      invalidateVehicles();
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -501,7 +494,7 @@ const updateDocumentType = async (
       variant: "destructive",
     });
   } else {
-    fetchData(); // refresh
+    invalidateVehicles();
   }
 };
 
@@ -518,7 +511,7 @@ const deleteDocument = async (docId: string) => {
       variant: "destructive",
     });
   } else {
-    fetchData();
+    invalidateVehicles();
   }
 };
 
@@ -543,12 +536,7 @@ const deleteExistingImage = async (img: VehicleImage) => {
 
     toast({ title: "Image removed" });
 
-setVehicleImages(prev => ({
-  ...prev,
-  [img.vehicle_id]: prev[img.vehicle_id].filter(
-    image => image.id !== img.id
-  ),
-}));
+    invalidateVehicles();
 
   } catch (err: any) {
     toast({
@@ -615,7 +603,7 @@ setVehicleImages(prev => ({
       toast({ title: "Vehicle deleted successfully" });
     }
 
-    fetchData();
+    invalidateVehicles();
   } catch (error: any) {
     toast({
       title: "Error",
