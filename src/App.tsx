@@ -54,7 +54,15 @@ import TermsPage from "./pages/footer/TermsPage";
 import PrivacyPage from "./pages/footer/PrivacyPage";
 import BlogPage from "./pages/footer/BlogPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
