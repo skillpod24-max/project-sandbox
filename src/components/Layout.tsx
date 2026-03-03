@@ -119,7 +119,7 @@ const Layout = ({ children }: LayoutProps) => {
     };
 
     updateStatus();
-    interval = setInterval(updateStatus, 8000);
+    interval = setInterval(updateStatus, 30000);
 
     const handleOnline = () => updateStatus();
     const handleOffline = () => setIsOnline(false);

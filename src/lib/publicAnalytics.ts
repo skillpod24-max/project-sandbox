@@ -39,33 +39,54 @@ interface TrackEventParams {
   vehicleId?: string;
 }
 
+// Debounce buffer to batch analytics inserts
+let eventBuffer: Array<{
+  event_type: string;
+  dealer_user_id: string;
+  public_page_id: string;
+  vehicle_id: string | null;
+  session_id: string;
+}> = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+const flushEvents = async () => {
+  if (eventBuffer.length === 0) return;
+  const batch = [...eventBuffer];
+  eventBuffer = [];
+  
+  try {
+    const { error } = await supabase
+      .from("public_page_events")
+      .insert(batch as any);
+    if (error) {
+      console.error("❌ Analytics batch insert failed:", error);
+    }
+  } catch (e) {
+    console.error("❌ Analytics exception:", e);
+  }
+};
+
 export const trackPublicEvent = async ({
   eventType,
   dealerUserId,
   publicPageId,
   vehicleId,
 }: TrackEventParams) => {
-  const payload = {
+  eventBuffer.push({
     event_type: eventType,
     dealer_user_id: dealerUserId,
     public_page_id: publicPageId,
     vehicle_id: vehicleId ?? null,
     session_id: getSessionId(),
-  };
+  });
 
-  console.log("📡 Tracking event:", payload);
+  // Flush after 2 seconds of inactivity (batches rapid events)
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = setTimeout(flushEvents, 2000);
 
-  try {
-    const { error } = await supabase
-      .from("public_page_events")
-      .insert(payload as any);
-
-    if (error) {
-      console.error("❌ Analytics insert failed:", error);
-    } else {
-      console.log("✅ Analytics saved:", eventType);
-    }
-  } catch (e) {
-    console.error("❌ Analytics exception:", e);
+  // Flush immediately if buffer gets large
+  if (eventBuffer.length >= 10) {
+    if (flushTimer) clearTimeout(flushTimer);
+    flushEvents();
   }
 };
