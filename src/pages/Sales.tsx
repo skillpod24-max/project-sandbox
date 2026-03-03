@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,12 +51,35 @@ const saleStatuses = ["inquiry", "reserved", "completed", "cancelled"] as const;
 
 const Sales = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("sales");
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const { data: pageData, isLoading: loading } = useQuery({
+    queryKey: ['sales-page'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const [salesRes, vehiclesRes, customersRes, settingsRes] = await Promise.all([
+        supabase.from("sales").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("*").eq("user_id", user.id),
+        supabase.from("customers").select("*").eq("is_active", true).eq("user_id", user.id),
+        supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      return {
+        sales: (salesRes.data || []) as Sale[],
+        vehicles: (vehiclesRes.data || []) as Vehicle[],
+        customers: (customersRes.data || []) as Customer[],
+        settings: settingsRes.data as Settings | null,
+      };
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const sales = pageData?.sales || [];
+  const vehicles = pageData?.vehicles || [];
+  const customers = pageData?.customers || [];
+  const settings = pageData?.settings || null;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -63,25 +87,25 @@ const Sales = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
-const [loadingPayments, setLoadingPayments] = useState(false);
-const [addPaymentOpen, setAddPaymentOpen] = useState(false);
-const [paymentAmount, setPaymentAmount] = useState(0);
-const [paymentMode, setPaymentMode] = useState<typeof paymentModes[number]>("cash");
-const [addingPayment, setAddingPayment] = useState(false);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentMode, setPaymentMode] = useState<typeof paymentModes[number]>("cash");
+  const [addingPayment, setAddingPayment] = useState(false);
 
-const paymentExceedsBalance =
-  selectedSale && paymentAmount > selectedSale.balance_amount;
+  const paymentExceedsBalance =
+    selectedSale && paymentAmount > selectedSale.balance_amount;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [enableTax, setEnableTax] = useState(false);
   const [additionalCharges, setAdditionalCharges] = useState<{name: string; amount: number; display: string}[]>([]);
   const [displayValues, setDisplayValues] = useState({
-  selling_price: "",
-  discount: "",
-  tax_amount: "",
-  down_payment: "",
-  amount_paid: "",
-});
+    selling_price: "",
+    discount: "",
+    tax_amount: "",
+    down_payment: "",
+    amount_paid: "",
+  });
 
   const [formData, setFormData] = useState<Partial<SaleInsert>>({
     vehicle_id: "",
@@ -97,36 +121,6 @@ const paymentExceedsBalance =
     is_emi: false,
     notes: "",
   });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      // Get current user for explicit filtering
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const [salesRes, vehiclesRes, customersRes, settingsRes] = await Promise.all([
-        supabase.from("sales").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicles").select("*").eq("user_id", user.id),
-        supabase.from("customers").select("*").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
-      ]);
-      setSales(salesRes.data || []);
-      setVehicles(vehiclesRes.data || []);
-      setCustomers(customersRes.data || []);
-      setSettings(settingsRes.data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const generateCode = () => `SL${Date.now().toString(36).toUpperCase()}`;
 
@@ -288,7 +282,7 @@ if (amountPaid > 0 && saleData) {
         toast({ title: "Sale added successfully" });
       }
       setDialogOpen(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['sales-page'] });
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -312,7 +306,7 @@ if (amountPaid > 0 && saleData) {
       .eq("id", sale.vehicle_id);
 
     toast({ title: "Sale deleted & vehicle released" });
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['sales-page'] });
   } catch (error: any) {
     toast({ title: "Error", description: error.message, variant: "destructive" });
   } finally {
@@ -435,9 +429,7 @@ if (selectedSale.is_emi) {
     };
 
     setSelectedSale(updatedSale);
-    setSales(prev =>
-      prev.map(s => s.id === selectedSale.id ? updatedSale : s)
-    );
+    queryClient.invalidateQueries({ queryKey: ['sales-page'] });
 
     setPayments(prev => payment ? [payment, ...prev] : prev);
 

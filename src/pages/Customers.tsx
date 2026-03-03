@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,9 +53,21 @@ type SaleWithVehicle = {
 
 const Customers = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("customers");
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: customers = [] as Customer[], isLoading: loading } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [] as Customer[];
+      const { data, error } = await supabase.from("customers").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as Customer[];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -74,24 +87,6 @@ const Customers = () => {
     notes: "",
     is_active: true,
   });
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      const { data, error } = await supabase.from("customers").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-      if (error) throw error;
-      setCustomers(data || []);
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCustomerSales = async (customerId: string) => {
     try {
@@ -140,7 +135,7 @@ const Customers = () => {
         toast({ title: "Customer added successfully" });
       }
       setDialogOpen(false);
-      fetchCustomers();
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -155,7 +150,7 @@ const Customers = () => {
       const { error } = await supabase.from("customers").delete().eq("id", customerToDelete);
       if (error) throw error;
       toast({ title: "Customer deleted successfully" });
-      fetchCustomers();
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {

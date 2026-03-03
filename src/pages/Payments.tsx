@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,34 +29,28 @@ const paymentTypes = ["customer_payment", "vendor_payment", "emi_payment", "expe
 
 const Payments = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("payments");
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: payments = [] as Payment[], isLoading: loading } = useQuery({
+    queryKey: ['payments'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [] as Payment[];
+      const { data } = await supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      return (data || []) as Payment[];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<PaymentInsert>>({ amount: 0, payment_mode: "cash", payment_type: "customer_payment" });
   const [showFilters, setShowFilters] = useState(false);
-const [filterType, setFilterType] = useState<string>("all");
-const [fromDate, setFromDate] = useState<string>("");
-const [toDate, setToDate] = useState<string>("");
-const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-
-
-
-  useEffect(() => { fetchPayments(); }, []);
-
-  const fetchPayments = async () => {
-    // Get current user for explicit filtering
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const { data } = await supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-    setPayments(data || []);
-    setLoading(false);
-  };
+  const [filterType, setFilterType] = useState<string>("all");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +61,7 @@ const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
       if (error) throw error;
       toast({ title: "Payment recorded successfully" });
       setDialogOpen(false);
-      fetchPayments();
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }

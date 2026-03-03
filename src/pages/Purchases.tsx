@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,13 +40,36 @@ const paymentModes = ["cash", "bank_transfer", "cheque", "upi", "card"] as const
 
 const Purchases = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("purchases");
   const isMobile = useIsMobile();
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [vehicleImages, setVehicleImages] = useState<VehicleImage[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: pageData, isLoading: loading } = useQuery({
+    queryKey: ['purchases-page'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const [purchasesRes, vehiclesRes, vendorsRes, imagesRes] = await Promise.all([
+        supabase.from("vehicle_purchases").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("*").eq("user_id", user.id),
+        supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
+        supabase.from("vehicle_images").select("*").eq("user_id", user.id),
+      ]);
+      return {
+        purchases: (purchasesRes.data || []) as Purchase[],
+        vehicles: (vehiclesRes.data || []) as Vehicle[],
+        vendors: (vendorsRes.data || []) as Vendor[],
+        vehicleImages: (imagesRes.data || []) as VehicleImage[],
+      };
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const purchases = pageData?.purchases || [];
+  const vehicles = pageData?.vehicles || [];
+  const vendors = pageData?.vendors || [];
+  const vehicleImages = pageData?.vehicleImages || [];
+
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -67,35 +91,6 @@ const Purchases = () => {
     payment_mode: "cash",
     notes: "",
   });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const [purchasesRes, vehiclesRes, vendorsRes, imagesRes] = await Promise.all([
-        supabase.from("vehicle_purchases").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicles").select("*").eq("user_id", user.id),
-        supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("vehicle_images").select("*").eq("user_id", user.id),
-      ]);
-      setPurchases(purchasesRes.data || []);
-      setVehicles(vehiclesRes.data || []);
-      setVendors(vendorsRes.data || []);
-      setVehicleImages(imagesRes.data || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const generateCode = () => `PUR${Date.now().toString(36).toUpperCase()}`;
   const paymentExceedsBalance =
@@ -196,7 +191,7 @@ const Purchases = () => {
         toast({ title: "Purchase added successfully" });
       }
       setDialogOpen(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['purchases-page'] });
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -211,7 +206,7 @@ const Purchases = () => {
       const { error } = await supabase.from("vehicle_purchases").delete().eq("id", purchaseToDelete);
       if (error) throw error;
       toast({ title: "Purchase deleted successfully" });
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['purchases-page'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -303,9 +298,7 @@ const Purchases = () => {
       };
 
       setSelectedPurchase(updatedPurchase);
-      setPurchases(prev =>
-        prev.map(p => p.id === selectedPurchase.id ? updatedPurchase : p)
-      );
+      queryClient.invalidateQueries({ queryKey: ['purchases-page'] });
       setPayments(prev => payment ? [payment, ...prev] : prev);
 
       toast({ title: "Payment added successfully" });

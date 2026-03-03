@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,7 +193,7 @@ const Vendors = () => {
         toast({ title: "Vendor added successfully" });
       }
       setDialogOpen(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['vendors-page'] });
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -207,7 +208,7 @@ const Vendors = () => {
       const { error } = await supabase.from("vendors").delete().eq("id", vendorToDelete);
       if (error) throw error;
       toast({ title: "Vendor deleted successfully" });
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['vendors-page'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
