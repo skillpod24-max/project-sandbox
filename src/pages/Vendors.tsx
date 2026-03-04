@@ -52,6 +52,7 @@ const displayAddress = (address: string | null) => {
 };
 
 const Vendors = () => {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { viewMode, setViewMode } = useViewMode("vendors");
   const [vendors, setVendors] = useState<Vendor[]>([]);
