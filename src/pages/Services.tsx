@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,10 +82,8 @@ const commonServices = [
 
 const Services = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("services");
-  const [packages, setPackages] = useState<ServicePackage[]>([]);
-  const [services, setServices] = useState<ServiceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
@@ -120,32 +119,22 @@ const Services = () => {
     start_date: new Date().toISOString().split("T")[0],
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      // Get current user for explicit filtering
+  const { data: queryData, isLoading: loading } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
+      if (!user) return { packages: [], services: [] };
       const [packagesRes, servicesRes] = await Promise.all([
         supabase.from("service_packages").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("service_records").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
-      
-      setPackages(packagesRes.data || []);
-      setServices(servicesRes.data || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { packages: packagesRes.data || [], services: servicesRes.data || [] };
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const packages = queryData?.packages || [];
+  const services = queryData?.services || [];
 
   const generateServiceNumber = () => `SVC${Date.now().toString(36).toUpperCase()}`;
 
@@ -194,7 +183,7 @@ const Services = () => {
       }
       setPackageDialogOpen(false);
       resetPackageForm();
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['services'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -227,7 +216,7 @@ const Services = () => {
         if (error) throw error;
         toast({ title: "Service deleted" });
       }
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['services'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -304,7 +293,7 @@ const Services = () => {
       }
       setServiceDialogOpen(false);
       resetServiceForm();
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['services'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
