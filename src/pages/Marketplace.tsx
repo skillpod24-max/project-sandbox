@@ -327,34 +327,45 @@ const Marketplace = () => {
   const vehiclesPerPage = 6;
   const displayedVehicles = showAllVehicles ? filteredVehicles : filteredVehicles.slice(0, vehiclesPerPage);
 
+  // Brand logos data
+  const popularBrands = useMemo(() => [
+    { name: "Maruti Suzuki", logo: "https://www.carlogos.org/car-logos/maruti-suzuki-logo.png" },
+    { name: "Hyundai", logo: "https://www.carlogos.org/car-logos/hyundai-logo.png" },
+    { name: "Tata", logo: "https://www.carlogos.org/car-logos/tata-logo.png" },
+    { name: "Mahindra", logo: "https://www.carlogos.org/car-logos/mahindra-logo.png" },
+    { name: "Kia", logo: "https://www.carlogos.org/car-logos/kia-logo.png" },
+    { name: "Toyota", logo: "https://www.carlogos.org/car-logos/toyota-logo.png" },
+    { name: "Honda", logo: "https://www.carlogos.org/car-logos/honda-logo.png" },
+    { name: "BMW", logo: "https://www.carlogos.org/car-logos/bmw-logo.png" },
+    { name: "Mercedes-Benz", logo: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png" },
+    { name: "Audi", logo: "https://www.carlogos.org/car-logos/audi-logo.png" },
+    { name: "Volkswagen", logo: "https://www.carlogos.org/car-logos/volkswagen-logo.png" },
+    { name: "Skoda", logo: "https://www.carlogos.org/car-logos/skoda-logo.png" },
+  ], []);
+
   if (loading) {
     return <MarketplaceSkeleton />;
   }
 
-    return (
+  return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 overflow-x-hidden">
-      {/* Top Navigation - Mobile-First Professional App Style */}
+      {/* ───── HEADER ───── */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-3 md:px-4">
-          {/* Main Header Row */}
           <div className="h-14 md:h-16 flex items-center justify-between gap-3">
             <Link to="/" className="flex items-center gap-2 shrink-0">
-              <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
                 <Car className="h-5 w-5 md:h-6 md:w-6 text-white" />
               </div>
-              <span className="text-lg md:text-xl font-bold text-foreground hidden xs:inline">VahanHub</span>
+              <span className="text-lg md:text-xl font-bold text-foreground hidden sm:inline tracking-tight">VahanHub</span>
             </Link>
 
-            {/* Location Selector - Compact on Mobile */}
             <div className="shrink-0">
               <LocationSelector
                 selectedCity={cityFilter}
                 onCityChange={setCityFilter}
                 availableCities={availableCities}
-                onLocationDetected={(lat, lng, city) => {
-                  setUserCoords({ lat, lng });
-                  setCityFilter(city);
-                }}
+                onLocationDetected={(lat, lng, city) => { setUserCoords({ lat, lng }); setCityFilter(city); }}
               />
             </div>
 
@@ -363,73 +374,49 @@ const Marketplace = () => {
               <div className="relative w-full">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Search vehicles, dealers..."
+                  placeholder="Search by brand, model or dealer..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && searchTerm.trim()) { navigate(`/marketplace/vehicles?search=${encodeURIComponent(searchTerm.trim())}`); setSearchFocused(false); } }}
-                  className="pl-12 pr-4 h-11 rounded-full bg-muted border-0 focus-visible:ring-2 focus-visible:ring-primary"
+                  className="pl-12 pr-4 h-11 rounded-full bg-muted border-0 focus-visible:ring-2 focus-visible:ring-blue-500"
                 />
-                <LiveSearchSuggestions 
-                  vehicles={vehicles}
-                  dealers={dealers}
-                  searchTerm={searchTerm}
-                  onSelect={(term) => { setSearchTerm(term); setSearchFocused(false); }}
-                  onClose={() => setSearchFocused(false)}
-                  visible={searchFocused}
-                />
+                <LiveSearchSuggestions vehicles={vehicles} dealers={dealers} searchTerm={searchTerm} onSelect={(term) => { setSearchTerm(term); setSearchFocused(false); }} onClose={() => setSearchFocused(false)} visible={searchFocused} />
               </div>
             </div>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-4">
-              <a href="#vehicles" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                Buy Vehicle
-              </a>
-              <Link 
-                to="/sell-vehicle"
-                className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
-              >
-                <DollarSign className="h-4 w-4" />
-                Sell Vehicle
+              <a href="#vehicles" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Buy</a>
+              <Link to="/sell-vehicle" className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1">
+                <DollarSign className="h-4 w-4" /> Sell
               </Link>
-              <a href="#dealers" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                Dealers
-              </a>
+              <a href="#dealers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Dealers</a>
               {wishlistCount > 0 && (
-                <Link 
-                  to="/marketplace/wishlist" 
-                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-red-500"
-                >
-                  <Heart className="h-4 w-4" />
-                  <span>{wishlistCount}</span>
+                <Link to="/marketplace/wishlist" className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-red-500">
+                  <Heart className="h-4 w-4" /><span>{wishlistCount}</span>
                 </Link>
               )}
+              <Link to="/auth">
+                <Button size="sm" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-5">Login</Button>
+              </Link>
             </nav>
 
             {/* Mobile Actions */}
             <div className="flex items-center gap-2 md:hidden">
               {wishlistCount > 0 && (
-                <Link 
-                  to="/marketplace/wishlist" 
-                  className="relative p-2 rounded-full bg-muted/50 hover:bg-muted"
-                >
+                <Link to="/marketplace/wishlist" className="relative p-2 rounded-full bg-muted/50">
                   <Heart className="h-5 w-5 text-muted-foreground" />
-                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-medium">
-                    {wishlistCount}
-                  </span>
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-medium">{wishlistCount}</span>
                 </Link>
               )}
-              <button 
-                className="p-2 rounded-full bg-muted/50 hover:bg-muted"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
+              <button className="p-2 rounded-full bg-muted/50" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
           </div>
 
-          {/* Mobile Search Bar - Always Visible */}
+          {/* Mobile Search */}
           <div className="md:hidden pb-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -441,89 +428,130 @@ const Marketplace = () => {
                 onKeyDown={(e) => { if (e.key === 'Enter' && searchTerm.trim()) { navigate(`/marketplace/vehicles?search=${encodeURIComponent(searchTerm.trim())}`); setSearchFocused(false); } }}
                 className="pl-10 pr-4 h-10 rounded-xl bg-muted border-0 text-sm"
               />
-              <LiveSearchSuggestions 
-                vehicles={vehicles}
-                dealers={dealers}
-                searchTerm={searchTerm}
-                onSelect={(term) => { setSearchTerm(term); setSearchFocused(false); }}
-                onClose={() => setSearchFocused(false)}
-                visible={searchFocused}
-              />
+              <LiveSearchSuggestions vehicles={vehicles} dealers={dealers} searchTerm={searchTerm} onSelect={(term) => { setSearchTerm(term); setSearchFocused(false); }} onClose={() => setSearchFocused(false)} visible={searchFocused} />
             </div>
           </div>
 
-          {/* Mobile Dropdown Menu */}
+          {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden py-3 border-t border-border animate-fade-in">
               <div className="flex flex-col gap-1">
-                <a href="#vehicles" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground">
-                  <Car className="h-5 w-5 text-primary" />
-                  <span className="font-medium">Buy Vehicle</span>
-                </a>
-                <Link to="/sell-vehicle" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-emerald-600">
-                  <DollarSign className="h-5 w-5" />
-                  <span className="font-medium">Sell Your Vehicle</span>
-                </Link>
-                <a href="#dealers" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground">
-                  <Building2 className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Browse Dealers</span>
-                </a>
-                <Link to="/auth" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground">
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Login / Register</span>
-                </Link>
+                <a href="#vehicles" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground"><Car className="h-5 w-5 text-blue-600" /><span className="font-medium">Buy Vehicle</span></a>
+                <Link to="/sell-vehicle" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-emerald-600"><DollarSign className="h-5 w-5" /><span className="font-medium">Sell Your Vehicle</span></Link>
+                <a href="#dealers" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground"><Building2 className="h-5 w-5 text-muted-foreground" /><span className="font-medium">Browse Dealers</span></a>
+                <Link to="/auth" className="flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-muted text-foreground"><Users className="h-5 w-5 text-muted-foreground" /><span className="font-medium">Login / Register</span></Link>
               </div>
             </div>
           )}
         </div>
       </header>
 
-      {/* Hero Section - Smaller on Mobile */}
-      <section className="relative h-[200px] md:h-[400px] overflow-hidden">
-        <HeroCarousel />
+      {/* ───── HERO SECTION ───── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500 rounded-full blur-[120px]" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-500 rounded-full blur-[120px]" />
+          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-400 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2" />
+        </div>
+        <div className="container mx-auto px-4 py-10 md:py-20 relative z-10">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md text-white/90 text-xs md:text-sm font-medium px-4 py-2 rounded-full mb-6 border border-white/10">
+              <Zap className="h-4 w-4 text-yellow-400" />
+              India's Trusted Pre-Owned Vehicle Marketplace
+            </div>
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-tight tracking-tight">
+              Find Your <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Dream Car</span>
+            </h1>
+            <p className="text-white/60 text-sm md:text-lg mb-8 max-w-xl mx-auto">
+              Browse {vehicles.length}+ verified vehicles from {dealers.length}+ trusted dealers. Transparent pricing. Easy EMI.
+            </p>
+
+            {/* Hero Stats */}
+            <div className="grid grid-cols-3 gap-3 md:gap-6 max-w-lg mx-auto mb-8">
+              {[
+                { value: `${vehicles.length}+`, label: "Vehicles" },
+                { value: `${dealers.length}+`, label: "Dealers" },
+                { value: "4.8★", label: "Rating" },
+              ].map((stat, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-xl md:text-3xl font-bold text-white">{stat.value}</div>
+                  <div className="text-white/50 text-xs md:text-sm">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Hero CTA */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                size="lg"
+                className="rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 px-8 h-12 text-base"
+                onClick={() => document.getElementById('vehicles')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                <Search className="h-5 w-5 mr-2" /> Browse Vehicles
+              </Button>
+              <Link to="/sell-vehicle">
+                <Button size="lg" variant="outline" className="rounded-full border-white/20 text-white bg-white/5 hover:bg-white/10 px-8 h-12 text-base w-full sm:w-auto">
+                  <DollarSign className="h-5 w-5 mr-2" /> Sell Your Car
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Category Pills - App-Style */}
-      <section className="sticky top-14 md:top-16 z-40 bg-background border-b border-border shadow-sm">
-        <div className="container mx-auto px-4 py-2 md:py-3">
-          {/* Main category pills - smaller on mobile */}
-          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            <button
-              onClick={() => { setVehicleType("car"); setBodyType("all"); }}
-              className={`flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm font-medium ${
-                vehicleType === "car" 
-                  ? 'bg-primary text-primary-foreground shadow-md' 
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              <Car className="h-4 w-4" />
-              <span>Cars</span>
-            </button>
-            <button
-              onClick={() => { setVehicleType("bike"); setBodyType("all"); }}
-              className={`flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm font-medium ${
-                vehicleType === "bike" 
-                  ? 'bg-primary text-primary-foreground shadow-md' 
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              <Bike className="h-4 w-4" />
-              <span>Bikes</span>
-            </button>
-            <button
-              onClick={() => { setVehicleType("commercial"); setBodyType("all"); }}
-              className={`flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm font-medium ${
-                vehicleType === "commercial" 
-                  ? 'bg-primary text-primary-foreground shadow-md' 
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              <Truck className="h-4 w-4" />
-              <span>Commercial</span>
-            </button>
+      {/* ───── EXPLORE BY BRAND ───── */}
+      <section className="container mx-auto px-4 py-8 md:py-12">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-lg md:text-2xl font-bold text-foreground">Explore by Brand</h2>
+            <p className="text-muted-foreground text-xs md:text-sm mt-0.5">Popular brands on VahanHub</p>
           </div>
+        </div>
+        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-3 md:gap-4">
+          {popularBrands.map((brand) => (
+            <button
+              key={brand.name}
+              onClick={() => { setSearchTerm(brand.name); document.getElementById('vehicles')?.scrollIntoView({ behavior: 'smooth' }); }}
+              className="group flex flex-col items-center gap-2 p-3 md:p-4 rounded-2xl bg-card border border-border hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300"
+            >
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-muted flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform duration-300">
+                <img
+                  src={brand.logo}
+                  alt={brand.name}
+                  className="w-7 h-7 md:w-9 md:h-9 object-contain"
+                  loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+              <span className="text-[10px] md:text-xs font-medium text-muted-foreground group-hover:text-foreground truncate w-full text-center transition-colors">{brand.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
-          {/* Body Type Filter for Cars */}
+      {/* ───── CATEGORY PILLS (Sticky) ───── */}
+      <section className="sticky top-14 md:top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 py-2.5 md:py-3">
+          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            {[
+              { type: "car", icon: Car, label: "Cars" },
+              { type: "bike", icon: Bike, label: "Bikes" },
+              { type: "commercial", icon: Truck, label: "Commercial" },
+            ].map(({ type, icon: Icon, label }) => (
+              <button
+                key={type}
+                onClick={() => { setVehicleType(type); setBodyType("all"); }}
+                className={`flex items-center gap-1.5 px-4 py-2 md:px-5 md:py-2.5 rounded-full transition-all whitespace-nowrap text-xs md:text-sm font-medium ${
+                  vehicleType === type
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
           {vehicleType === "car" && (
             <div className="flex gap-1.5 md:gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
               {carBodyTypes.map((type) => (
@@ -531,8 +559,8 @@ const Marketplace = () => {
                   key={type}
                   onClick={() => setBodyType(type.toLowerCase())}
                   className={`px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
-                    bodyType === type.toLowerCase() 
-                      ? 'bg-primary/10 text-primary border border-primary/30' 
+                    bodyType === type.toLowerCase()
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
                       : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-transparent'
                   }`}
                 >
@@ -544,25 +572,26 @@ const Marketplace = () => {
         </div>
       </section>
 
-      {/* Featured Vehicles Section - Compact on mobile */}
+      {/* ───── FEATURED VEHICLES ───── */}
       {featuredVehicles.length > 0 && (
-        <section className="container mx-auto px-3 md:px-4 py-6 md:py-8">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
+        <section className="container mx-auto px-3 md:px-4 py-6 md:py-10">
+          <div className="flex items-center justify-between mb-5 md:mb-6">
             <div>
               <h2 className="text-lg md:text-2xl font-bold text-foreground flex items-center gap-2">
                 <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
                 Featured Vehicles
               </h2>
-              <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">Handpicked for you</p>
+              <p className="text-muted-foreground text-xs md:text-sm mt-0.5">Handpicked premium picks</p>
             </div>
             <Link to="/marketplace/vehicles">
-              <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 text-xs md:text-sm">
+              <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 gap-1 text-xs md:text-sm">
                 View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
             </Link>
           </div>
-          {/* Desktop: full cards, Mobile: compact cards */}
-          <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
+
+          {/* Desktop grid */}
+          <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-5">
             {featuredVehicles.map((vehicle) => (
               <MarketplaceVehicleCard
                 key={vehicle.id}
@@ -575,14 +604,15 @@ const Marketplace = () => {
               />
             ))}
           </div>
-          {/* Mobile: compact grid */}
+
+          {/* Mobile: compact 2-col */}
           <div className="grid grid-cols-2 gap-2.5 md:hidden">
             {featuredVehicles.map((vehicle) => {
               const dealer = getDealerForVehicle(vehicle.user_id);
               const hasDiscount = vehicle.strikeout_price && vehicle.strikeout_price > vehicle.selling_price;
               return (
                 <Link key={vehicle.id} to={`/marketplace/vehicle/${vehicle.id}`} className="group block">
-                  <Card className="overflow-hidden border-0 shadow-sm rounded-xl">
+                  <Card className="overflow-hidden border-0 shadow-sm rounded-2xl bg-card">
                     <div className="aspect-[4/3] bg-muted overflow-hidden relative">
                       {vehicle.image_url ? (
                         <img src={vehicle.image_url} alt={`${vehicle.brand} ${vehicle.model}`} className="w-full h-full object-cover" loading="lazy" />
@@ -590,8 +620,8 @@ const Marketplace = () => {
                         <div className="w-full h-full flex items-center justify-center"><Car className="h-8 w-8 text-muted-foreground/30" /></div>
                       )}
                       {vehicle.image_badge_text && (
-                        <Badge className="absolute top-1.5 left-1.5 text-white border-0 text-[10px] px-1.5 py-0.5" style={{ backgroundColor: '#10B981' }}>
-                          {vehicle.image_badge_text.length > 12 ? `${vehicle.image_badge_text.slice(0, 12)}...` : vehicle.image_badge_text}
+                        <Badge className="absolute top-1.5 left-1.5 bg-emerald-600 text-white border-0 text-[10px] px-1.5 py-0.5">
+                          {vehicle.image_badge_text.length > 12 ? `${vehicle.image_badge_text.slice(0, 12)}…` : vehicle.image_badge_text}
                         </Badge>
                       )}
                       <button
@@ -610,19 +640,14 @@ const Marketplace = () => {
                         <span>·</span>
                         <span>{vehicle.odometer_reading ? `${formatIndianNumber(vehicle.odometer_reading)} km` : vehicle.transmission}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          {hasDiscount && <span className="text-[10px] text-muted-foreground line-through block">{formatCurrency(vehicle.strikeout_price)}</span>}
-                          <span className="text-sm font-bold text-primary">{formatCurrency(vehicle.selling_price)}</span>
-                        </div>
+                      <div>
+                        {hasDiscount && <span className="text-[10px] text-muted-foreground line-through block">{formatCurrency(vehicle.strikeout_price)}</span>}
+                        <span className="text-sm font-bold text-blue-600">{formatCurrency(vehicle.selling_price)}</span>
                       </div>
                       {dealer && (
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground pt-0.5">
-                          <MapPin className="h-2.5 w-2.5" />
-                          <span className="truncate">{(() => {
-                            const parts = (dealer.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean);
-                            return parts.length >= 2 ? parts[1] : parts[0] || "";
-                          })()}</span>
+                          <MapPin className="h-2.5 w-2.5 shrink-0" />
+                          <span className="truncate">{(() => { const p = (dealer.dealer_address || "").split(",").map((s: string) => s.trim()).filter(Boolean); return p.length >= 2 ? p[p.length - 2] : p[0] || ""; })()}</span>
                         </div>
                       )}
                     </div>
@@ -634,43 +659,37 @@ const Marketplace = () => {
         </section>
       )}
 
-      {/* Top Dealers Section */}
-      <section id="dealers" className="container mx-auto px-3 md:px-4 py-6 md:py-8">
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div>
-            <h2 className="text-lg md:text-2xl font-bold text-foreground flex items-center gap-2">
-              <Star className="h-5 w-5 md:h-6 md:w-6 text-amber-500 fill-amber-500" />
-              Top Rated Dealers
-            </h2>
-            <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">Verified & trusted dealers</p>
+      {/* ───── TOP DEALERS ───── */}
+      <section id="dealers" className="bg-muted/30 py-6 md:py-10">
+        <div className="container mx-auto px-3 md:px-4">
+          <div className="flex items-center justify-between mb-5 md:mb-6">
+            <div>
+              <h2 className="text-lg md:text-2xl font-bold text-foreground flex items-center gap-2">
+                <Star className="h-5 w-5 md:h-6 md:w-6 text-amber-500 fill-amber-500" />
+                Top Rated Dealers
+              </h2>
+              <p className="text-muted-foreground text-xs md:text-sm mt-0.5">Verified & trusted partners</p>
+            </div>
+            <Link to="/marketplace/dealers">
+              <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 gap-1 text-xs md:text-sm">
+                All Dealers <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+              </Button>
+            </Link>
           </div>
-          <Link to="/marketplace/dealers">
-            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 text-xs md:text-sm">
-              View All <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
-            </Button>
-          </Link>
-        </div>
-
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
-          {topDealers.map((dealer) => (
-            <MarketplaceDealerCard
-              key={dealer.id}
-              dealer={dealer}
-              vehicleCount={dealer.vehicleCount}
-              rating={dealer.rating}
-            />
-          ))}
-          {topDealers.length === 0 && (
-            <p className="text-slate-500 py-8 w-full text-center">
-              No dealers available on marketplace yet
-            </p>
-          )}
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
+            {topDealers.map((dealer) => (
+              <MarketplaceDealerCard key={dealer.id} dealer={dealer} vehicleCount={dealer.vehicleCount} rating={dealer.rating} />
+            ))}
+            {topDealers.length === 0 && (
+              <p className="text-muted-foreground py-8 w-full text-center">No dealers available on marketplace yet</p>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Vehicles in High Demand - 2 per row on mobile, 4 on desktop */}
-      <section className="bg-gradient-to-b from-orange-50/50 to-background py-6 md:py-10">
-        <div className="container mx-auto px-3 md:px-4">
+      {/* ───── HIGH DEMAND ───── */}
+      {highDemandVehicles.length > 0 && (
+        <section className="container mx-auto px-3 md:px-4 py-6 md:py-10">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base md:text-2xl font-bold text-foreground flex items-center gap-2">
@@ -680,46 +699,35 @@ const Marketplace = () => {
               <p className="text-muted-foreground text-xs mt-0.5">Most viewed this week</p>
             </div>
             <Link to="/marketplace/vehicles">
-              <Button variant="ghost" size="sm" className="text-orange-600 gap-1 text-xs h-8 px-2">
-                View All <ChevronRight className="h-3 w-3" />
-              </Button>
+              <Button variant="ghost" size="sm" className="text-orange-600 gap-1 text-xs h-8 px-2">View All <ChevronRight className="h-3 w-3" /></Button>
             </Link>
           </div>
-
-          {/* 2 columns on mobile, 4 on desktop */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
             {highDemandVehicles.map((vehicle) => (
-              <HighDemandCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                dealer={getDealerForVehicle(vehicle.user_id)}
-              />
+              <HighDemandCard key={vehicle.id} vehicle={vehicle} dealer={getDealerForVehicle(vehicle.user_id)} />
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Recently Viewed Section */}
-      <RecentlyViewedSection 
-        vehicles={recentlyViewedVehicles}
-        onClear={clearRecentlyViewed}
-      />
+      {/* Recently Viewed */}
+      <RecentlyViewedSection vehicles={recentlyViewedVehicles} onClear={clearRecentlyViewed} />
 
-      {/* Offers section removed */}
-
-      {/* Features Strip - Mobile Optimized */}
-      <section className="bg-background border-y border-border py-3 md:py-4 overflow-hidden">
+      {/* ───── TRUST STRIP ───── */}
+      <section className="bg-card border-y border-border py-4 overflow-hidden">
         <div className="container mx-auto px-3 md:px-4">
-          <div className="flex gap-4 md:gap-12 overflow-x-auto scrollbar-hide items-center justify-start md:justify-center">
+          <div className="flex gap-6 md:gap-12 overflow-x-auto scrollbar-hide items-center justify-start md:justify-center">
             {[
-              { icon: ShieldCheck, text: "150+ Inspection", color: "text-primary" },
-              { icon: RefreshCw, text: "7-Day Return", color: "text-emerald-600" },
-              { icon: FileCheck, text: "Fixed Price", color: "text-purple-600" },
-              { icon: Headphones, text: "24/7 Support", color: "text-orange-600" },
-              { icon: BadgePercent, text: "Best Price", color: "text-pink-600" },
+              { icon: ShieldCheck, text: "150+ Point Inspection", color: "text-blue-600" },
+              { icon: RefreshCw, text: "7-Day Return Policy", color: "text-emerald-600" },
+              { icon: FileCheck, text: "Fixed Transparent Price", color: "text-purple-600" },
+              { icon: Headphones, text: "Dedicated Support", color: "text-orange-600" },
+              { icon: BadgePercent, text: "Best Price Guarantee", color: "text-pink-600" },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-1.5 shrink-0">
-                <item.icon className={`h-4 w-4 ${item.color}`} />
+              <div key={i} className="flex items-center gap-2 shrink-0">
+                <div className={`h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0`}>
+                  <item.icon className={`h-4 w-4 ${item.color}`} />
+                </div>
                 <span className="text-xs md:text-sm font-medium text-foreground whitespace-nowrap">{item.text}</span>
               </div>
             ))}
@@ -727,59 +735,47 @@ const Marketplace = () => {
         </div>
       </section>
 
-      {/* EMI & Finance Banner */}
-      <section className="container mx-auto px-4 py-6">
-        <Card className="bg-gradient-to-r from-emerald-600 to-teal-600 border-0 rounded-2xl overflow-hidden">
-          <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* ───── EMI BANNER ───── */}
+      <section className="container mx-auto px-4 py-8 md:py-10">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 md:p-10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-5">
             <div className="flex items-center gap-4 text-white">
-              <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-                <Calculator className="h-7 w-7" />
+              <div className="h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                <Calculator className="h-7 w-7 md:h-8 md:w-8" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">Get Easy Finance</h3>
-                <p className="text-emerald-100 text-sm">EMI starting from ₹4,999/month • Instant approval</p>
+                <h3 className="text-xl md:text-2xl font-bold">Easy Vehicle Finance</h3>
+                <p className="text-emerald-100 text-sm md:text-base">EMI starting ₹4,999/month • Instant approval • 100% online</p>
               </div>
             </div>
-            <Button 
-              className="bg-white text-emerald-700 hover:bg-emerald-50 rounded-full px-6"
-              onClick={() => setShowEMICalculator(true)}
-            >
-              Calculate EMI
-              <ChevronRight className="h-4 w-4 ml-1" />
+            <Button className="bg-white text-emerald-700 hover:bg-emerald-50 rounded-full px-8 h-12 font-semibold shadow-lg" onClick={() => setShowEMICalculator(true)}>
+              Calculate EMI <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </section>
 
-      {/* All Vehicles Section - No Sidebar Filter */}
-      <section id="vehicles" className="container mx-auto px-4 py-10">
+      {/* ───── ALL VEHICLES ───── */}
+      <section id="vehicles" className="container mx-auto px-4 py-8 md:py-10">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">
+            <h2 className="text-xl md:text-2xl font-bold text-foreground">
               Browse All {vehicleType === "car" ? "Cars" : vehicleType === "bike" ? "Bikes" : "Vehicles"}
             </h2>
-            <p className="text-slate-500 text-sm mt-1">{filteredVehicles.length} vehicles available</p>
+            <p className="text-muted-foreground text-sm mt-1">{filteredVehicles.length} vehicles available</p>
           </div>
-          
-          {/* Inline Filters */}
           <div className="hidden md:flex gap-2">
-            {/* City Filter */}
             <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-36 border-slate-200 rounded-lg">
-                <MapPin className="h-4 w-4 mr-1 text-slate-400" />
-                <SelectValue placeholder="City" />
-              </SelectTrigger>
+              <SelectTrigger className="w-36 rounded-lg"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" /><SelectValue placeholder="City" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Cities</SelectItem>
-                {availableCities.map((city) => (
-                  <SelectItem key={city} value={city}>{city}</SelectItem>
-                ))}
+                {availableCities.map((city) => (<SelectItem key={city} value={city}>{city}</SelectItem>))}
               </SelectContent>
             </Select>
             <Select value={fuelType} onValueChange={setFuelType}>
-              <SelectTrigger className="w-32 border-slate-200 rounded-lg">
-                <SelectValue placeholder="Fuel" />
-              </SelectTrigger>
+              <SelectTrigger className="w-32 rounded-lg"><SelectValue placeholder="Fuel" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Fuel</SelectItem>
                 <SelectItem value="petrol">Petrol</SelectItem>
@@ -789,9 +785,7 @@ const Marketplace = () => {
               </SelectContent>
             </Select>
             <Select value={priceRange} onValueChange={setPriceRange}>
-              <SelectTrigger className="w-40 border-slate-200 rounded-lg">
-                <SelectValue placeholder="Budget" />
-              </SelectTrigger>
+              <SelectTrigger className="w-40 rounded-lg"><SelectValue placeholder="Budget" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Any Budget</SelectItem>
                 <SelectItem value="0-300000">Under ₹3 Lakh</SelectItem>
@@ -803,7 +797,6 @@ const Marketplace = () => {
           </div>
         </div>
 
-        {/* Vehicle Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {displayedVehicles.map((vehicle) => (
             <MarketplaceVehicleCard
@@ -817,140 +810,99 @@ const Marketplace = () => {
             />
           ))}
           {filteredVehicles.length === 0 && (
-            <div className="col-span-full text-center py-16 text-slate-500">
-              <Car className="h-20 w-20 mx-auto mb-4 text-slate-300" />
+            <div className="col-span-full text-center py-16 text-muted-foreground">
+              <Car className="h-20 w-20 mx-auto mb-4 text-muted-foreground/30" />
               <p className="text-lg font-medium">No vehicles found</p>
               <p className="text-sm">Try adjusting your filters</p>
             </div>
           )}
         </div>
 
-        {/* Load More Button */}
         {filteredVehicles.length > vehiclesPerPage && !showAllVehicles && (
           <div className="text-center mt-8">
-            <Button 
-              size="lg"
-              variant="outline"
-              className="rounded-full px-8 border-blue-300 text-blue-600 hover:bg-blue-50"
-              onClick={() => setShowAllVehicles(true)}
-            >
-              View All {filteredVehicles.length} Vehicles
-              <ChevronRight className="h-4 w-4 ml-1" />
+            <Button size="lg" variant="outline" className="rounded-full px-8 border-blue-200 text-blue-600 hover:bg-blue-50" onClick={() => setShowAllVehicles(true)}>
+              View All {filteredVehicles.length} Vehicles <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         )}
       </section>
 
-      {/* Dealer CTA Section */}
-      <section className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 py-16">
-        <div className="container mx-auto px-4 text-center text-white">
-          <div className="max-w-2xl mx-auto">
+      {/* ───── WHY VAHANHUB + DEALER CTA ───── */}
+      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 py-16 md:py-20">
+        <div className="container mx-auto px-4">
+          {/* USP Cards */}
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Why Choose VahanHub?</h2>
+            <p className="text-white/50 text-sm md:text-base">India's fastest growing vehicle marketplace</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mb-16">
+            {[
+              { icon: CheckCircle, label: "100% Verified", desc: "Every dealer verified", gradient: "from-emerald-500 to-green-600" },
+              { icon: Shield, label: "Safe Transactions", desc: "Secure payments", gradient: "from-blue-500 to-indigo-600" },
+              { icon: CreditCard, label: "Easy EMI", desc: "Flexible finance", gradient: "from-purple-500 to-violet-600" },
+              { icon: Award, label: "Best Price", desc: "Guaranteed savings", gradient: "from-amber-500 to-orange-600" },
+            ].map((item, i) => (
+              <div key={i} className="group text-center p-5 md:p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300">
+                <div className={`h-12 w-12 md:h-14 md:w-14 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <item.icon className="h-6 w-6 md:h-7 md:w-7 text-white" />
+                </div>
+                <h3 className="font-semibold text-white text-sm md:text-base mb-1">{item.label}</h3>
+                <p className="text-xs text-white/50">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Dealer CTA */}
+          <div className="max-w-2xl mx-auto text-center">
             <div className="h-16 w-16 rounded-2xl bg-blue-500/20 backdrop-blur flex items-center justify-center mx-auto mb-6">
               <Building2 className="h-8 w-8 text-blue-400" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Are You a Dealer?</h2>
-            <p className="text-lg opacity-80 mb-8">
-              Join 500+ dealers already growing their business with VahanHub
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Are You a Dealer?</h2>
+            <p className="text-white/60 mb-8 text-sm md:text-base">
+              Join {dealers.length}+ dealers already growing their business with VahanHub. Free tools, more leads, zero commission.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-full px-8"
-                onClick={() => navigate("/auth")}
-              >
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 shadow-lg shadow-blue-600/30" onClick={() => navigate("/auth")}>
                 Start Free Trial
               </Button>
-              <Button size="lg" variant="outline" className="border-white/30 text-slate-900 bg-white hover:bg-white/90 rounded-full px-8">
-                Learn More
-              </Button>
+              <Link to="/how-it-works">
+                <Button size="lg" variant="outline" className="border-white/20 text-white bg-white/5 hover:bg-white/10 rounded-full px-8 w-full sm:w-auto">
+                  Learn More
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Trust & Value Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Why Choose VahanHub?</h2>
-          <p className="text-slate-500">India's fastest growing vehicle marketplace</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {[
-            { icon: CheckCircle, label: "100% Verified", desc: "Every dealer verified", color: "text-emerald-600 bg-emerald-50" },
-            { icon: Shield, label: "Safe Transactions", desc: "Secure payments", color: "text-blue-600 bg-blue-50" },
-            { icon: CreditCard, label: "Easy EMI", desc: "Flexible finance", color: "text-purple-600 bg-purple-50" },
-            { icon: Award, label: "Best Price", desc: "Guaranteed savings", color: "text-amber-600 bg-amber-50" },
-          ].map((item, i) => (
-            <Card key={i} className="text-center p-6 border-0 shadow-sm rounded-2xl bg-white hover:shadow-lg transition-shadow group">
-              <div className={`h-14 w-14 rounded-xl ${item.color} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}>
-                <item.icon className="h-7 w-7" />
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-1">{item.label}</h3>
-              <p className="text-sm text-slate-500">{item.desc}</p>
-            </Card>
-          ))}
-        </div>
-      </section>
+      {/* ───── COMPARE BAR ───── */}
+      <CompareBar vehicles={compareVehicles} onRemove={removeFromCompare} onClear={clearCompare} />
 
-      {/* Compare Bar */}
-      <CompareBar
-        vehicles={compareVehicles}
-        onRemove={removeFromCompare}
-        onClear={clearCompare}
-      />
-
-
-      {/* Mobile Bottom Navigation - Professional App Style */}
+      {/* ───── MOBILE BOTTOM NAV ───── */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border z-50">
         <div className="grid grid-cols-3 h-16">
-          <button 
-            onClick={() => document.getElementById('vehicles')?.scrollIntoView({ behavior: 'smooth' })}
-            className="flex flex-col items-center justify-center gap-0.5 text-blue-600"
-          >
-            <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
-              <Car className="h-4 w-4" />
-            </div>
+          <button onClick={() => document.getElementById('vehicles')?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center justify-center gap-0.5 text-blue-600">
+            <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center"><Car className="h-4 w-4" /></div>
             <span className="text-[10px] font-medium">Buy</span>
           </button>
-          <Link
-            to="/sell-vehicle"
-            className="flex flex-col items-center justify-center gap-0.5 text-emerald-600"
-          >
-            <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center">
-              <Tag className="h-4 w-4" />
-            </div>
+          <Link to="/sell-vehicle" className="flex flex-col items-center justify-center gap-0.5 text-emerald-600">
+            <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center"><Tag className="h-4 w-4" /></div>
             <span className="text-[10px] font-medium">Sell</span>
           </Link>
-          <Link
-            to="/marketplace/wishlist"
-            className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
-          >
+          <Link to="/marketplace/wishlist" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground">
             <div className="relative h-8 w-8 rounded-full bg-muted flex items-center justify-center">
               <Heart className="h-4 w-4" />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">
-                  {wishlistCount}
-                </span>
-              )}
+              {wishlistCount > 0 && (<span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">{wishlistCount}</span>)}
             </div>
             <span className="text-[10px] font-medium">Wishlist</span>
           </Link>
         </div>
       </div>
 
-      {/* Marketing Popup */}
+      {/* Popups & Overlays */}
       <MarketplacePopup />
-      
-      {/* Floating CTA */}
       <FloatingCTA />
-
-      {/* EMI Calculator */}
-      <MarketplaceEMICalculator 
-        open={showEMICalculator} 
-        onOpenChange={setShowEMICalculator} 
-      />
-
-      {/* Footer */}
+      <MarketplaceEMICalculator open={showEMICalculator} onOpenChange={setShowEMICalculator} />
       <MarketplaceFooter />
     </div>
   );
