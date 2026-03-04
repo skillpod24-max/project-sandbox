@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -68,9 +69,7 @@ const allDocumentCategories: { value: string; label: string }[] = [
 const Documents = () => {
   const { viewMode, setViewMode } = useViewMode("documents");
   const { toast } = useToast();
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedVehicle, setSelectedVehicle] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [docViewerOpen, setDocViewerOpen] = useState(false);
@@ -87,19 +86,22 @@ const Documents = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => { fetchData(); }, []);
+  const { data: queryData, isLoading: loading } = useQuery({
+    queryKey: ['documents'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { documents: [], vehicles: [] };
+      const [docsRes, vehiclesRes] = await Promise.all([
+        supabase.from("documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("id,brand,model,variant,code").eq("user_id", user.id).order("brand"),
+      ]);
+      return { documents: docsRes.data || [], vehicles: vehiclesRes.data || [] };
+    },
+    staleTime: 2 * 60 * 1000,
+  });
 
-  const fetchData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-    const [docsRes, vehiclesRes] = await Promise.all([
-      supabase.from("documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("vehicles").select("*").eq("user_id", user.id).order("brand"),
-    ]);
-    setDocuments(docsRes.data || []);
-    setVehicles(vehiclesRes.data || []);
-    setLoading(false);
-  };
+  const documents = queryData?.documents || [];
+  const vehicles = queryData?.vehicles || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -162,7 +164,7 @@ const Documents = () => {
       setAddDialogOpen(false);
       setAddForm({ documentName: "", documentType: "rc" as string, vehicleId: "", expiryDate: "" });
       setSelectedFile(null);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
