@@ -97,6 +97,7 @@ const getSourceLabel = (source: string) => {
 };
 
 const Leads = () => {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { viewMode, setViewMode } = useViewMode("leads");
