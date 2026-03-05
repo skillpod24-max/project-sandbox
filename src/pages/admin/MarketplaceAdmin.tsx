@@ -430,7 +430,6 @@ const MarketplaceAdmin = () => {
   const adminTabs = [
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "dealers", label: "Dealers", icon: Building2 },
-    { id: "featured", label: "Featured", icon: Sparkles },
     { id: "banners", label: "Banners", icon: Image },
     { id: "sell_requests", label: "Sell Requests", icon: Tag },
     { id: "tickets", label: "Support", icon: Ticket },
@@ -753,52 +752,6 @@ const MarketplaceAdmin = () => {
             </Card>
           )}
 
-          {/* ===== FEATURED TAB ===== */}
-          {activeAdminTab === "featured" && (
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" /> Featured Vehicles</CardTitle>
-                <CardDescription>
-                  Only available (in_stock) vehicles shown. Max 5 featured.
-                  Currently featured: {vehicles.filter(v => v.marketplace_status === 'featured' && v.status === 'in_stock').length}/5
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Dealer</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Featured</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {featuredVehicles.slice(0, 50).map((vehicle) => {
-                      const dealer = dealers.find(d => d.user_id === vehicle.user_id);
-                      const isFeatured = vehicle.marketplace_status === 'featured';
-                      return (
-                        <TableRow key={vehicle.id} className={isFeatured ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}>
-                          <TableCell>
-                            <p className="font-semibold text-foreground">{vehicle.manufacturing_year} {vehicle.brand} {vehicle.model}</p>
-                            <p className="text-xs text-muted-foreground">{vehicle.fuel_type} · {vehicle.transmission}</p>
-                          </TableCell>
-                          <TableCell>{dealer?.dealer_name || 'Unknown'}</TableCell>
-                          <TableCell className="font-semibold text-primary">{formatCurrency(vehicle.selling_price)}</TableCell>
-                          <TableCell>
-                            <Checkbox
-                              checked={isFeatured}
-                              onCheckedChange={() => handleToggleFeaturedVehicle(vehicle.id, isFeatured)}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
 
           {/* ===== BANNERS ===== */}
           {activeAdminTab === "banners" && (
