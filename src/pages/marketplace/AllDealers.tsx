@@ -222,14 +222,14 @@ const AllDealers = () => {
 
         {/* Dealers Grid - Enhanced Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-          {filteredDealers.map((dealer, index) => {
+          {displayedDealers.map((dealer, index) => {
             const location = getDealerLocation(dealer.dealer_address || "");
             return (
               <Link 
                 key={dealer.id} 
                 to={`/marketplace/dealer/${dealer.public_page_id}`}
                 className="animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
+                style={{ animationDelay: `${Math.min(index, 8) * 50}ms` }}
               >
                 <Card className="overflow-hidden hover:shadow-xl transition-all duration-500 rounded-2xl border-0 shadow-sm group hover:-translate-y-1">
                   {/* Header with gradient */}
@@ -249,6 +249,7 @@ const AllDealers = () => {
                           src={dealer.shop_logo_url} 
                           alt={dealer.dealer_name}
                           className="h-16 w-16 rounded-2xl object-cover border-4 border-background shadow-lg"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center border-4 border-background shadow-lg">
@@ -323,6 +324,8 @@ const AllDealers = () => {
               </Link>
             );
           })}
+        </div>
+        <ScrollLoader ref={loaderRef} hasMore={hasMore} />
         </div>
 
         {/* Enhanced Empty State */}
