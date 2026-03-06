@@ -615,10 +615,12 @@ const Marketplace = () => {
         </div>
       </div>
 
-      {/* Popups & Overlays */}
-      <MarketplacePopup />
-      <MarketplaceEMICalculator open={showEMICalculator} onOpenChange={setShowEMICalculator} />
-      <MarketplaceFooter />
+      {/* Popups & Overlays - lazy loaded */}
+      <Suspense fallback={null}>
+        <MarketplacePopup />
+        {showEMICalculator && <MarketplaceEMICalculator open={showEMICalculator} onOpenChange={setShowEMICalculator} />}
+        <MarketplaceFooter />
+      </Suspense>
     </div>
   );
 };
