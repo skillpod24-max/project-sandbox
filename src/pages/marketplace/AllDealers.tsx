@@ -120,6 +120,7 @@ const AllDealers = () => {
     return result;
   }, [dealers, searchTerm, cityFilter, sortBy]);
 
+  const { displayedItems: displayedDealers, hasMore, loaderRef } = useInfiniteScroll(filteredDealers, 18);
   const clearFilters = () => {
     setSearchTerm("");
     setCityFilter("all");
