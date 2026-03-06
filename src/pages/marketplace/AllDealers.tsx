@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MarketplaceSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import ScrollLoader from "@/components/ScrollLoader";
 
 const AllDealers = () => {
   const [searchTerm, setSearchTerm] = useState("");
