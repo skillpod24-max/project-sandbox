@@ -31,12 +31,29 @@ const MarketplaceDealer = () => {
   const fetchDealer = async () => {
     try {
       // Fetch dealer settings
-      const { data: dealerData, error } = await supabase
+      // Try public_page_id first, then fall back to user_id
+      let dealerData: any = null;
+      let error: any = null;
+
+      const { data: byPublicId, error: err1 } = await supabase
         .from("settings")
         .select("*")
-        .eq("user_id", dealerId)
+        .eq("public_page_id", dealerId)
         .eq("marketplace_enabled", true)
-        .single();
+        .maybeSingle();
+
+      if (byPublicId) {
+        dealerData = byPublicId;
+      } else {
+        const { data: byUserId, error: err2 } = await supabase
+          .from("settings")
+          .select("*")
+          .eq("user_id", dealerId)
+          .eq("marketplace_enabled", true)
+          .maybeSingle();
+        dealerData = byUserId;
+        error = err2;
+      }
 
       if (error || !dealerData) {
         setLoading(false);

@@ -480,7 +480,7 @@ const Marketplace = () => {
           {happyStories.map((story, i) => (
             <div
               key={i}
-              className="bg-card rounded-2xl border border-border p-6 md:p-7 flex flex-col justify-between aspect-square sm:aspect-auto sm:min-h-[260px] hover:shadow-lg transition-shadow duration-300"
+              className="bg-card rounded-2xl border border-border p-5 md:p-7 flex flex-col justify-between min-h-[200px] sm:min-h-[260px] hover:shadow-lg transition-shadow duration-300"
             >
               <div>
                 <div className="flex gap-0.5 mb-4">
