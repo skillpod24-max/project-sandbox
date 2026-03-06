@@ -31,12 +31,29 @@ const MarketplaceDealer = () => {
   const fetchDealer = async () => {
     try {
       // Fetch dealer settings
-      const { data: dealerData, error } = await supabase
+      // Try public_page_id first, then fall back to user_id
+      let dealerData: any = null;
+      let error: any = null;
+
+      const { data: byPublicId, error: err1 } = await supabase
         .from("settings")
         .select("*")
-        .eq("user_id", dealerId)
+        .eq("public_page_id", dealerId)
         .eq("marketplace_enabled", true)
-        .single();
+        .maybeSingle();
+
+      if (byPublicId) {
+        dealerData = byPublicId;
+      } else {
+        const { data: byUserId, error: err2 } = await supabase
+          .from("settings")
+          .select("*")
+          .eq("user_id", dealerId)
+          .eq("marketplace_enabled", true)
+          .maybeSingle();
+        dealerData = byUserId;
+        error = err2;
+      }
 
       if (error || !dealerData) {
         setLoading(false);
@@ -44,11 +61,12 @@ const MarketplaceDealer = () => {
       }
 
       setDealer(dealerData);
+      const dealerUserId = dealerData.user_id;
 
       // Track page view
       await trackPublicEvent({
         eventType: "dealer_view",
-        dealerUserId: dealerId!,
+        dealerUserId,
         publicPageId: "marketplace"
       });
 
@@ -56,7 +74,7 @@ const MarketplaceDealer = () => {
       const { data: vehiclesData } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("user_id", dealerId)
+        .eq("user_id", dealerUserId)
         .eq("is_public", true)
         .eq("status", "in_stock");
 
@@ -84,7 +102,7 @@ const MarketplaceDealer = () => {
       const { data: reviewsData } = await supabase
         .from("dealer_testimonials")
         .select("*")
-        .eq("user_id", dealerId)
+        .eq("user_id", dealerUserId)
         .eq("is_verified", true)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -95,7 +113,7 @@ const MarketplaceDealer = () => {
       const { data: salesData } = await supabase
         .from("sales")
         .select("id")
-        .eq("user_id", dealerId)
+        .eq("user_id", dealerUserId)
         .eq("status", "completed");
 
       const avgRating = reviewsData && reviewsData.length > 0
