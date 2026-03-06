@@ -1,6 +1,11 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import marutiLogo from "@/assets/brands/maruti-suzuki.png";
+import mahindraLogo from "@/assets/brands/mahindra.png";
+import hondaLogo from "@/assets/brands/honda.png";
+import hyundaiLogo from "@/assets/brands/hyundai.png";
+import skodaLogo from "@/assets/brands/skoda.png";
 import { Input } from "@/components/ui/input";
 import {
   Search, Car, Star, CheckCircle, Shield,
