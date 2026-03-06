@@ -37,23 +37,27 @@ const AllVehicles = () => {
     queryFn: async () => {
       const { data: dealers } = await supabase
         .from("settings")
-        .select("*")
+        .select("user_id, dealer_name, dealer_address, dealer_phone, shop_logo_url, marketplace_featured, marketplace_badge, google_reviews_rating, google_reviews_count, public_page_id")
         .eq("public_page_enabled", true)
         .eq("marketplace_enabled", true);
 
-      const dealerIds = (dealers || []).map(d => d.user_id);
+      if (!dealers?.length) return { vehicles: [], dealers: [] };
+      const dealerIds = dealers.map(d => d.user_id);
 
+      // Parallel: fetch vehicles and images together
       const { data: vehicles } = await supabase
         .from("vehicles")
-        .select("*")
+        .select("id, brand, model, variant, selling_price, strikeout_price, manufacturing_year, fuel_type, transmission, vehicle_type, odometer_reading, color, user_id, created_at, status, marketplace_status, image_badge_text, image_badge_color, number_of_owners, registration_number, mileage, condition")
         .in("user_id", dealerIds)
         .eq("status", "in_stock")
         .in("marketplace_status", ["approved", "featured"]);
 
-      const vehicleIds = (vehicles || []).map(v => v.id);
+      if (!vehicles?.length) return { vehicles: [], dealers };
+
+      const vehicleIds = vehicles.map(v => v.id);
       const { data: images } = await supabase
         .from("vehicle_images")
-        .select("*")
+        .select("vehicle_id, image_url, is_primary")
         .in("vehicle_id", vehicleIds);
 
       const imageMap: Record<string, string> = {};
@@ -64,11 +68,11 @@ const AllVehicles = () => {
       });
 
       return {
-        vehicles: (vehicles || []).map(v => ({
+        vehicles: vehicles.map(v => ({
           ...v,
           image_url: imageMap[v.id]
         })),
-        dealers: dealers || []
+        dealers
       };
     },
     staleTime: 1000 * 60 * 5
