@@ -61,11 +61,12 @@ const MarketplaceDealer = () => {
       }
 
       setDealer(dealerData);
+      const dealerUserId = dealerData.user_id;
 
       // Track page view
       await trackPublicEvent({
         eventType: "dealer_view",
-        dealerUserId: dealerId!,
+        dealerUserId,
         publicPageId: "marketplace"
       });
 
@@ -73,7 +74,7 @@ const MarketplaceDealer = () => {
       const { data: vehiclesData } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("user_id", dealerId)
+        .eq("user_id", dealerUserId)
         .eq("is_public", true)
         .eq("status", "in_stock");
 
@@ -101,7 +102,7 @@ const MarketplaceDealer = () => {
       const { data: reviewsData } = await supabase
         .from("dealer_testimonials")
         .select("*")
-        .eq("user_id", dealerId)
+        .eq("user_id", dealerUserId)
         .eq("is_verified", true)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -112,7 +113,7 @@ const MarketplaceDealer = () => {
       const { data: salesData } = await supabase
         .from("sales")
         .select("id")
-        .eq("user_id", dealerId)
+        .eq("user_id", dealerUserId)
         .eq("status", "completed");
 
       const avgRating = reviewsData && reviewsData.length > 0
