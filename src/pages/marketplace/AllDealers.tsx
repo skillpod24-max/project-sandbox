@@ -18,45 +18,49 @@ const AllDealers = () => {
   const [cityFilter, setCityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("rating");
 
-  // Fetch all marketplace dealers
+  // Fetch all marketplace dealers - single consolidated query
   const { data, isLoading } = useQuery({
     queryKey: ['all-dealers'],
     queryFn: async () => {
+      // Single query to get dealers
       const { data: dealers } = await supabase
         .from("settings")
-        .select("*")
+        .select("user_id, id, dealer_name, dealer_address, dealer_phone, shop_logo_url, marketplace_featured, marketplace_badge, google_reviews_rating, google_reviews_count, public_page_id")
         .eq("public_page_enabled", true)
         .eq("marketplace_enabled", true);
 
-      const dealerIds = (dealers || []).map(d => d.user_id);
+      if (!dealers?.length) return { dealers: [] };
+      const dealerIds = dealers.map(d => d.user_id);
 
-      const { data: vehicles } = await supabase
-        .from("vehicles")
-        .select("user_id")
-        .in("user_id", dealerIds)
-        .eq("is_public", true)
-        .eq("status", "in_stock");
+      // Batch: vehicles count + testimonials in parallel
+      const [vehiclesRes, testimonialsRes] = await Promise.all([
+        supabase
+          .from("vehicles")
+          .select("user_id")
+          .in("user_id", dealerIds)
+          .eq("is_public", true)
+          .eq("status", "in_stock"),
+        supabase
+          .from("dealer_testimonials")
+          .select("user_id, rating")
+          .in("user_id", dealerIds)
+          .eq("is_verified", true)
+      ]);
 
       const vehicleCount: Record<string, number> = {};
-      (vehicles || []).forEach(v => {
+      (vehiclesRes.data || []).forEach(v => {
         vehicleCount[v.user_id] = (vehicleCount[v.user_id] || 0) + 1;
       });
 
-      const { data: testimonials } = await supabase
-        .from("dealer_testimonials")
-        .select("user_id, rating")
-        .in("user_id", dealerIds)
-        .eq("is_verified", true);
-
       const ratings: Record<string, { sum: number; count: number }> = {};
-      (testimonials || []).forEach(t => {
+      (testimonialsRes.data || []).forEach(t => {
         if (!ratings[t.user_id]) ratings[t.user_id] = { sum: 0, count: 0 };
         ratings[t.user_id].sum += t.rating;
         ratings[t.user_id].count += 1;
       });
 
       return {
-        dealers: (dealers || []).map(d => ({
+        dealers: dealers.map(d => ({
           ...d,
           vehicleCount: vehicleCount[d.user_id] || 0,
           rating: ratings[d.user_id] 
