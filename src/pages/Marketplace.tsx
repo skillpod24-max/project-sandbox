@@ -26,11 +26,11 @@ const serviceCategories = [
 ];
 
 const popularBrands = [
-  { name: "Maruti Suzuki", logo: "https://www.carlogos.org/car-logos/maruti-suzuki-logo.png" },
-  { name: "Mahindra", logo: "https://www.carlogos.org/car-logos/mahindra-logo.png" },
-  { name: "Honda", logo: "https://www.carlogos.org/car-logos/honda-logo.png" },
-  { name: "Hyundai", logo: "https://www.carlogos.org/car-logos/hyundai-logo.png" },
-  { name: "Skoda", logo: "https://www.carlogos.org/car-logos/skoda-logo.png" },
+  { name: "Maruti Suzuki", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Maruti_Suzuki_Logo.svg/200px-Maruti_Suzuki_Logo.svg.png" },
+  { name: "Mahindra", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Mahindra_and_Mahindra_Limited_logo.svg/200px-Mahindra_and_Mahindra_Limited_logo.svg.png" },
+  { name: "Honda", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Honda.svg/200px-Honda.svg.png" },
+  { name: "Hyundai", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Hyundai_Motor_Company_logo.svg/200px-Hyundai_Motor_Company_logo.svg.png" },
+  { name: "Skoda", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/%C5%A0koda_Auto_logo_%282022%29.svg/200px-%C5%A0koda_Auto_logo_%282022%29.svg.png" },
 ];
 
 const categoryTabs = [
