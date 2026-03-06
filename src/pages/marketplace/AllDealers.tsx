@@ -326,7 +326,6 @@ const AllDealers = () => {
           })}
         </div>
         <ScrollLoader ref={loaderRef} hasMore={hasMore} />
-        </div>
 
         {/* Enhanced Empty State */}
         {filteredDealers.length === 0 && (
