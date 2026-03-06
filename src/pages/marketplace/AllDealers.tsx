@@ -10,51 +10,57 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MarketplaceSkeleton } from "@/components/marketplace/ShimmerSkeleton";
 import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import ScrollLoader from "@/components/ScrollLoader";
 
 const AllDealers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("rating");
 
-  // Fetch all marketplace dealers
+  // Fetch all marketplace dealers - single consolidated query
   const { data, isLoading } = useQuery({
     queryKey: ['all-dealers'],
     queryFn: async () => {
+      // Single query to get dealers
       const { data: dealers } = await supabase
         .from("settings")
-        .select("*")
+        .select("user_id, id, dealer_name, dealer_address, dealer_phone, shop_logo_url, marketplace_featured, marketplace_badge, google_reviews_rating, google_reviews_count, public_page_id")
         .eq("public_page_enabled", true)
         .eq("marketplace_enabled", true);
 
-      const dealerIds = (dealers || []).map(d => d.user_id);
+      if (!dealers?.length) return { dealers: [] };
+      const dealerIds = dealers.map(d => d.user_id);
 
-      const { data: vehicles } = await supabase
-        .from("vehicles")
-        .select("user_id")
-        .in("user_id", dealerIds)
-        .eq("is_public", true)
-        .eq("status", "in_stock");
+      // Batch: vehicles count + testimonials in parallel
+      const [vehiclesRes, testimonialsRes] = await Promise.all([
+        supabase
+          .from("vehicles")
+          .select("user_id")
+          .in("user_id", dealerIds)
+          .eq("is_public", true)
+          .eq("status", "in_stock"),
+        supabase
+          .from("dealer_testimonials")
+          .select("user_id, rating")
+          .in("user_id", dealerIds)
+          .eq("is_verified", true)
+      ]);
 
       const vehicleCount: Record<string, number> = {};
-      (vehicles || []).forEach(v => {
+      (vehiclesRes.data || []).forEach(v => {
         vehicleCount[v.user_id] = (vehicleCount[v.user_id] || 0) + 1;
       });
 
-      const { data: testimonials } = await supabase
-        .from("dealer_testimonials")
-        .select("user_id, rating")
-        .in("user_id", dealerIds)
-        .eq("is_verified", true);
-
       const ratings: Record<string, { sum: number; count: number }> = {};
-      (testimonials || []).forEach(t => {
+      (testimonialsRes.data || []).forEach(t => {
         if (!ratings[t.user_id]) ratings[t.user_id] = { sum: 0, count: 0 };
         ratings[t.user_id].sum += t.rating;
         ratings[t.user_id].count += 1;
       });
 
       return {
-        dealers: (dealers || []).map(d => ({
+        dealers: dealers.map(d => ({
           ...d,
           vehicleCount: vehicleCount[d.user_id] || 0,
           rating: ratings[d.user_id] 
@@ -114,6 +120,7 @@ const AllDealers = () => {
     return result;
   }, [dealers, searchTerm, cityFilter, sortBy]);
 
+  const { displayedItems: displayedDealers, hasMore, loaderRef } = useInfiniteScroll(filteredDealers, 18);
   const clearFilters = () => {
     setSearchTerm("");
     setCityFilter("all");
@@ -215,14 +222,14 @@ const AllDealers = () => {
 
         {/* Dealers Grid - Enhanced Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-          {filteredDealers.map((dealer, index) => {
+          {displayedDealers.map((dealer, index) => {
             const location = getDealerLocation(dealer.dealer_address || "");
             return (
               <Link 
                 key={dealer.id} 
                 to={`/marketplace/dealer/${dealer.public_page_id}`}
                 className="animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
+                style={{ animationDelay: `${Math.min(index, 8) * 50}ms` }}
               >
                 <Card className="overflow-hidden hover:shadow-xl transition-all duration-500 rounded-2xl border-0 shadow-sm group hover:-translate-y-1">
                   {/* Header with gradient */}
@@ -242,6 +249,7 @@ const AllDealers = () => {
                           src={dealer.shop_logo_url} 
                           alt={dealer.dealer_name}
                           className="h-16 w-16 rounded-2xl object-cover border-4 border-background shadow-lg"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center border-4 border-background shadow-lg">
@@ -317,6 +325,7 @@ const AllDealers = () => {
             );
           })}
         </div>
+        <ScrollLoader ref={loaderRef} hasMore={hasMore} />
 
         {/* Enhanced Empty State */}
         {filteredDealers.length === 0 && (

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import marutiLogo from "@/assets/brands/maruti-suzuki.png";
@@ -14,12 +14,13 @@ import {
   ShieldCheck, RefreshCw, FileCheck, Headphones, BadgePercent,
   Tag, MapPin, Navigation, Loader2, Store
 } from "lucide-react";
-import MarketplaceFooter from "@/components/marketplace/MarketplaceFooter";
 import LocationSelector, { MAJOR_CITIES } from "@/components/marketplace/LocationSelector";
 import useWishlist from "@/hooks/useWishlist";
-import MarketplacePopup from "@/components/marketplace/MarketplacePopup";
-import FloatingCTA from "@/components/marketplace/FloatingCTA";
-import MarketplaceEMICalculator from "@/components/marketplace/MarketplaceEMICalculator";
+
+// Lazy load heavy / below-fold components
+const MarketplaceFooter = lazy(() => import("@/components/marketplace/MarketplaceFooter"));
+const MarketplacePopup = lazy(() => import("@/components/marketplace/MarketplacePopup"));
+const MarketplaceEMICalculator = lazy(() => import("@/components/marketplace/MarketplaceEMICalculator"));
 
 const serviceCategories = [
   { icon: Car, label: "Buy Used Car", href: "/marketplace/vehicles", color: "text-blue-600", bg: "bg-blue-50", active: true },
@@ -614,10 +615,12 @@ const Marketplace = () => {
         </div>
       </div>
 
-      {/* Popups & Overlays */}
-      <MarketplacePopup />
-      <MarketplaceEMICalculator open={showEMICalculator} onOpenChange={setShowEMICalculator} />
-      <MarketplaceFooter />
+      {/* Popups & Overlays - lazy loaded */}
+      <Suspense fallback={null}>
+        <MarketplacePopup />
+        {showEMICalculator && <MarketplaceEMICalculator open={showEMICalculator} onOpenChange={setShowEMICalculator} />}
+        <MarketplaceFooter />
+      </Suspense>
     </div>
   );
 };
