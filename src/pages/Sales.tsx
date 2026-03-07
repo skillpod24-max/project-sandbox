@@ -60,10 +60,10 @@ const Sales = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
       const [salesRes, vehiclesRes, customersRes, settingsRes] = await Promise.all([
-        supabase.from("sales").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicles").select("*").eq("user_id", user.id),
-        supabase.from("customers").select("*").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("sales").select("id, sale_number, vehicle_id, customer_id, selling_price, discount, tax_amount, total_amount, down_payment, amount_paid, balance_amount, payment_mode, status, is_emi, emi_configured, annual_interest_rate, notes, sale_date, created_at, user_id").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("id, brand, model, variant, status, selling_price, manufacturing_year, registration_number, vehicle_type").eq("user_id", user.id),
+        supabase.from("customers").select("id, full_name, phone, email, code").eq("is_active", true).eq("user_id", user.id),
+        supabase.from("settings").select("dealer_name, dealer_address, dealer_phone, dealer_email, dealer_gst, shop_logo_url, sale_prefix, tax_rate, currency").eq("user_id", user.id).maybeSingle(),
       ]);
       return {
         sales: (salesRes.data || []) as Sale[],

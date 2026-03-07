@@ -37,7 +37,7 @@ const Payments = () => {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [] as Payment[];
-      const { data } = await supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      const { data } = await supabase.from("payments").select("id, payment_number, amount, payment_type, payment_mode, payment_date, effective_date, payment_purpose, description, reference_id, reference_type, customer_id, vendor_id, principal_amount, interest_amount, profit_amount, user_id, created_at").eq("user_id", user.id).order("created_at", { ascending: false });
       return (data || []) as Payment[];
     },
     staleTime: 2 * 60 * 1000,

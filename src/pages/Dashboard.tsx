@@ -27,17 +27,17 @@ const fetchDashboardData = async () => {
   if (!user) throw new Error("No user");
 
   const [vehiclesRes, customersRes, vendorsRes, salesRes, purchasesRes, emisRes, paymentsRes, expensesRes, leadsRes, imagesRes, eventsRes] = await Promise.all([
-    supabase.from("vehicles").select("*").eq("user_id", user.id),
-    supabase.from("customers").select("*").eq("user_id", user.id),
-    supabase.from("vendors").select("*").eq("user_id", user.id),
-    supabase.from("sales").select("*").eq("user_id", user.id),
-    supabase.from("vehicle_purchases").select("*").eq("user_id", user.id),
-    supabase.from("emi_schedules").select("*").eq("user_id", user.id),
-    supabase.from("payments").select("*").eq("user_id", user.id),
-    supabase.from("expenses").select("*").eq("user_id", user.id),
-    supabase.from("leads").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-    supabase.from("vehicle_images").select("*").eq("user_id", user.id),
-    supabase.from("public_page_events").select("*").eq("dealer_user_id", user.id),
+    supabase.from("vehicles").select("id, status, purchase_price, brand, model, selling_price").eq("user_id", user.id),
+    supabase.from("customers").select("id, full_name").eq("user_id", user.id),
+    supabase.from("vendors").select("id").eq("user_id", user.id),
+    supabase.from("sales").select("id, status, total_amount, balance_amount, customer_id, vehicle_id, amount_paid").eq("user_id", user.id),
+    supabase.from("vehicle_purchases").select("id").eq("user_id", user.id),
+    supabase.from("emi_schedules").select("id, status").eq("user_id", user.id),
+    supabase.from("payments").select("id, amount, payment_type, created_at").eq("user_id", user.id),
+    supabase.from("expenses").select("id, amount").eq("user_id", user.id),
+    supabase.from("leads").select("id, customer_name, phone, vehicle_interest, status, priority, source, follow_up_date, notes, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("vehicle_images").select("vehicle_id, image_url, is_primary").eq("user_id", user.id),
+    supabase.from("public_page_events").select("event_type, vehicle_id, public_page_id, created_at").eq("dealer_user_id", user.id),
   ]);
 
   const vehicles = vehiclesRes.data || [];

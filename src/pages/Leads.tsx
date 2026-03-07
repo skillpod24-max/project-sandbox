@@ -101,8 +101,6 @@ const Leads = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { viewMode, setViewMode } = useViewMode("leads");
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
@@ -130,32 +128,34 @@ const Leads = () => {
     lead_type: "buying",
   });
 
-  useEffect(() => {
-    fetchLeads();
-    const channel = supabase
-      .channel("leads-page-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => fetchLeads())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
-
-  const fetchLeads = async () => {
-    try {
+  const { data: leadsData, isLoading: loading } = useQuery({
+    queryKey: ['leads'],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+      if (!user) return [];
       const { data, error } = await supabase
         .from("leads")
-        .select("*")
+        .select("id, user_id, lead_number, customer_name, phone, email, vehicle_interest, budget_min, budget_max, source, status, priority, assigned_to, follow_up_date, last_contact_date, notes, created_at, updated_at, city, lead_type, last_viewed_at, converted_from_lead")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setLeads(data || []);
-    } catch (error) {
-      console.error("Error fetching leads:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return (data || []) as Lead[];
+    },
+    staleTime: 60 * 1000,
+  });
+
+  const leads = leadsData || [];
+
+  // Realtime subscription for lead updates - only invalidates React Query cache
+  useEffect(() => {
+    const channel = supabase
+      .channel("leads-page-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => {
+        queryClient.invalidateQueries({ queryKey: ['leads'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   // Dynamic city list from leads
   const uniqueCities = Array.from(
