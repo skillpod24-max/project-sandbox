@@ -58,8 +58,11 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes - keep unused data in cache longer
       refetchOnWindowFocus: false,
+      refetchOnMount: 'always', // Use cache but revalidate if stale
       retry: 1,
+      structuralSharing: true, // Prevent unnecessary re-renders
     },
   },
 });

@@ -1,20 +1,17 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/formatters";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Car, Clock, MapPin, Phone, User, Eye, CheckCircle, XCircle,
-  Calendar, Fuel, Gauge, Tag, MessageSquare,
-  BarChart3, TrendingUp, Mail, Store, Users, ArrowUpRight
+  Car, Phone, Eye, Calendar, MessageSquare,
+  BarChart3, TrendingUp, Store, Tag
 } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, subDays, startOfDay } from "date-fns";
@@ -22,7 +19,6 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from "recharts";
 
-// Tab Types - Only dealer-relevant tabs (removed all-vehicles and dealers)
 type HubTab = "analytics" | "vehicles-for-sale";
 
 interface SellRequest {
@@ -36,180 +32,62 @@ interface SellRequest {
   notes: string | null;
   status: string;
   created_at: string;
-  parsedData?: {
-    type?: string;
-    vehicleType?: string;
-    brand?: string;
-    model?: string;
-    variant?: string;
-    year?: number;
-    fuelType?: string;
-    transmission?: string;
-    kmDriven?: string;
-    expectedPrice?: string;
-    owners?: string;
-    description?: string;
-    images?: string[];
-    color?: string;
-    registrationNumber?: string;
-    condition?: string;
-    insuranceValid?: string;
-    accidentHistory?: string;
-    state?: string;
-  };
+  parsedData?: Record<string, any>;
 }
 
-interface TestDriveRequest {
-  id: string;
-  customer_name: string;
-  phone: string;
-  email: string | null;
-  vehicle_interest: string;
-  notes: string | null;
-  status: string;
-  created_at: string;
-  testDriveDate?: string;
-  testDriveTime?: string;
-  isTestDrive: boolean;
-}
-
-interface DealerMarketplaceHubProps {
-  // Optional props for when used as a component
-}
-
-const DealerMarketplaceHub = () => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [statsLoaded, setStatsLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<HubTab>("analytics");
-  const [userId, setUserId] = useState<string | null>(null);
-
-  // Analytics state
-  const [analyticsStats, setAnalyticsStats] = useState({
-    dealerPageViews: 0,
-    vehiclePageViews: 0,
-    totalEnquiries: 0,
-    testDriveRequests: 0,
-    totalCalls: 0,
-    totalWhatsapp: 0,
-    publicVehicles: 0,
-    conversionRate: 0,
-  });
-  const [dailyData, setDailyData] = useState<any[]>([]);
-  const [vehicleStats, setVehicleStats] = useState<any[]>([]);
-  const [period, setPeriod] = useState("7d");
-
-  // Test Drive & Enquiries state (combined)
-  const [marketplaceLeads, setMarketplaceLeads] = useState<TestDriveRequest[]>([]);
-
-  // Vehicles for Sale state
-  const [sellRequests, setSellRequests] = useState<SellRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<SellRequest | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-
-  // Initial auth check - only runs once
-  useEffect(() => {
-    const checkAuth = async () => {
+// ─── Auth hook (single call, cached) ───
+const useCurrentUserId = () => {
+  const { data: userId, isLoading } = useQuery({
+    queryKey: ['auth-user-id'],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-      setLoading(false);
-    };
-    checkAuth();
-  }, []);
+      return user?.id ?? null;
+    },
+    staleTime: Infinity, // Auth doesn't change mid-session
+    gcTime: Infinity,
+  });
+  return { userId: userId ?? null, isLoading };
+};
 
-  // Fetch data when userId changes or period changes
-  useEffect(() => {
-    if (userId) {
-      fetchAllData();
-
-      // Realtime subscription for instant updates
-      const channel = supabase
-        .channel("hub-leads-realtime")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "leads" },
-          () => fetchAllData()
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [userId, period]);
-
-  const fetchAllData = async () => {
-    if (!userId) return;
-
-    try {
-      await Promise.all([
-        fetchAnalytics(userId),
-        fetchMarketplaceLeads(userId),
-        fetchSellRequests(userId)
-      ]);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  const fetchAnalytics = async (uid: string) => {
-    try {
+// ─── Analytics query ───
+const useHubAnalytics = (userId: string | null, period: string) => {
+  return useQuery({
+    queryKey: ['hub-analytics', userId, period],
+    queryFn: async () => {
+      if (!userId) return null;
       const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
       const startDate = startOfDay(subDays(new Date(), days));
 
-      // Fetch ONLY marketplace-specific events
-      const { data: events } = await supabase
-        .from("public_page_events")
-        .select("*")
-        .eq("dealer_user_id", uid)
-        .eq("public_page_id", "marketplace")
-        .gte("created_at", startDate.toISOString());
+      // Parallel: events + public vehicle count
+      const [{ data: events }, { count: publicVehiclesCount }] = await Promise.all([
+        supabase
+          .from("public_page_events")
+          .select("event_type, vehicle_id, created_at")
+          .eq("dealer_user_id", userId)
+          .eq("public_page_id", "marketplace")
+          .gte("created_at", startDate.toISOString()),
+        supabase
+          .from("vehicles")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("is_public", true),
+      ]);
 
-      const { count: publicVehiclesCount } = await supabase
-        .from("vehicles")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", uid)
-        .eq("is_public", true);
-
-      // Separate dealer page views and vehicle page views
-      const dealerViews = (events || []).filter(e => e.event_type === "dealer_view").length;
-      const vehicleViews = (events || []).filter(e => e.event_type === "vehicle_view").length;
-      const enquiriesCount = (events || []).filter(e => e.event_type === "enquiry_submit").length;
-      const calls = (events || []).filter(e => e.event_type === "cta_call").length;
-      const whatsapp = (events || []).filter(e => e.event_type === "cta_whatsapp").length;
-
-      // Count test drive requests from leads
-      const { count: testDriveCount } = await supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", uid)
-        .eq("source", "marketplace")
-        .ilike("notes", "%TEST DRIVE REQUESTED%");
-
+      const allEvents = events || [];
+      const dealerViews = allEvents.filter(e => e.event_type === "dealer_view").length;
+      const vehicleViews = allEvents.filter(e => e.event_type === "vehicle_view").length;
+      const enquiriesCount = allEvents.filter(e => e.event_type === "enquiry_submit").length;
+      const calls = allEvents.filter(e => e.event_type === "cta_call").length;
+      const whatsapp = allEvents.filter(e => e.event_type === "cta_whatsapp").length;
       const totalViews = dealerViews + vehicleViews;
 
-      setAnalyticsStats({
-        dealerPageViews: dealerViews,
-        vehiclePageViews: vehicleViews,
-        totalEnquiries: enquiriesCount,
-        testDriveRequests: testDriveCount || 0,
-        totalCalls: calls,
-        totalWhatsapp: whatsapp,
-        publicVehicles: publicVehiclesCount || 0,
-        conversionRate: totalViews > 0 ? ((enquiriesCount + calls + whatsapp) / totalViews) * 100 : 0,
-      });
-      setStatsLoaded(true);
-
-      // Daily breakdown with separate dealer/vehicle views
+      // Daily breakdown
       const dailyMap: Record<string, { date: string; dealerViews: number; vehicleViews: number; enquiries: number }> = {};
       for (let i = 0; i < days; i++) {
         const d = format(subDays(new Date(), i), "MMM dd");
         dailyMap[d] = { date: d, dealerViews: 0, vehicleViews: 0, enquiries: 0 };
       }
-
-      (events || []).forEach(e => {
+      allEvents.forEach(e => {
         const d = format(new Date(e.created_at), "MMM dd");
         if (dailyMap[d]) {
           if (e.event_type === "dealer_view") dailyMap[d].dealerViews++;
@@ -218,108 +96,139 @@ const DealerMarketplaceHub = () => {
         }
       });
 
-      setDailyData(Object.values(dailyMap).reverse());
-
       // Vehicle-wise stats
       const vehicleMap: Record<string, { id: string; views: number; enquiries: number }> = {};
-      (events || []).filter(e => e.vehicle_id).forEach(e => {
-        if (!vehicleMap[e.vehicle_id]) {
-          vehicleMap[e.vehicle_id] = { id: e.vehicle_id, views: 0, enquiries: 0 };
-        }
-        if (e.event_type === "vehicle_view") vehicleMap[e.vehicle_id].views++;
-        if (e.event_type === "enquiry_submit") vehicleMap[e.vehicle_id].enquiries++;
+      allEvents.filter(e => e.vehicle_id).forEach(e => {
+        if (!vehicleMap[e.vehicle_id!]) vehicleMap[e.vehicle_id!] = { id: e.vehicle_id!, views: 0, enquiries: 0 };
+        if (e.event_type === "vehicle_view") vehicleMap[e.vehicle_id!].views++;
+        if (e.event_type === "enquiry_submit") vehicleMap[e.vehicle_id!].enquiries++;
       });
 
+      let vehicleStats: any[] = [];
       const vehicleIds = Object.keys(vehicleMap);
       if (vehicleIds.length > 0) {
         const [{ data: vehiclesData }, { data: imagesData }] = await Promise.all([
           supabase.from("vehicles").select("id, brand, model, manufacturing_year, selling_price").in("id", vehicleIds),
           supabase.from("vehicle_images").select("vehicle_id, image_url, is_primary").in("vehicle_id", vehicleIds),
         ]);
-
         const imageMap: Record<string, string> = {};
         (imagesData || []).forEach(img => {
           if (!imageMap[img.vehicle_id] || img.is_primary) imageMap[img.vehicle_id] = img.image_url;
         });
-
-        const enriched = (vehiclesData || []).map(v => ({
-          ...v,
-          ...vehicleMap[v.id],
+        vehicleStats = (vehiclesData || []).map(v => ({
+          ...v, ...vehicleMap[v.id],
           name: `${v.manufacturing_year} ${v.brand} ${v.model}`,
           image_url: imageMap[v.id] || null,
-        })).sort((a, b) => b.views - a.views);
-
-        setVehicleStats(enriched.slice(0, 10));
+        })).sort((a, b) => b.views - a.views).slice(0, 10);
       }
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-    }
-  };
 
-  const fetchMarketplaceLeads = async (uid: string) => {
-    // Fetch all marketplace leads (both enquiries and test drives)
-    const { data } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("user_id", uid)
-      .eq("source", "marketplace")
-      .order("created_at", { ascending: false });
-
-    const parsed = (data || []).map(lead => {
-      const notes = lead.notes || "";
-      const isTestDrive = notes.includes("TEST DRIVE REQUESTED");
-      const dateMatch = notes.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
-      const timeMatch = notes.match(/at (\d{1,2}:\d{2} [AP]M)/);
       return {
-        ...lead,
-        testDriveDate: dateMatch?.[1],
-        testDriveTime: timeMatch?.[1],
-        isTestDrive
+        stats: {
+          dealerPageViews: dealerViews,
+          vehiclePageViews: vehicleViews,
+          totalEnquiries: enquiriesCount,
+          testDriveRequests: 0, // Will be derived from leads query
+          totalCalls: calls,
+          totalWhatsapp: whatsapp,
+          publicVehicles: publicVehiclesCount || 0,
+          conversionRate: totalViews > 0 ? ((enquiriesCount + calls + whatsapp) / totalViews) * 100 : 0,
+        },
+        dailyData: Object.values(dailyMap).reverse(),
+        vehicleStats,
       };
-    });
+    },
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000, // 2 min
+  });
+};
 
-    setMarketplaceLeads(parsed);
-  };
-
-  const fetchSellRequests = async (uid: string) => {
-    const { data } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("assigned_to", uid)
-      .eq("source", "marketplace_sell")
-      .order("created_at", { ascending: false });
-
-    const parsedRequests = (data || []).map(req => {
-      let parsedData = {};
-      try {
-        if (req.notes) {
-          parsedData = JSON.parse(req.notes);
-        }
-      } catch {}
-      return { ...req, parsedData } as SellRequest;
-    });
-
-    setSellRequests(parsedRequests);
-  };
-
-  const handleStatusUpdate = async (requestId: string, newStatus: string) => {
-    try {
-      await supabase
+// ─── Marketplace leads query ───
+const useMarketplaceLeads = (userId: string | null) => {
+  return useQuery({
+    queryKey: ['hub-marketplace-leads', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data } = await supabase
         .from("leads")
-        .update({ status: newStatus })
-        .eq("id", requestId);
+        .select("id, lead_number, customer_name, phone, email, vehicle_interest, notes, status, created_at")
+        .eq("user_id", userId)
+        .eq("source", "marketplace")
+        .order("created_at", { ascending: false })
+        .limit(200);
 
+      return (data || []).map(lead => {
+        const notes = lead.notes || "";
+        const isTestDrive = notes.includes("TEST DRIVE REQUESTED");
+        const dateMatch = notes.match(/TEST DRIVE REQUESTED: (\d{4}-\d{2}-\d{2})/);
+        const timeMatch = notes.match(/at (\d{1,2}:\d{2} [AP]M)/);
+        return { ...lead, testDriveDate: dateMatch?.[1], testDriveTime: timeMatch?.[1], isTestDrive };
+      });
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  });
+};
+
+// ─── Sell requests query ───
+const useSellRequests = (userId: string | null) => {
+  return useQuery({
+    queryKey: ['hub-sell-requests', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data } = await supabase
+        .from("leads")
+        .select("id, lead_number, customer_name, phone, email, city, vehicle_interest, notes, status, created_at")
+        .eq("assigned_to", userId)
+        .eq("source", "marketplace_sell")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      return (data || []).map(req => {
+        let parsedData = {};
+        try { if (req.notes) parsedData = JSON.parse(req.notes); } catch {}
+        return { ...req, parsedData } as SellRequest;
+      });
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  });
+};
+
+const DealerMarketplaceHub = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<HubTab>("analytics");
+  const [period, setPeriod] = useState("7d");
+  const [selectedRequest, setSelectedRequest] = useState<SellRequest | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const { userId, isLoading: authLoading } = useCurrentUserId();
+  const { data: analyticsData, isLoading: analyticsLoading } = useHubAnalytics(userId, period);
+  const { data: marketplaceLeads = [] } = useMarketplaceLeads(userId);
+  const { data: sellRequests = [] } = useSellRequests(userId);
+
+  const analyticsStats = analyticsData?.stats || {
+    dealerPageViews: 0, vehiclePageViews: 0, totalEnquiries: 0,
+    testDriveRequests: 0, totalCalls: 0, totalWhatsapp: 0,
+    publicVehicles: 0, conversionRate: 0,
+  };
+  const dailyData = analyticsData?.dailyData || [];
+  const vehicleStats = analyticsData?.vehicleStats || [];
+
+  // Derive test drive count from leads
+  const testDriveCount = useMemo(() => marketplaceLeads.filter(l => l.isTestDrive).length, [marketplaceLeads]);
+  const statsWithTestDrives = { ...analyticsStats, testDriveRequests: testDriveCount };
+
+  const handleStatusUpdate = useCallback(async (requestId: string, newStatus: string) => {
+    try {
+      await supabase.from("leads").update({ status: newStatus }).eq("id", requestId);
       toast({ title: `Status updated to ${newStatus}` });
-      if (userId) fetchAllData();
+      // Invalidate only the affected query
+      queryClient.invalidateQueries({ queryKey: ['hub-sell-requests', userId] });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
-  };
-
-  const tabs: { id: HubTab; label: string; icon: any }[] = [
-    { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "vehicles-for-sale", label: "Vehicles for Sale", icon: Tag },
-  ];
+  }, [userId, queryClient, toast]);
 
   const statusColors: Record<string, string> = {
     new: "bg-blue-100 text-blue-700",
@@ -332,11 +241,12 @@ const DealerMarketplaceHub = () => {
     purchased: "bg-purple-100 text-purple-700",
   };
 
-  // Separate test drives and enquiries
-  const testDrives = useMemo(() => marketplaceLeads.filter(l => l.isTestDrive), [marketplaceLeads]);
-  const enquiries = useMemo(() => marketplaceLeads.filter(l => !l.isTestDrive), [marketplaceLeads]);
+  const tabs: { id: HubTab; label: string; icon: any }[] = [
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "vehicles-for-sale", label: "Vehicles for Sale", icon: Tag },
+  ];
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="space-y-6 p-6">
         <div className="flex gap-4">
@@ -344,13 +254,7 @@ const DealerMarketplaceHub = () => {
           <Skeleton className="h-8 w-32" />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80 rounded-lg" />
-          <Skeleton className="h-80 rounded-lg" />
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
         </div>
       </div>
     );
@@ -369,7 +273,7 @@ const DealerMarketplaceHub = () => {
         </div>
       </div>
 
-      {/* Tab Switcher - Zoho Style */}
+      {/* Tab Switcher */}
       <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -410,14 +314,14 @@ const DealerMarketplaceHub = () => {
           {/* Summary Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {[
-              { label: "Dealer Page Views", value: analyticsStats.dealerPageViews, icon: Store, color: "text-blue-600 bg-blue-50" },
-              { label: "Vehicle Page Views", value: analyticsStats.vehiclePageViews, icon: Eye, color: "text-indigo-600 bg-indigo-50" },
-              { label: "Total Enquiries", value: analyticsStats.totalEnquiries, icon: MessageSquare, color: "text-green-600 bg-green-50" },
-              { label: "Test Drive Requests", value: analyticsStats.testDriveRequests, icon: Calendar, color: "text-purple-600 bg-purple-50" },
-              { label: "Calls", value: analyticsStats.totalCalls, icon: Phone, color: "text-amber-600 bg-amber-50" },
-              { label: "WhatsApp", value: analyticsStats.totalWhatsapp, icon: MessageSquare, color: "text-emerald-600 bg-emerald-50" },
-              { label: "Public Vehicles", value: analyticsStats.publicVehicles, icon: Car, color: "text-slate-600 bg-slate-100" },
-              { label: "Conversion Rate", value: `${analyticsStats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: "text-rose-600 bg-rose-50" },
+              { label: "Dealer Page Views", value: statsWithTestDrives.dealerPageViews, icon: Store, color: "text-blue-600 bg-blue-50" },
+              { label: "Vehicle Page Views", value: statsWithTestDrives.vehiclePageViews, icon: Eye, color: "text-indigo-600 bg-indigo-50" },
+              { label: "Total Enquiries", value: statsWithTestDrives.totalEnquiries, icon: MessageSquare, color: "text-green-600 bg-green-50" },
+              { label: "Test Drive Requests", value: statsWithTestDrives.testDriveRequests, icon: Calendar, color: "text-purple-600 bg-purple-50" },
+              { label: "Calls", value: statsWithTestDrives.totalCalls, icon: Phone, color: "text-amber-600 bg-amber-50" },
+              { label: "WhatsApp", value: statsWithTestDrives.totalWhatsapp, icon: MessageSquare, color: "text-emerald-600 bg-emerald-50" },
+              { label: "Public Vehicles", value: statsWithTestDrives.publicVehicles, icon: Car, color: "text-slate-600 bg-slate-100" },
+              { label: "Conversion Rate", value: `${statsWithTestDrives.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: "text-rose-600 bg-rose-50" },
             ].map((stat, i) => (
               <Card key={i} className="border shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
@@ -426,7 +330,7 @@ const DealerMarketplaceHub = () => {
                       <stat.icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      {statsLoaded ? (
+                      {!analyticsLoading ? (
                         <p className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</p>
                       ) : (
                         <Skeleton className="h-8 w-16 rounded" />
@@ -439,9 +343,8 @@ const DealerMarketplaceHub = () => {
             ))}
           </div>
 
-          {/* Dealer Page vs Vehicle Page Analytics */}
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Dealer Page Analytics */}
             <Card className="border shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -465,7 +368,6 @@ const DealerMarketplaceHub = () => {
               </CardContent>
             </Card>
 
-            {/* Vehicle Page Analytics */}
             <Card className="border shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -491,7 +393,7 @@ const DealerMarketplaceHub = () => {
             </Card>
           </div>
 
-          {/* Top Performing Vehicles - Grid Cards with Images */}
+          {/* Top Performing Vehicles */}
           <Card className="border shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">Top Performing Vehicles</CardTitle>
@@ -499,7 +401,7 @@ const DealerMarketplaceHub = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {vehicleStats.map((v, i) => (
+                {vehicleStats.map((v: any, i: number) => (
                   <Card key={v.id} className="overflow-hidden border hover:shadow-md transition-shadow">
                     <div className="aspect-video bg-muted relative">
                       {v.image_url ? (
@@ -532,7 +434,6 @@ const DealerMarketplaceHub = () => {
         </div>
       )}
 
-
       {/* Vehicles for Sale Tab */}
       {activeTab === "vehicles-for-sale" && (
         <div className="space-y-4 animate-fade-in">
@@ -564,34 +465,25 @@ const DealerMarketplaceHub = () => {
                   <div
                     key={req.id}
                     className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => {
-                      setSelectedRequest(req);
-                      setDetailOpen(true);
-                    }}
+                    onClick={() => { setSelectedRequest(req); setDetailOpen(true); }}
                   >
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{req.customer_name}</span>
-                          <Badge className={statusColors[req.status] || "bg-slate-100"}>
-                            {req.status}
-                          </Badge>
+                          <Badge className={statusColors[req.status] || "bg-slate-100"}>{req.status}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{req.vehicle_interest}</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Phone className="h-3 w-3" /> {req.phone}
                         </p>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(req.created_at), "MMM dd")}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{format(new Date(req.created_at), "MMM dd")}</span>
                     </div>
                   </div>
                 ))}
                 {sellRequests.length === 0 && (
-                  <p className="text-center text-muted-foreground py-12">
-                    No vehicle selling requests yet
-                  </p>
+                  <p className="text-center text-muted-foreground py-12">No vehicle selling requests yet</p>
                 )}
               </div>
             </CardContent>
@@ -599,7 +491,7 @@ const DealerMarketplaceHub = () => {
         </div>
       )}
 
-      {/* Detail Dialog for Sell Requests */}
+      {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -607,8 +499,7 @@ const DealerMarketplaceHub = () => {
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4">
-              {/* Images Gallery */}
-              {selectedRequest.parsedData?.images && selectedRequest.parsedData.images.length > 0 && (
+              {selectedRequest.parsedData?.images?.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
                   {selectedRequest.parsedData.images.map((img: string, i: number) => (
                     <div key={i} className={`${i === 0 ? 'col-span-2' : ''} bg-muted rounded-lg overflow-hidden`}>
@@ -618,89 +509,30 @@ const DealerMarketplaceHub = () => {
                 </div>
               )}
 
-              {/* All Details Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                <div className="p-3 rounded-lg bg-muted">
-                  <p className="text-muted-foreground text-xs">Customer</p>
-                  <p className="font-medium">{selectedRequest.customer_name}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted">
-                  <p className="text-muted-foreground text-xs">Phone</p>
-                  <p className="font-medium">{selectedRequest.phone}</p>
-                </div>
-                {selectedRequest.email && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Email</p>
-                    <p className="font-medium">{selectedRequest.email}</p>
+                {[
+                  { label: "Customer", value: selectedRequest.customer_name },
+                  { label: "Phone", value: selectedRequest.phone },
+                  { label: "Email", value: selectedRequest.email },
+                  { label: "Vehicle", value: selectedRequest.vehicle_interest },
+                  { label: "City", value: selectedRequest.city },
+                  { label: "Brand", value: selectedRequest.parsedData?.brand },
+                  { label: "Model", value: selectedRequest.parsedData?.model },
+                  { label: "Year", value: selectedRequest.parsedData?.year },
+                  { label: "Vehicle Type", value: selectedRequest.parsedData?.vehicleType },
+                  { label: "Fuel Type", value: selectedRequest.parsedData?.fuelType },
+                  { label: "Transmission", value: selectedRequest.parsedData?.transmission },
+                  { label: "KM Driven", value: selectedRequest.parsedData?.kmDriven ? `${selectedRequest.parsedData.kmDriven} km` : null },
+                  { label: "Expected Price", value: selectedRequest.parsedData?.expectedPrice },
+                  { label: "Owners", value: selectedRequest.parsedData?.owners },
+                ].filter(f => f.value).map((field, i) => (
+                  <div key={i} className="p-3 rounded-lg bg-muted">
+                    <p className="text-muted-foreground text-xs">{field.label}</p>
+                    <p className="font-medium capitalize">{field.value}</p>
                   </div>
-                )}
-                <div className="p-3 rounded-lg bg-muted">
-                  <p className="text-muted-foreground text-xs">Vehicle</p>
-                  <p className="font-medium">{selectedRequest.vehicle_interest}</p>
-                </div>
-                {selectedRequest.city && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">City</p>
-                    <p className="font-medium">{selectedRequest.city}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.brand && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Brand</p>
-                    <p className="font-medium">{selectedRequest.parsedData.brand}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.model && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Model</p>
-                    <p className="font-medium">{selectedRequest.parsedData.model}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.year && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Year</p>
-                    <p className="font-medium">{selectedRequest.parsedData.year}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.vehicleType && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Vehicle Type</p>
-                    <p className="font-medium capitalize">{selectedRequest.parsedData.vehicleType}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.fuelType && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Fuel Type</p>
-                    <p className="font-medium capitalize">{selectedRequest.parsedData.fuelType}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.transmission && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Transmission</p>
-                    <p className="font-medium capitalize">{selectedRequest.parsedData.transmission}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.kmDriven && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">KM Driven</p>
-                    <p className="font-medium">{selectedRequest.parsedData.kmDriven} km</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.expectedPrice && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Expected Price</p>
-                    <p className="font-medium text-primary">{selectedRequest.parsedData.expectedPrice}</p>
-                  </div>
-                )}
-                {selectedRequest.parsedData?.owners && (
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-muted-foreground text-xs">Owners</p>
-                    <p className="font-medium">{selectedRequest.parsedData.owners}</p>
-                  </div>
-                )}
+                ))}
               </div>
 
-              {/* Description */}
               {selectedRequest.parsedData?.description && (
                 <div className="p-3 rounded-lg bg-muted">
                   <p className="text-muted-foreground text-xs mb-1">Description</p>
@@ -708,7 +540,6 @@ const DealerMarketplaceHub = () => {
                 </div>
               )}
 
-              {/* Status Actions */}
               <div className="space-y-2 pt-4 border-t">
                 <p className="text-sm font-medium text-muted-foreground">Update Status</p>
                 <div className="flex flex-wrap gap-2">
