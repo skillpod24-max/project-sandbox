@@ -35,7 +35,7 @@ const fetchDashboardData = async () => {
     supabase.from("emi_schedules").select("id, status").eq("user_id", user.id),
     supabase.from("payments").select("id, amount, payment_type, created_at").eq("user_id", user.id),
     supabase.from("expenses").select("id, amount").eq("user_id", user.id),
-    supabase.from("leads").select("id, customer_name, phone, vehicle_interest, status, follow_up_date, notes, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("leads").select("id, customer_name, phone, vehicle_interest, status, priority, source, follow_up_date, notes, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
     supabase.from("vehicle_images").select("vehicle_id, image_url, is_primary").eq("user_id", user.id),
     supabase.from("public_page_events").select("event_type, vehicle_id, public_page_id, created_at").eq("dealer_user_id", user.id),
   ]);
