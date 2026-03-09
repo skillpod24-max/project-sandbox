@@ -28,12 +28,7 @@ const EMI = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [emis, setEmis] = useState<EMISchedule[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [emiInterestCollected, setEmiInterestCollected] = useState(0);
 const [emiInterestPending, setEmiInterestPending] = useState(0);
