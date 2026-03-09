@@ -110,31 +110,10 @@ const Vendors = () => {
   });
 
   useEffect(() => {
-    fetchData();
-    const handler = () => fetchData();
+    const handler = () => queryClient.invalidateQueries({ queryKey: ['vendors-page'] });
     window.addEventListener("vendor-updated", handler);
     return () => window.removeEventListener("vendor-updated", handler);
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-
-      const [vendorsRes, purchasesRes, vehiclesRes] = await Promise.all([
-        supabase.from("vendors").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicle_purchases").select("*").eq("user_id", user.id).order("purchase_date", { ascending: false }),
-        supabase.from("vehicles").select("*").eq("user_id", user.id),
-      ]);
-      setVendors(vendorsRes.data || []);
-      setPurchases(purchasesRes.data || []);
-      setVehicles(vehiclesRes.data || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [queryClient]);
 
   const generateCode = () => `VEN${Date.now().toString(36).toUpperCase()}`;
 
