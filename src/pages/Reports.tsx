@@ -182,7 +182,7 @@ return;
 }
 
 const [salesRes, vehiclesRes, purchasesRes, paymentsRes, emisRes, customersRes, expensesRes, vendorsRes] = await Promise.all([
-supabase.from("sales").select("id,sale_number,vehicle_id,customer_id,selling_price,total_amount,amount_paid,balance_amount,status,sale_date,is_emi,emi_configured,discount,tax_amount,payment_mode").eq("user_id", user.id),
+supabase.from("sales").select("id,sale_number,vehicle_id,customer_id,selling_price,total_amount,amount_paid,balance_amount,status,sale_date,is_emi,emi_configured,discount,tax_amount,payment_mode,down_payment").eq("user_id", user.id),
 supabase.from("vehicles").select("id,brand,model,variant,code,status,purchase_price,selling_price,fuel_type,vehicle_type,created_at,condition").eq("user_id", user.id),
 supabase.from("vehicle_purchases").select("id,vehicle_id,vendor_id,purchase_price,amount_paid,balance_amount,purchase_date").eq("user_id", user.id),
 supabase.from("payments").select("id,amount,payment_type,payment_date,payment_mode,payment_purpose,customer_id,vendor_id,reference_id,principal_amount,interest_amount,profit_amount,created_at").eq("user_id", user.id),
