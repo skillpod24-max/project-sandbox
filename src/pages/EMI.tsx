@@ -98,10 +98,6 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
   const [paymentMode, setPaymentMode] = useState<string>("cash");
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
   if (!selectedSaleId) return;
 
   supabase
@@ -114,33 +110,6 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
       setEmiDocuments(data || []);
     });
 }, [selectedSaleId]);
-
-
-  const fetchData = async () => {
-    try {
-      // Get current user for explicit filtering
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const [emisRes, salesRes, vehiclesRes, customersRes] = await Promise.all([
-        supabase.from("emi_schedules").select("*").eq("user_id", user.id).order("due_date", { ascending: true }),
-        supabase.from("sales").select("*").eq("is_emi", true).eq("user_id", user.id),
-        supabase.from("vehicles").select("*").eq("user_id", user.id),
-        supabase.from("customers").select("*").eq("user_id", user.id),
-      ]);
-      setEmis(emisRes.data || []);
-      setSales(salesRes.data || []);
-      setVehicles(vehiclesRes.data || []);
-      setCustomers(customersRes.data || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getSaleInfo = (saleId: string) => {
     const sale = sales.find(s => s.id === saleId);
