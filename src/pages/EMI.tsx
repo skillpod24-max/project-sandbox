@@ -431,7 +431,7 @@ await supabase.from("sales").update({
     toast({ title: "Payment recorded successfully" });
 
     setPaymentDialogOpen(false);
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['emi-page'] });
   } catch (error: any) {
     toast({
       title: "Error",
