@@ -313,7 +313,7 @@ await supabase
 
     toast({ title: "EMI schedule generated successfully" });
     setConfigDialogOpen(false);
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['emi-page'] });
   } catch (error: any) {
     toast({
       title: "Error",
