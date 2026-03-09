@@ -58,10 +58,9 @@ export async function createPublicLead({
     throw new Error("Failed to create lead");
   }
 
-  // 3️⃣ Send email to dealer (only if email is configured)
+  // 3️⃣ Send email to dealer (fire-and-forget — never blocks lead creation)
   if (!settingsError && settings?.dealer_email) {
-    try {
-      await sendEmail({
+    sendEmail({
         to: settings.dealer_email,
         subject: `🚗 New ${source === "marketplace" ? "Marketplace" : "Catalogue"} Enquiry - ${customerName}`,
         html: `
@@ -102,11 +101,9 @@ export async function createPublicLead({
             </div>
           </div>
         `,
+      }).catch((emailError) => {
+        console.error("Failed to send email notification:", emailError);
       });
-    } catch (emailError) {
-      console.error("Failed to send email notification:", emailError);
-      // Don't throw - lead was created successfully, email is secondary
-    }
   } else {
     console.warn("Dealer email not configured, skipping email notification");
   }

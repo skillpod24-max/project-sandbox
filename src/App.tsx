@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
+import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -68,14 +70,15 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
 
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
           {/* ---------- Public Marketplace ---------- */}
           <Route path="/" element={<Marketplace />} />
           <Route path="/marketplace/vehicle/:vehicleId" element={<MarketplaceVehicle />} />
@@ -111,150 +114,192 @@ const App = () => (
           <Route
             path="/dashboard"
             element={
-              <Layout>
-                <Dashboard />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/vehicles"
             element={
-              <Layout>
-                <Vehicles />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Vehicles />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/customers"
             element={
-              <Layout>
-                <Customers />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Customers />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/vendors"
             element={
-              <Layout>
-                <Vendors />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Vendors />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/sales"
             element={
-              <Layout>
-                <Sales />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Sales />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/purchases"
             element={
-              <Layout>
-                <Purchases />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Purchases />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/payments"
             element={
-              <Layout>
-                <Payments />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Payments />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/emi"
             element={
-              <Layout>
-                <EMI />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <EMI />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/expenses"
             element={
-              <Layout>
-                <Expenses />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Expenses />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/documents"
             element={
-              <Layout>
-                <Documents />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Documents />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/leads"
             element={
-              <Layout>
-                <Leads />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Leads />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/services"
             element={
-              <Layout>
-                <Services />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Services />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/reports"
             element={
-              <Layout>
-                <Reports />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Reports />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/marketplace-hub"
             element={
-              <Layout>
-                <DealerMarketplaceHub />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <DealerMarketplaceHub />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/analytics/marketplace"
             element={
-              <Layout>
-                <MarketplaceAnalytics />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <MarketplaceAnalytics />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/analytics/public-page"
             element={
-              <Layout>
-                <PublicPageAnalytics />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <PublicPageAnalytics />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/alerts"
             element={
-              <Layout>
-                <Alerts />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Alerts />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/settings"
             element={
-              <Layout>
-                <Settings />
-              </Layout>
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
+                </Layout>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/calendar"
-            element={<Layout><CalendarPage /></Layout>}
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CalendarPage />
+                </Layout>
+              </ProtectedRoute>
+            }
           />
           {/* Removed individual routes - now consolidated in Marketplace Hub */}
           <Route path="/inspection/:vehicleId" element={<VehicleInspection />} />
@@ -265,6 +310,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
