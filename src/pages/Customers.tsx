@@ -61,7 +61,7 @@ const Customers = () => {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [] as Customer[];
-      const { data, error } = await supabase.from("customers").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("customers").select("id,code,full_name,phone,email,address,id_proof_type,id_proof_number,driving_license_number,notes,is_active,converted_from_lead,lead_id,created_at,user_id").eq("user_id", user.id).order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as Customer[];
     },
