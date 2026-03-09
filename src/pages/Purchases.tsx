@@ -50,10 +50,10 @@ const Purchases = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
       const [purchasesRes, vehiclesRes, vendorsRes, imagesRes] = await Promise.all([
-        supabase.from("vehicle_purchases").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicles").select("*").eq("user_id", user.id),
-        supabase.from("vendors").select("*").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("vehicle_images").select("*").eq("user_id", user.id),
+        supabase.from("vehicle_purchases").select("id,purchase_number,vehicle_id,vendor_id,purchase_price,amount_paid,balance_amount,payment_mode,purchase_date,notes,created_at,user_id").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("id,brand,model,variant,code,status,purchase_price,selling_price").eq("user_id", user.id),
+        supabase.from("vendors").select("id,name,code,phone,is_active").eq("is_active", true).eq("user_id", user.id),
+        supabase.from("vehicle_images").select("id,vehicle_id,image_url,is_primary").eq("user_id", user.id),
       ]);
       return {
         purchases: (purchasesRes.data || []) as Purchase[],

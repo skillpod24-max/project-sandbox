@@ -90,7 +90,7 @@ const Expenses = () => {
       if (!user) return [] as Expense[];
       const { data, error } = await supabase
         .from("expenses")
-        .select("*")
+        .select("id,expense_number,amount,category,description,expense_date,payment_mode,vehicle_id,notes,created_at,user_id")
         .eq("user_id", user.id)
         .order("expense_date", { ascending: false });
       if (error) throw error;

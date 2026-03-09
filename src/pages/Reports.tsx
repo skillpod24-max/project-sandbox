@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -181,13 +182,13 @@ return;
 }
 
 const [salesRes, vehiclesRes, purchasesRes, paymentsRes, emisRes, customersRes, expensesRes, vendorsRes] = await Promise.all([
-supabase.from("sales").select("*").eq("user_id", user.id),
-supabase.from("vehicles").select("*").eq("user_id", user.id),
-supabase.from("vehicle_purchases").select("*").eq("user_id", user.id),
-supabase.from("payments").select("*").eq("user_id", user.id),
-supabase.from("emi_schedules").select("*").eq("user_id", user.id),
-supabase.from("customers").select("*").eq("user_id", user.id),
-supabase.from("expenses").select("*").eq("user_id", user.id),
+supabase.from("sales").select("id,sale_number,vehicle_id,customer_id,selling_price,total_amount,amount_paid,balance_amount,status,sale_date,is_emi,emi_configured,discount,tax_amount,payment_mode,down_payment").eq("user_id", user.id),
+supabase.from("vehicles").select("id,brand,model,variant,code,status,purchase_price,selling_price,fuel_type,vehicle_type,created_at,condition").eq("user_id", user.id),
+supabase.from("vehicle_purchases").select("id,vehicle_id,vendor_id,purchase_price,amount_paid,balance_amount,purchase_date").eq("user_id", user.id),
+supabase.from("payments").select("id,amount,payment_type,payment_date,payment_mode,payment_purpose,customer_id,vendor_id,reference_id,principal_amount,interest_amount,profit_amount,created_at").eq("user_id", user.id),
+supabase.from("emi_schedules").select("id,emi_number,emi_amount,amount_paid,status,due_date,sale_id,principal_component,interest_component,principal_paid,interest_paid,updated_at").eq("user_id", user.id),
+supabase.from("customers").select("id,full_name,created_at").eq("user_id", user.id),
+supabase.from("expenses").select("id,amount,category,expense_date").eq("user_id", user.id),
 supabase.from("vendors").select("id, name").eq("user_id", user.id),
 ]);
 

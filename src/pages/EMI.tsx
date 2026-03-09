@@ -28,12 +28,33 @@ const EMI = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [emis, setEmis] = useState<EMISchedule[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: emiPageData, isLoading: loading } = useQuery({
+    queryKey: ['emi-page'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { emis: [] as EMISchedule[], sales: [] as Sale[], vehicles: [] as Vehicle[], customers: [] as Customer[] };
+      const [emisRes, salesRes, vehiclesRes, customersRes] = await Promise.all([
+        supabase.from("emi_schedules").select("id,emi_number,due_date,emi_amount,amount_paid,status,sale_id,principal_component,interest_component,principal_paid,interest_paid,paid_date,notes,user_id").eq("user_id", user.id).order("due_date", { ascending: true }),
+        supabase.from("sales").select("id,sale_number,vehicle_id,customer_id,total_amount,amount_paid,balance_amount,down_payment,is_emi,emi_configured,annual_interest_rate,status,selling_price").eq("is_emi", true).eq("user_id", user.id),
+        supabase.from("vehicles").select("id,brand,model,variant,code,status").eq("user_id", user.id),
+        supabase.from("customers").select("id,full_name,phone,code").eq("user_id", user.id),
+      ]);
+      return {
+        emis: (emisRes.data || []) as EMISchedule[],
+        sales: (salesRes.data || []) as Sale[],
+        vehicles: (vehiclesRes.data || []) as Vehicle[],
+        customers: (customersRes.data || []) as Customer[],
+      };
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const emis = emiPageData?.emis || [];
+  const sales = emiPageData?.sales || [];
+  const vehicles = emiPageData?.vehicles || [];
+  const customers = emiPageData?.customers || [];
 
   const [emiInterestCollected, setEmiInterestCollected] = useState(0);
 const [emiInterestPending, setEmiInterestPending] = useState(0);
@@ -77,10 +98,6 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
   const [paymentMode, setPaymentMode] = useState<string>("cash");
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
   if (!selectedSaleId) return;
 
   supabase
@@ -93,33 +110,6 @@ const [emiAmountPending, setEmiAmountPending] = useState(0);
       setEmiDocuments(data || []);
     });
 }, [selectedSaleId]);
-
-
-  const fetchData = async () => {
-    try {
-      // Get current user for explicit filtering
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const [emisRes, salesRes, vehiclesRes, customersRes] = await Promise.all([
-        supabase.from("emi_schedules").select("*").eq("user_id", user.id).order("due_date", { ascending: true }),
-        supabase.from("sales").select("*").eq("is_emi", true).eq("user_id", user.id),
-        supabase.from("vehicles").select("*").eq("user_id", user.id),
-        supabase.from("customers").select("*").eq("user_id", user.id),
-      ]);
-      setEmis(emisRes.data || []);
-      setSales(salesRes.data || []);
-      setVehicles(vehiclesRes.data || []);
-      setCustomers(customersRes.data || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getSaleInfo = (saleId: string) => {
     const sale = sales.find(s => s.id === saleId);
@@ -323,7 +313,7 @@ await supabase
 
     toast({ title: "EMI schedule generated successfully" });
     setConfigDialogOpen(false);
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['emi-page'] });
   } catch (error: any) {
     toast({
       title: "Error",
@@ -441,7 +431,7 @@ await supabase.from("sales").update({
     toast({ title: "Payment recorded successfully" });
 
     setPaymentDialogOpen(false);
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['emi-page'] });
   } catch (error: any) {
     toast({
       title: "Error",
