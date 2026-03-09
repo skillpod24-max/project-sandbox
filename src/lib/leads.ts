@@ -101,11 +101,9 @@ export async function createPublicLead({
             </div>
           </div>
         `,
+      }).catch((emailError) => {
+        console.error("Failed to send email notification:", emailError);
       });
-    } catch (emailError) {
-      console.error("Failed to send email notification:", emailError);
-      // Don't throw - lead was created successfully, email is secondary
-    }
   } else {
     console.warn("Dealer email not configured, skipping email notification");
   }
