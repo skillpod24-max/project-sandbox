@@ -70,14 +70,15 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
 
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
           {/* ---------- Public Marketplace ---------- */}
           <Route path="/" element={<Marketplace />} />
           <Route path="/marketplace/vehicle/:vehicleId" element={<MarketplaceVehicle />} />
