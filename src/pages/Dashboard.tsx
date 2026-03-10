@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -8,7 +6,6 @@ import {
   CreditCard, Wallet, ChevronDown, ChevronUp
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend } from "recharts";
-import { format, subMonths, startOfDay, endOfDay } from "date-fns";
 import { formatCurrency, formatIndianNumber } from "@/lib/formatters";
 import { DashboardSkeleton } from "@/components/ui/page-skeleton";
 import {
@@ -19,254 +16,25 @@ import {
   OutstandingPaymentsWidget,
   UpcomingTestDrivesWidget,
 } from "@/components/dashboard/DashboardWidgets";
-
-const COLORS = ['hsl(221, 83%, 53%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(262, 83%, 58%)', 'hsl(339, 90%, 51%)'];
-
-const fetchDashboardData = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("No user");
-
-  const [vehiclesRes, customersRes, vendorsRes, salesRes, purchasesRes, emisRes, paymentsRes, expensesRes, leadsRes, imagesRes, eventsRes] = await Promise.all([
-    supabase.from("vehicles").select("id, status, purchase_price, brand, model, selling_price").eq("user_id", user.id),
-    supabase.from("customers").select("id, full_name").eq("user_id", user.id),
-    supabase.from("vendors").select("id").eq("user_id", user.id),
-    supabase.from("sales").select("id, status, total_amount, balance_amount, customer_id, vehicle_id, amount_paid").eq("user_id", user.id),
-    supabase.from("vehicle_purchases").select("id").eq("user_id", user.id),
-    supabase.from("emi_schedules").select("id, status").eq("user_id", user.id),
-    supabase.from("payments").select("id, amount, payment_type, created_at").eq("user_id", user.id),
-    supabase.from("expenses").select("id, amount").eq("user_id", user.id),
-    supabase.from("leads").select("id, customer_name, phone, vehicle_interest, status, priority, source, follow_up_date, notes, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
-    supabase.from("vehicle_images").select("vehicle_id, image_url, is_primary").eq("user_id", user.id),
-    supabase.from("public_page_events").select("event_type, vehicle_id, public_page_id, created_at").eq("dealer_user_id", user.id),
-  ]);
-
-  const vehicles = vehiclesRes.data || [];
-  const customers = customersRes.data || [];
-  const vendors = vendorsRes.data || [];
-  const sales = salesRes.data || [];
-  const emis = emisRes.data || [];
-  const expenses = expensesRes.data || [];
-  const payments = paymentsRes.data || [];
-  const leads = leadsRes.data || [];
-  const images = imagesRes.data || [];
-  const events = eventsRes.data || [];
-
-  const inStock = vehicles.filter(v => v.status === 'in_stock').length;
-  const sold = vehicles.filter(v => v.status === 'sold').length;
-  const reserved = vehicles.filter(v => v.status === 'reserved').length;
-  
-  const completedSales = sales.filter(s => s.status === 'completed');
-  const totalSalesValue = completedSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
-  const totalCollected = payments.filter(p => p.payment_type === "customer_payment").reduce((sum, p) => sum + Number(p.amount || 0), 0);
-  const pendingPayments = totalSalesValue - totalCollected;
-
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  const monthlyCollections = payments
-    .filter(p =>
-      p.payment_type === "customer_payment" &&
-      new Date(p.created_at).getMonth() === currentMonth &&
-      new Date(p.created_at).getFullYear() === currentYear
-    )
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-  const totalRevenue = payments.filter(p => p.payment_type === "customer_payment").reduce((sum, p) => sum + Number(p.amount || 0), 0);
-  const totalCost = payments.filter(p => p.payment_type === "vendor_payment").reduce((sum, p) => sum + Number(p.amount || 0), 0);
-  const totalExpensesVal = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-  const totalProfit = totalRevenue - totalCost - totalExpensesVal;
-
-  const avgSaleValue = completedSales.length > 0 ? totalSalesValue / completedSales.length : 0;
-  const pendingEMIs = emis.filter(e => e.status === 'pending').length;
-
-  // Cash Flow Trend
-  const cashFlowMap: Record<string, { inflow: number; outflow: number }> = {};
-  for (let i = 5; i >= 0; i--) {
-    const date = subMonths(now, i);
-    const key = format(date, "MMM yyyy");
-    cashFlowMap[key] = { inflow: 0, outflow: 0 };
-  }
-
-  payments.forEach(p => {
-    const month = format(new Date(p.created_at), "MMM yyyy");
-    if (!cashFlowMap[month]) return;
-    if (p.payment_type === "customer_payment") {
-      cashFlowMap[month].inflow += Number(p.amount || 0);
-    }
-    if (p.payment_type === "vendor_payment") {
-      cashFlowMap[month].outflow += Number(p.amount || 0);
-    }
-  });
-
-  const cashFlowData = Object.entries(cashFlowMap).map(([month, data]) => ({ month, ...data }));
-
-  // Inventory Value Distribution
-  const inventoryValueMap = { in_stock: 0, sold: 0, reserved: 0 };
-  vehicles.forEach(v => {
-    const price = Number(v.purchase_price || 0);
-    if (v.status === "in_stock") inventoryValueMap.in_stock += price;
-    if (v.status === "sold") inventoryValueMap.sold += price;
-    if (v.status === "reserved") inventoryValueMap.reserved += price;
-  });
-
-  const inventoryValueData = [
-    { name: "In Stock", value: inventoryValueMap.in_stock, color: COLORS[1] },
-    { name: "Sold", value: inventoryValueMap.sold, color: COLORS[0] },
-    { name: "Reserved", value: inventoryValueMap.reserved, color: COLORS[2] },
-  ];
-
-  // Sales Funnel
-  const totalLeads = leads.length;
-  const qualifiedLeads = leads.filter(l => l.status === "qualified").length;
-  const soldCount = leads.filter(l => l.status === "won").length;
-  const lostCount = leads.filter(l => l.status === "lost").length;
-
-  const salesFunnelData = [
-    { name: "Leads", count: totalLeads, percent: totalLeads > 0 ? 100 : 0, color: COLORS[0] },
-    { name: "Qualified", count: qualifiedLeads, percent: totalLeads > 0 ? Math.round((qualifiedLeads / totalLeads) * 100) : 0, color: COLORS[1] },
-    { name: "Sold", count: soldCount, percent: totalLeads > 0 ? Math.round((soldCount / totalLeads) * 100) : 0, color: COLORS[2] },
-    { name: "Lost", count: lostCount, percent: totalLeads > 0 ? Math.round((lostCount / totalLeads) * 100) : 0, color: COLORS[4] },
-  ];
-
-  // Upcoming Follow-ups
-  const upcomingFollowUps = leads
-    .filter(l => l.follow_up_date && new Date(l.follow_up_date) >= now)
-    .sort((a, b) => new Date(a.follow_up_date!).getTime() - new Date(b.follow_up_date!).getTime())
-    .slice(0, 5);
-
-  // Recent Leads
-  const recentLeads = leads.slice(0, 5);
-
-  // Upcoming Test Drives
-  const testDriveLeads = leads
-    .filter(l => {
-      if (!l.notes) return false;
-      const match = l.notes.match(/TEST DRIVE REQUESTED:\s*(\d{4}-\d{2}-\d{2})/);
-      if (!match) return false;
-      return new Date(match[1]) >= now;
-    })
-    .map(l => {
-      const match = l.notes!.match(/TEST DRIVE REQUESTED:\s*(\d{4}-\d{2}-\d{2})(?:\s*at\s*(.+?))?[\]\n]/);
-      return {
-        id: l.id,
-        customer_name: l.customer_name,
-        phone: l.phone,
-        test_drive_date: match?.[1] || '',
-        test_drive_time: match?.[2]?.trim() || '',
-        vehicle_interest: l.vehicle_interest,
-      };
-    })
-    .sort((a, b) => new Date(a.test_drive_date).getTime() - new Date(b.test_drive_date).getTime())
-    .slice(0, 5);
-
-  // Today's Overview
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
-  
-  const todayEvents = events.filter(e => {
-    const eventDate = new Date(e.created_at);
-    return eventDate >= todayStart && eventDate <= todayEnd;
-  });
-
-  const marketplaceEvents = todayEvents.filter(e => e.public_page_id === 'marketplace');
-  const catalogueEvents = todayEvents.filter(e => e.public_page_id !== 'marketplace');
-
-  const quickOverview = {
-    marketplace_views: marketplaceEvents.filter(e => e.event_type === 'vehicle_view' || e.event_type === 'dealer_view').length,
-    marketplace_enquiries: marketplaceEvents.filter(e => e.event_type === 'enquiry_submit').length,
-    catalogue_views: catalogueEvents.filter(e => e.event_type === 'page_view' || e.event_type === 'vehicle_view').length,
-    catalogue_enquiries: catalogueEvents.filter(e => e.event_type === 'enquiry' || e.event_type === 'enquiry_submit').length,
-  };
-
-  // Top Performing Vehicles
-  const vehicleViewCounts: Record<string, { views: number; enquiries: number; isMarketplace: boolean }> = {};
-  events.forEach(e => {
-    if (!e.vehicle_id) return;
-    const isMarketplace = e.public_page_id === 'marketplace';
-    const key = `${e.vehicle_id}_${isMarketplace ? 'mp' : 'cat'}`;
-    if (!vehicleViewCounts[key]) {
-      vehicleViewCounts[key] = { views: 0, enquiries: 0, isMarketplace };
-    }
-    if (e.event_type.includes('view')) vehicleViewCounts[key].views++;
-    if (e.event_type.includes('enquiry')) vehicleViewCounts[key].enquiries++;
-  });
-
-  const getTopVehicle = (isMP: boolean) => {
-    const sorted = Object.entries(vehicleViewCounts)
-      .filter(([, v]) => v.isMarketplace === isMP)
-      .sort(([, a], [, b]) => (b.views + b.enquiries) - (a.views + a.enquiries));
-    if (sorted.length === 0) return null;
-    const topVehicleId = sorted[0][0].split('_')[0];
-    const topVehicle = vehicles.find(v => v.id === topVehicleId);
-    const vehicleImage = images.find(i => i.vehicle_id === topVehicleId);
-    if (!topVehicle) return null;
-    const suffix = isMP ? 'mp' : 'cat';
-    return {
-      id: topVehicle.id, brand: topVehicle.brand, model: topVehicle.model,
-      image_url: vehicleImage?.image_url,
-      views: vehicleViewCounts[`${topVehicleId}_${suffix}`]?.views || 0,
-      enquiries: vehicleViewCounts[`${topVehicleId}_${suffix}`]?.enquiries || 0,
-      selling_price: topVehicle.selling_price,
-    };
-  };
-
-  // Outstanding Payments
-  const outstandingPayments = completedSales
-    .filter(s => s.balance_amount > 0)
-    .map(s => {
-      const customer = customers.find(c => c.id === s.customer_id);
-      const vehicle = vehicles.find(v => v.id === s.vehicle_id);
-      return {
-        id: s.id,
-        customer_name: customer?.full_name || 'Unknown',
-        vehicle_name: vehicle ? `${vehicle.brand} ${vehicle.model}` : 'Unknown',
-        amount: s.balance_amount,
-      };
-    })
-    .slice(0, 5);
-
-  return {
-    stats: {
-      totalVehicles: vehicles.length, vehiclesInStock: inStock, vehiclesSold: sold,
-      vehiclesReserved: reserved, totalCustomers: customers.length, totalVendors: vendors.length,
-      pendingPayments, monthlySales: monthlyCollections, totalRevenue, totalProfit,
-      totalSalesCount: completedSales.length, avgSaleValue, totalExpenses: totalExpensesVal, pendingEMIs,
-    },
-    cashFlowData, inventoryValueData, salesFunnelData,
-    upcomingFollowUps, recentLeads, upcomingTestDrives: testDriveLeads,
-    topMarketplaceVehicle: getTopVehicle(true),
-    topCatalogueVehicle: getTopVehicle(false),
-    quickOverview, outstandingPayments,
-  };
-};
+import { useDashboardData } from "@/services/api";
 
 const Dashboard = () => {
   const [showAllCards, setShowAllCards] = useState(false);
 
-  const { data, isLoading: loading } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: fetchDashboardData,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const stats = data?.stats ?? {
-    totalVehicles: 0, vehiclesInStock: 0, vehiclesSold: 0, vehiclesReserved: 0,
-    totalCustomers: 0, totalVendors: 0, pendingPayments: 0, monthlySales: 0,
-    totalRevenue: 0, totalProfit: 0, totalSalesCount: 0, avgSaleValue: 0,
-    totalExpenses: 0, pendingEMIs: 0,
-  };
-  const cashFlowData = data?.cashFlowData ?? [];
-  const inventoryValueData = data?.inventoryValueData ?? [];
-  const salesFunnelData = data?.salesFunnelData ?? [];
-  const upcomingFollowUps = data?.upcomingFollowUps ?? [];
-  const recentLeads = data?.recentLeads ?? [];
-  const topMarketplaceVehicle = data?.topMarketplaceVehicle ?? null;
-  const topCatalogueVehicle = data?.topCatalogueVehicle ?? null;
-  const quickOverview = data?.quickOverview ?? { marketplace_views: 0, marketplace_enquiries: 0, catalogue_views: 0, catalogue_enquiries: 0 };
-  const outstandingPayments = data?.outstandingPayments ?? [];
-  const upcomingTestDrives = data?.upcomingTestDrives ?? [];
+  const {
+    isLoading: loading,
+    stats,
+    inventoryValueData,
+    salesFunnelData,
+    cashFlowData,
+    upcomingFollowUps,
+    recentLeads,
+    upcomingTestDrives,
+    topMarketplaceVehicle,
+    topCatalogueVehicle,
+    quickOverview,
+    outstandingPayments,
+  } = useDashboardData();
 
   const primaryCards = [
     { title: "Total Vehicles", value: formatIndianNumber(stats.totalVehicles), icon: Car, color: "text-chart-1" },
