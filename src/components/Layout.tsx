@@ -107,7 +107,7 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
 
     const updateStatus = async () => {
       if (!navigator.onLine) {
