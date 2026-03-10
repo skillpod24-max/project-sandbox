@@ -1536,6 +1536,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      dashboard_summary: { Args: { p_user_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
