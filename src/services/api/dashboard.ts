@@ -25,7 +25,7 @@ interface DashboardSummary {
 const fetchDashboardSummary = async (userId: string): Promise<DashboardSummary> => {
   const { data, error } = await supabase.rpc("dashboard_summary", { p_user_id: userId });
   if (error) throw error;
-  return data as DashboardSummary;
+  return data as unknown as DashboardSummary;
 };
 
 // Fetch only the detail data needed for charts/widgets (lightweight queries)
