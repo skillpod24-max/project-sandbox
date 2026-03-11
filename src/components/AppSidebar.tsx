@@ -247,6 +247,7 @@ export function AppSidebar() {
   ], []);
 
   return (
+    <TooltipProvider delayDuration={0}>
     <Sidebar collapsible="icon" className="will-change-transform border-r border-border/30 overflow-x-hidden">
       <SidebarContent className="bg-sidebar flex flex-col h-full overflow-x-hidden">
         {/* Logo - Zoho Style */}
@@ -273,5 +274,6 @@ export function AppSidebar() {
         </div>
       </SidebarContent>
     </Sidebar>
+    </TooltipProvider>
   );
 }
