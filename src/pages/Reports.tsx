@@ -1592,12 +1592,12 @@ return (
 {!(accountingMode === "nbfc" && nbfcView === "breakdown") && (
 <Tabs defaultValue="overview" className="space-y-4">
 <TabsList className="flex w-full max-w-2xl overflow-x-auto scrollbar-invisible">
-<TabsTrigger value="overview">Overview</TabsTrigger>
-<TabsTrigger value="sales">Sales</TabsTrigger>
-<TabsTrigger value="inventory">Inventory</TabsTrigger>
-<TabsTrigger value="customers">Customers</TabsTrigger>
-<TabsTrigger value="payments">Payments</TabsTrigger>
-<TabsTrigger value="public">Public Page</TabsTrigger>
+<TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Overview</TabsTrigger>
+<TabsTrigger value="sales" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Sales</TabsTrigger>
+<TabsTrigger value="inventory" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Inventory</TabsTrigger>
+<TabsTrigger value="customers" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Customers</TabsTrigger>
+<TabsTrigger value="payments" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Payments</TabsTrigger>
+<TabsTrigger value="public" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Public Page</TabsTrigger>
 
 </TabsList>
 
