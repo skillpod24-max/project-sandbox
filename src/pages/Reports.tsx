@@ -1276,30 +1276,30 @@ return (
 {!(accountingMode === "nbfc" && nbfcView === "breakdown") && (
   <>
 {/* KPI Cards - Row 1 */}
-<div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 px-1">
+<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 px-1">
 <Card className="border border-border bg-gradient-to-br from-chart-2/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Revenue</p>
-<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-2 truncate" title={`₹${formatIndianNumber(summary.totalRevenue)}`}>₹{formatIndianNumber(summary.totalRevenue)}</p>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Revenue</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-2 break-all leading-tight">₹{formatIndianNumber(summary.totalRevenue)}</p>
 <p className="text-[10px] text-chart-2">{summary.totalSales} sales</p>
 </div>
 </CardContent>
 </Card>
 <Card className="border border-border bg-gradient-to-br from-chart-5/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Paid Cost</p>
-<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-5 truncate" title={`₹${formatIndianNumber(summary.totalCost)}`}>₹{formatIndianNumber(summary.totalCost)}</p>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Paid Cost</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-5 break-all leading-tight">₹{formatIndianNumber(summary.totalCost)}</p>
 <p className="text-[10px] text-chart-5">{summary.totalPurchases} purchases</p>
 </div>
 </CardContent>
 </Card>
 <Card className="border border-border bg-gradient-to-br from-chart-4/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Profit</p>
-<p className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${summary.totalProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`} title={`₹${formatIndianNumber(summary.totalProfit)}`}>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Profit</p>
+<p className={`text-sm sm:text-lg lg:text-xl font-bold break-all leading-tight ${summary.totalProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
 ₹{formatIndianNumber(summary.totalProfit)}
 </p>
 <p className="text-[10px] text-chart-4">{summary.profitMargin.toFixed(1)}% margin</p>
@@ -1307,10 +1307,10 @@ return (
 </CardContent>
 </Card>
 <Card className="border border-border bg-gradient-to-br from-chart-1/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Avg Sale</p>
-<p className="text-base sm:text-xl lg:text-2xl font-bold truncate" title={`₹${formatIndianNumber(Math.round(summary.avgSaleValue))}`}>₹{formatIndianNumber(Math.round(summary.avgSaleValue))}</p>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Avg Sale</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold break-all leading-tight">₹{formatIndianNumber(Math.round(summary.avgSaleValue))}</p>
 <p className="text-[10px] text-chart-1">per sale</p>
 </div>
 </CardContent>
