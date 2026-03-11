@@ -1388,7 +1388,7 @@ return (
   {accountingMode === "nbfc" && nbfcView === "breakdown" && (
   <Tabs defaultValue="vehicles" className="space-y-4">
 
-    <TabsList className="grid grid-cols-6 w-full">
+    <TabsList className="flex w-full overflow-x-auto scrollbar-invisible">
       <TabsTrigger value="vehicles">Vehicle Ledger</TabsTrigger>
 <TabsTrigger value="pnl">P&L (Cash)</TabsTrigger>
 <TabsTrigger value="balance">Balance Sheet</TabsTrigger>
