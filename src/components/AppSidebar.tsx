@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, memo } from "react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
   Car,
