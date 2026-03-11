@@ -604,16 +604,16 @@ const PublicVehiclePage = () => {
 
       {/* Auto Lead Popup */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-0 max-h-[90vh] overflow-y-auto">
-          <div className={`bg-gradient-to-br ${accent.gradient} p-6 text-white`}>
-            <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full w-fit mb-3">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-              <span className="text-xs font-semibold">Special Offer</span>
+        <DialogContent className="max-w-sm sm:max-w-md p-0 overflow-hidden rounded-2xl border-0 max-h-[85vh] overflow-y-auto">
+          <div className={`bg-gradient-to-br ${accent.gradient} px-5 py-4 text-white`}>
+            <div className="flex items-center gap-1.5 bg-white/20 px-2.5 py-0.5 rounded-full w-fit mb-2">
+              <Sparkles className="h-3 w-3 text-amber-300" />
+              <span className="text-[10px] font-semibold">Special Offer</span>
             </div>
-            <h3 className="text-xl font-bold mb-1">Interested in this vehicle?</h3>
-            <p className="text-white/80 text-sm">Share your details for a personalized quote on the {vehicle.brand} {vehicle.model}.</p>
+            <h3 className="text-base font-bold mb-0.5">Interested in this vehicle?</h3>
+            <p className="text-white/80 text-xs leading-relaxed">Get a personalized quote on the {vehicle.brand} {vehicle.model}.</p>
           </div>
-          <div className="p-5">
+          <div className="px-5 py-4">
             {submitted ? (
               <div className="text-center py-4">
                 <CheckCircle className={`h-12 w-12 mx-auto mb-3 ${accent.text}`} />

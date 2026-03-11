@@ -262,7 +262,11 @@ const Payments = () => {
         </DialogContent>
       </Dialog>
       <Dialog open={!!selectedPayment} onOpenChange={(open) => { if (!open) setSelectedPayment(null); }}>
-  <DialogContent className="max-w-md rounded-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+  <DialogContent
+    className="max-w-md rounded-2xl"
+    onOpenAutoFocus={(e) => e.preventDefault()}
+    onCloseAutoFocus={(e) => e.preventDefault()}
+  >
     <DialogHeader>
       <DialogTitle>Payment Breakdown</DialogTitle>
     </DialogHeader>
