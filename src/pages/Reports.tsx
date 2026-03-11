@@ -1320,79 +1320,64 @@ return (
 {/* KPI Cards - Row 2 */}
 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
   {accountingMode === "nbfc" && (
-<Card className="border border-border">
+<Card className="border border-border overflow-hidden">
   <CardContent className="p-2 sm:p-4 text-center">
-    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-2">
-      <IndianRupee className="h-4 w-4 sm:h-5 sm:w-5 text-chart-4" />
+    <div className="h-8 w-8 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-1">
+      <IndianRupee className="h-4 w-4 text-chart-4" />
     </div>
-
-    <p className="text-lg sm:text-3xl font-bold text-chart-4 truncate">
+    <p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-4 truncate" title={`₹${formatIndianNumber(summary.interestCollected)}`}>
       ₹{formatIndianNumber(summary.interestCollected)}
     </p>
-
-    <p className="text-xs sm:text-sm text-muted-foreground">
-      Interest Earned
-    </p>
-
+    <p className="text-[10px] sm:text-xs text-muted-foreground">Interest Earned</p>
     {summary.interestPending > 0 && (
-      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-        ₹{formatIndianNumber(summary.interestPending)} pending
-      </p>
+      <p className="text-[10px] text-muted-foreground mt-0.5 truncate">₹{formatIndianNumber(summary.interestPending)} pending</p>
     )}
   </CardContent>
 </Card>
   )}
 
-<Card className="border border-border">
+<Card className="border border-border overflow-hidden">
 <CardContent className="p-2 sm:p-4 text-center">
-<div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-2">
-<Users className="h-4 w-4 sm:h-5 sm:w-5 text-chart-4" />
+<div className="h-8 w-8 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-1">
+<Users className="h-4 w-4 text-chart-4" />
 </div>
-<p className="text-lg sm:text-3xl font-bold text-chart-4">{summary.totalCustomers}</p>
-<p className="text-xs sm:text-sm text-muted-foreground">Total Customers</p>
+<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-4">{summary.totalCustomers}</p>
+<p className="text-[10px] sm:text-xs text-muted-foreground">Total Customers</p>
 </CardContent>
 </Card>
-<Card className="border border-border">
+<Card className="border border-border overflow-hidden">
 <CardContent className="p-2 sm:p-4 text-center">
-<div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-chart-3/20 flex items-center justify-center mx-auto mb-2">
-<Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-chart-3" />
+<div className="h-8 w-8 rounded-full bg-chart-3/20 flex items-center justify-center mx-auto mb-1">
+<Wallet className="h-4 w-4 text-chart-3" />
 </div>
-<p className="text-lg sm:text-3xl font-bold text-chart-3 truncate">₹{formatIndianNumber(summary.pendingAmount)}</p>
-<p className="text-xs sm:text-sm text-muted-foreground">Pending Amount</p>
+<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-3 truncate" title={`₹${formatIndianNumber(summary.pendingAmount)}`}>₹{formatIndianNumber(summary.pendingAmount)}</p>
+<p className="text-[10px] sm:text-xs text-muted-foreground">Pending Amount</p>
 </CardContent>
 </Card>
-<Card className="border border-border">
+<Card className="border border-border overflow-hidden">
 <CardContent className="p-2 sm:p-4 text-center">
-<div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-chart-2/20 flex items-center justify-center mx-auto mb-2">
-<CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-chart-2" />
+<div className="h-8 w-8 rounded-full bg-chart-2/20 flex items-center justify-center mx-auto mb-1">
+<CreditCard className="h-4 w-4 text-chart-2" />
 </div>
-<p className="text-lg sm:text-3xl font-bold text-chart-2 truncate">₹{formatIndianNumber(summary.collectedAmount)}</p>
-<p className="text-xs sm:text-sm text-muted-foreground">Collected</p>
+<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-2 truncate" title={`₹${formatIndianNumber(summary.collectedAmount)}`}>₹{formatIndianNumber(summary.collectedAmount)}</p>
+<p className="text-[10px] sm:text-xs text-muted-foreground">Collected</p>
 </CardContent>
 </Card>
 
-<Card className="border border-border">
+<Card className="border border-border overflow-hidden">
   <CardContent className="p-2 sm:p-4 text-center">
-    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-chart-5/20 flex items-center justify-center mx-auto mb-2">
-      <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-chart-5" />
+    <div className="h-8 w-8 rounded-full bg-chart-5/20 flex items-center justify-center mx-auto mb-1">
+      <Receipt className="h-4 w-4 text-chart-5" />
     </div>
-
-    <p className="text-lg sm:text-3xl font-bold text-chart-5 truncate">
+    <p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-5 truncate" title={`₹${formatIndianNumber(summary.totalExpenses)}`}>
       ₹{formatIndianNumber(summary.totalExpenses)}
     </p>
-
-    <p className="text-xs sm:text-sm text-muted-foreground">
-      Expenses
-    </p>
-
+    <p className="text-[10px] sm:text-xs text-muted-foreground">Expenses</p>
     {accountingMode === "simple" && (
-      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-        Deducted from profit
-      </p>
+      <p className="text-[10px] text-muted-foreground mt-0.5">Deducted from profit</p>
     )}
   </CardContent>
 </Card>
-
 
 </div>
 

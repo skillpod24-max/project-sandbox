@@ -663,18 +663,16 @@ const DealerPublicPage = () => {
 
       {/* Auto Lead Popup */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-0 max-h-[90vh] overflow-y-auto">
-          <div className={`bg-gradient-to-br ${accent.gradient} p-6 text-white`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full">
-                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                <span className="text-xs font-semibold">Special Offer</span>
-              </div>
+        <DialogContent className="max-w-sm sm:max-w-md p-0 overflow-hidden rounded-2xl border-0 max-h-[85vh] overflow-y-auto">
+          <div className={`bg-gradient-to-br ${accent.gradient} px-5 py-4 text-white`}>
+            <div className="flex items-center gap-1.5 bg-white/20 px-2.5 py-0.5 rounded-full w-fit mb-2">
+              <Sparkles className="h-3 w-3 text-amber-300" />
+              <span className="text-[10px] font-semibold">Special Offer</span>
             </div>
-            <h3 className="text-xl font-bold mb-1">Looking for the perfect vehicle?</h3>
-            <p className="text-white/80 text-sm">Share your details and get personalized recommendations from {dealerInfo?.dealer_name || "our expert team"}. Free consultation, no obligations.</p>
+            <h3 className="text-base font-bold mb-0.5">Looking for the perfect vehicle?</h3>
+            <p className="text-white/80 text-xs leading-relaxed">Get personalized recommendations from {dealerInfo?.dealer_name || "our expert team"}. Free consultation.</p>
           </div>
-          <div className="p-5">
+          <div className="px-5 py-4">
             <DealerEnquiryForm dealerInfo={dealerInfo} pageId={pageId!} compact />
           </div>
         </DialogContent>

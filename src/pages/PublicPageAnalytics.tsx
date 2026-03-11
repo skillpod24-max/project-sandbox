@@ -593,27 +593,38 @@ const PublicPageAnalytics = () => {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-medium">Form Funnel</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={formFunnelData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {formFunnelData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <CardContent>
+                  <div className="h-[180px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={formFunnelData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={70}
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={false}
+                          labelLine={false}
+                        >
+                          {formFunnelData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 justify-center">
+                    {formFunnelData.map((entry: any, i: number) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+                        <span className="text-muted-foreground">{entry.name}</span>
+                        <span className="font-medium text-foreground">{entry.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
