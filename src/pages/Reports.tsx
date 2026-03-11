@@ -1591,7 +1591,7 @@ return (
 
 {!(accountingMode === "nbfc" && nbfcView === "breakdown") && (
 <Tabs defaultValue="overview" className="space-y-4">
-<TabsList className="grid grid-cols-6 w-full max-w-2xl">
+<TabsList className="flex w-full max-w-2xl overflow-x-auto scrollbar-invisible">
 <TabsTrigger value="overview">Overview</TabsTrigger>
 <TabsTrigger value="sales">Sales</TabsTrigger>
 <TabsTrigger value="inventory">Inventory</TabsTrigger>
