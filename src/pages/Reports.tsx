@@ -1277,61 +1277,41 @@ return (
   <>
 {/* KPI Cards - Row 1 */}
 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 px-1">
-<Card className="border border-border bg-gradient-to-br from-chart-2/10 to-transparent">
+<Card className="border border-border bg-gradient-to-br from-chart-2/10 to-transparent overflow-hidden">
 <CardContent className="p-2 sm:p-4">
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-<div className="min-w-0 flex-1">
-<p className="text-[10px] sm:text-sm text-muted-foreground">Revenue</p>
-<p className="text-sm sm:text-2xl font-bold text-chart-2">₹{formatIndianNumber(summary.totalRevenue)}</p>
+<div className="flex flex-col gap-1">
+<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Revenue</p>
+<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-2 truncate" title={`₹${formatIndianNumber(summary.totalRevenue)}`}>₹{formatIndianNumber(summary.totalRevenue)}</p>
 <p className="text-[10px] text-chart-2">{summary.totalSales} sales</p>
 </div>
-<div className="hidden sm:flex h-12 w-12 rounded-full bg-chart-2/20 items-center justify-center">
-<TrendingUp className="h-6 w-6 text-chart-2" />
-</div>
-</div>
 </CardContent>
 </Card>
-<Card className="border border-border bg-gradient-to-br from-chart-5/10 to-transparent">
+<Card className="border border-border bg-gradient-to-br from-chart-5/10 to-transparent overflow-hidden">
 <CardContent className="p-2 sm:p-4">
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-<div className="min-w-0 flex-1">
-<p className="text-[10px] sm:text-sm text-muted-foreground">Paid Cost</p>
-<p className="text-sm sm:text-2xl font-bold text-chart-5">₹{formatIndianNumber(summary.totalCost)}</p>
+<div className="flex flex-col gap-1">
+<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Paid Cost</p>
+<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-5 truncate" title={`₹${formatIndianNumber(summary.totalCost)}`}>₹{formatIndianNumber(summary.totalCost)}</p>
 <p className="text-[10px] text-chart-5">{summary.totalPurchases} purchases</p>
 </div>
-<div className="hidden sm:flex h-12 w-12 rounded-full bg-chart-5/20 items-center justify-center">
-<TrendingDown className="h-6 w-6 text-chart-5" />
-</div>
-</div>
 </CardContent>
 </Card>
-<Card className="border border-border bg-gradient-to-br from-chart-4/10 to-transparent">
+<Card className="border border-border bg-gradient-to-br from-chart-4/10 to-transparent overflow-hidden">
 <CardContent className="p-2 sm:p-4">
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-<div className="min-w-0 flex-1">
-<p className="text-[10px] sm:text-sm text-muted-foreground">Profit</p>
-<p className={`text-sm sm:text-2xl font-bold ${summary.totalProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+<div className="flex flex-col gap-1">
+<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Profit</p>
+<p className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${summary.totalProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`} title={`₹${formatIndianNumber(summary.totalProfit)}`}>
 ₹{formatIndianNumber(summary.totalProfit)}
 </p>
 <p className="text-[10px] text-chart-4">{summary.profitMargin.toFixed(1)}% margin</p>
 </div>
-<div className="hidden sm:flex h-12 w-12 rounded-full bg-chart-4/20 items-center justify-center">
-<DollarSign className="h-6 w-6 text-chart-4" />
-</div>
-</div>
 </CardContent>
 </Card>
-<Card className="border border-border bg-gradient-to-br from-chart-1/10 to-transparent">
+<Card className="border border-border bg-gradient-to-br from-chart-1/10 to-transparent overflow-hidden">
 <CardContent className="p-2 sm:p-4">
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-<div className="min-w-0 flex-1">
-<p className="text-[10px] sm:text-sm text-muted-foreground">Avg Sale</p>
-<p className="text-sm sm:text-2xl font-bold">₹{formatIndianNumber(Math.round(summary.avgSaleValue))}</p>
+<div className="flex flex-col gap-1">
+<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Avg Sale</p>
+<p className="text-base sm:text-xl lg:text-2xl font-bold truncate" title={`₹${formatIndianNumber(Math.round(summary.avgSaleValue))}`}>₹{formatIndianNumber(Math.round(summary.avgSaleValue))}</p>
 <p className="text-[10px] text-chart-1">per sale</p>
-</div>
-<div className="hidden sm:flex h-12 w-12 rounded-full bg-chart-1/20 items-center justify-center">
-<Receipt className="h-6 w-6 text-chart-1" />
-</div>
 </div>
 </CardContent>
 </Card>
