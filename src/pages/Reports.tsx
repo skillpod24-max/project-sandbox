@@ -1276,30 +1276,30 @@ return (
 {!(accountingMode === "nbfc" && nbfcView === "breakdown") && (
   <>
 {/* KPI Cards - Row 1 */}
-<div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 px-1">
+<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 px-1">
 <Card className="border border-border bg-gradient-to-br from-chart-2/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Revenue</p>
-<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-2 truncate" title={`₹${formatIndianNumber(summary.totalRevenue)}`}>₹{formatIndianNumber(summary.totalRevenue)}</p>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Revenue</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-2 break-all leading-tight">₹{formatIndianNumber(summary.totalRevenue)}</p>
 <p className="text-[10px] text-chart-2">{summary.totalSales} sales</p>
 </div>
 </CardContent>
 </Card>
 <Card className="border border-border bg-gradient-to-br from-chart-5/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Paid Cost</p>
-<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-5 truncate" title={`₹${formatIndianNumber(summary.totalCost)}`}>₹{formatIndianNumber(summary.totalCost)}</p>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Paid Cost</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-5 break-all leading-tight">₹{formatIndianNumber(summary.totalCost)}</p>
 <p className="text-[10px] text-chart-5">{summary.totalPurchases} purchases</p>
 </div>
 </CardContent>
 </Card>
 <Card className="border border-border bg-gradient-to-br from-chart-4/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Profit</p>
-<p className={`text-base sm:text-xl lg:text-2xl font-bold truncate ${summary.totalProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`} title={`₹${formatIndianNumber(summary.totalProfit)}`}>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Profit</p>
+<p className={`text-sm sm:text-lg lg:text-xl font-bold break-all leading-tight ${summary.totalProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
 ₹{formatIndianNumber(summary.totalProfit)}
 </p>
 <p className="text-[10px] text-chart-4">{summary.profitMargin.toFixed(1)}% margin</p>
@@ -1307,10 +1307,10 @@ return (
 </CardContent>
 </Card>
 <Card className="border border-border bg-gradient-to-br from-chart-1/10 to-transparent overflow-hidden">
-<CardContent className="p-2 sm:p-4">
-<div className="flex flex-col gap-1">
-<p className="text-[10px] sm:text-xs text-muted-foreground truncate">Avg Sale</p>
-<p className="text-base sm:text-xl lg:text-2xl font-bold truncate" title={`₹${formatIndianNumber(Math.round(summary.avgSaleValue))}`}>₹{formatIndianNumber(Math.round(summary.avgSaleValue))}</p>
+<CardContent className="p-2 sm:p-3">
+<div className="flex flex-col gap-0.5">
+<p className="text-[10px] sm:text-xs text-muted-foreground">Avg Sale</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold break-all leading-tight">₹{formatIndianNumber(Math.round(summary.avgSaleValue))}</p>
 <p className="text-[10px] text-chart-1">per sale</p>
 </div>
 </CardContent>
@@ -1318,58 +1318,58 @@ return (
 </div>
 
 {/* KPI Cards - Row 2 */}
-<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
+<div className={`grid gap-2 sm:gap-3 ${accountingMode === "nbfc" ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
   {accountingMode === "nbfc" && (
 <Card className="border border-border overflow-hidden">
-  <CardContent className="p-2 sm:p-4 text-center">
-    <div className="h-8 w-8 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-1">
-      <IndianRupee className="h-4 w-4 text-chart-4" />
+  <CardContent className="p-2 sm:p-3 text-center">
+    <div className="h-7 w-7 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-1">
+      <IndianRupee className="h-3.5 w-3.5 text-chart-4" />
     </div>
-    <p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-4 truncate" title={`₹${formatIndianNumber(summary.interestCollected)}`}>
+    <p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-4 break-all leading-tight">
       ₹{formatIndianNumber(summary.interestCollected)}
     </p>
     <p className="text-[10px] sm:text-xs text-muted-foreground">Interest Earned</p>
     {summary.interestPending > 0 && (
-      <p className="text-[10px] text-muted-foreground mt-0.5 truncate">₹{formatIndianNumber(summary.interestPending)} pending</p>
+      <p className="text-[10px] text-muted-foreground mt-0.5 break-all">₹{formatIndianNumber(summary.interestPending)} pending</p>
     )}
   </CardContent>
 </Card>
   )}
 
 <Card className="border border-border overflow-hidden">
-<CardContent className="p-2 sm:p-4 text-center">
-<div className="h-8 w-8 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-1">
-<Users className="h-4 w-4 text-chart-4" />
+<CardContent className="p-2 sm:p-3 text-center">
+<div className="h-7 w-7 rounded-full bg-chart-4/20 flex items-center justify-center mx-auto mb-1">
+<Users className="h-3.5 w-3.5 text-chart-4" />
 </div>
-<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-4">{summary.totalCustomers}</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-4">{summary.totalCustomers}</p>
 <p className="text-[10px] sm:text-xs text-muted-foreground">Total Customers</p>
 </CardContent>
 </Card>
 <Card className="border border-border overflow-hidden">
-<CardContent className="p-2 sm:p-4 text-center">
-<div className="h-8 w-8 rounded-full bg-chart-3/20 flex items-center justify-center mx-auto mb-1">
-<Wallet className="h-4 w-4 text-chart-3" />
+<CardContent className="p-2 sm:p-3 text-center">
+<div className="h-7 w-7 rounded-full bg-chart-3/20 flex items-center justify-center mx-auto mb-1">
+<Wallet className="h-3.5 w-3.5 text-chart-3" />
 </div>
-<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-3 truncate" title={`₹${formatIndianNumber(summary.pendingAmount)}`}>₹{formatIndianNumber(summary.pendingAmount)}</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-3 break-all leading-tight">₹{formatIndianNumber(summary.pendingAmount)}</p>
 <p className="text-[10px] sm:text-xs text-muted-foreground">Pending Amount</p>
 </CardContent>
 </Card>
 <Card className="border border-border overflow-hidden">
-<CardContent className="p-2 sm:p-4 text-center">
-<div className="h-8 w-8 rounded-full bg-chart-2/20 flex items-center justify-center mx-auto mb-1">
-<CreditCard className="h-4 w-4 text-chart-2" />
+<CardContent className="p-2 sm:p-3 text-center">
+<div className="h-7 w-7 rounded-full bg-chart-2/20 flex items-center justify-center mx-auto mb-1">
+<CreditCard className="h-3.5 w-3.5 text-chart-2" />
 </div>
-<p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-2 truncate" title={`₹${formatIndianNumber(summary.collectedAmount)}`}>₹{formatIndianNumber(summary.collectedAmount)}</p>
+<p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-2 break-all leading-tight">₹{formatIndianNumber(summary.collectedAmount)}</p>
 <p className="text-[10px] sm:text-xs text-muted-foreground">Collected</p>
 </CardContent>
 </Card>
 
 <Card className="border border-border overflow-hidden">
-  <CardContent className="p-2 sm:p-4 text-center">
-    <div className="h-8 w-8 rounded-full bg-chart-5/20 flex items-center justify-center mx-auto mb-1">
-      <Receipt className="h-4 w-4 text-chart-5" />
+  <CardContent className="p-2 sm:p-3 text-center">
+    <div className="h-7 w-7 rounded-full bg-chart-5/20 flex items-center justify-center mx-auto mb-1">
+      <Receipt className="h-3.5 w-3.5 text-chart-5" />
     </div>
-    <p className="text-base sm:text-xl lg:text-2xl font-bold text-chart-5 truncate" title={`₹${formatIndianNumber(summary.totalExpenses)}`}>
+    <p className="text-sm sm:text-lg lg:text-xl font-bold text-chart-5 break-all leading-tight">
       ₹{formatIndianNumber(summary.totalExpenses)}
     </p>
     <p className="text-[10px] sm:text-xs text-muted-foreground">Expenses</p>
@@ -1388,7 +1388,7 @@ return (
   {accountingMode === "nbfc" && nbfcView === "breakdown" && (
   <Tabs defaultValue="vehicles" className="space-y-4">
 
-    <TabsList className="grid grid-cols-6 w-full">
+    <TabsList className="flex w-full overflow-x-auto scrollbar-invisible">
       <TabsTrigger value="vehicles">Vehicle Ledger</TabsTrigger>
 <TabsTrigger value="pnl">P&L (Cash)</TabsTrigger>
 <TabsTrigger value="balance">Balance Sheet</TabsTrigger>
@@ -1591,13 +1591,13 @@ return (
 
 {!(accountingMode === "nbfc" && nbfcView === "breakdown") && (
 <Tabs defaultValue="overview" className="space-y-4">
-<TabsList className="grid grid-cols-6 w-full max-w-2xl">
-<TabsTrigger value="overview">Overview</TabsTrigger>
-<TabsTrigger value="sales">Sales</TabsTrigger>
-<TabsTrigger value="inventory">Inventory</TabsTrigger>
-<TabsTrigger value="customers">Customers</TabsTrigger>
-<TabsTrigger value="payments">Payments</TabsTrigger>
-<TabsTrigger value="public">Public Page</TabsTrigger>
+<TabsList className="flex w-full max-w-2xl overflow-x-auto scrollbar-invisible">
+<TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Overview</TabsTrigger>
+<TabsTrigger value="sales" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Sales</TabsTrigger>
+<TabsTrigger value="inventory" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Inventory</TabsTrigger>
+<TabsTrigger value="customers" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Customers</TabsTrigger>
+<TabsTrigger value="payments" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Payments</TabsTrigger>
+<TabsTrigger value="public" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Public Page</TabsTrigger>
 
 </TabsList>
 
