@@ -140,17 +140,33 @@ export default function DealerEnquiryForm({
   }
 
   return (
-    <Card className={compact ? "border-0 shadow-none" : ""}>
-      <div className="mb-4 text-center">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Get the Best Quote
-        </h3>
-        <p className="text-xs text-gray-500 mt-1">
-          Fill this form and we'll contact you shortly
-        </p>
-      </div>
+    <div className={compact ? "space-y-3" : ""}>
+      {!compact && (
+        <Card>
+          <div className="mb-4 text-center pt-4 px-4">
+            <h3 className="text-base font-semibold text-foreground">Get the Best Quote</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Fill this form and we'll contact you shortly</p>
+          </div>
+          <CardContent className="space-y-3 px-4 pb-4">
+            {renderFormFields()}
+          </CardContent>
+        </Card>
+      )}
+      {compact && (
+        <>
+          <div className="text-center mb-3">
+            <h3 className="text-sm font-semibold text-foreground">Get the Best Quote</h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">We'll contact you shortly</p>
+          </div>
+          {renderFormFields()}
+        </>
+      )}
+    </div>
+  );
 
-      <CardContent className="space-y-3">
+  function renderFormFields() {
+    return (
+      <div className="space-y-2.5">
         <div className="flex gap-2">
           {(["buying", "selling"] as const).map((t) => (
             <Button
@@ -158,6 +174,7 @@ export default function DealerEnquiryForm({
               size="sm"
               variant={form.leadType === t ? "default" : "outline"}
               onClick={() => setForm({ ...form, leadType: t })}
+              className="flex-1 h-8 text-xs capitalize"
             >
               {t}
             </Button>
@@ -169,36 +186,42 @@ export default function DealerEnquiryForm({
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           onFocus={handleFormFocus}
+          className="h-9 text-sm rounded-lg"
         />
         <Input
           placeholder="Phone *"
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
           onFocus={handleFormFocus}
+          className="h-9 text-sm rounded-lg"
         />
         <Input
           placeholder="City"
           value={form.city}
           onChange={(e) => setForm({ ...form, city: e.target.value })}
           onFocus={handleFormFocus}
+          className="h-9 text-sm rounded-lg"
         />
         <Input
           placeholder="Email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           onFocus={handleFormFocus}
+          className="h-9 text-sm rounded-lg"
         />
         <Textarea
           placeholder="Message"
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
           onFocus={handleFormFocus}
+          rows={2}
+          className="text-sm rounded-lg resize-none"
         />
 
-        <Button onClick={submit} disabled={submitting} className="w-full">
+        <Button onClick={submit} disabled={submitting} className="w-full h-9 text-sm font-semibold rounded-lg">
           {submitting ? "Sending..." : "Send Enquiry"}
         </Button>
-      </CardContent>
-    </Card>
-  );
+      </div>
+    );
+  }
 }
