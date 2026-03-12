@@ -1,315 +1,169 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
-
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Vehicles from "./pages/Vehicles";
-import Customers from "./pages/Customers";
-import Vendors from "./pages/Vendors";
-import Sales from "./pages/Sales";
-import Purchases from "./pages/Purchases";
-import Payments from "./pages/Payments";
-import EMI from "./pages/EMI";
-import Expenses from "./pages/Expenses";
-import Documents from "./pages/Documents";
-import Leads from "./pages/Leads";
-import Services from "./pages/Services";
-import Reports from "./pages/Reports";
-import Alerts from "./pages/Alerts";
-import Settings from "./pages/Settings";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-
+import { AuthProvider } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
+import CarLoader from "./components/CarLoader";
 
-import PublicVehicle from "./pages/PublicVehicle";
-import DealerPublicPage from "./pages/DealerPublicPage";
-import PublicPageAnalytics from "./pages/PublicPageAnalytics";
-import Marketplace from "./pages/Marketplace";
-import MarketplaceVehicle from "./pages/marketplace/MarketplaceVehicle";
-import MarketplaceDealer from "./pages/marketplace/MarketplaceDealer";
-import MarketplaceAdmin from "./pages/admin/MarketplaceAdmin";
-import CompareVehicles from "./pages/marketplace/CompareVehicles";
-import AuctionDetail from "./pages/marketplace/AuctionDetail";
-import MarketplaceAnalytics from "./pages/MarketplaceAnalytics";
-import VehicleInspection from "./pages/VehicleInspection";
-import SellVehicle from "./pages/marketplace/SellVehicle";
-import SellVehicleFormPage from "./pages/marketplace/SellVehicleFormPage";
-import Wishlist from "./pages/marketplace/Wishlist";
-import AllDealers from "./pages/marketplace/AllDealers";
-import AllVehicles from "./pages/marketplace/AllVehicles";
-import DealerMarketplaceHub from "./pages/DealerMarketplaceHub";
-import CalendarPage from "./pages/CalendarPage";
+// ─── Lazy-loaded pages (code-split per route) ───────────────────────
+// Public marketplace
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const MarketplaceVehicle = lazy(() => import("./pages/marketplace/MarketplaceVehicle"));
+const MarketplaceDealer = lazy(() => import("./pages/marketplace/MarketplaceDealer"));
+const CompareVehicles = lazy(() => import("./pages/marketplace/CompareVehicles"));
+const AuctionDetail = lazy(() => import("./pages/marketplace/AuctionDetail"));
+const Wishlist = lazy(() => import("./pages/marketplace/Wishlist"));
+const AllDealers = lazy(() => import("./pages/marketplace/AllDealers"));
+const AllVehicles = lazy(() => import("./pages/marketplace/AllVehicles"));
+const SellVehicle = lazy(() => import("./pages/marketplace/SellVehicle"));
+const SellVehicleFormPage = lazy(() => import("./pages/marketplace/SellVehicleFormPage"));
+const MarketplaceAdmin = lazy(() => import("./pages/admin/MarketplaceAdmin"));
 
-// Footer Pages
-import AboutPage from "./pages/footer/AboutPage";
-import HowItWorksPage from "./pages/footer/HowItWorksPage";
-import ContactPage from "./pages/footer/ContactPage";
-import FAQPage from "./pages/footer/FAQPage";
-import TermsPage from "./pages/footer/TermsPage";
-import PrivacyPage from "./pages/footer/PrivacyPage";
-import BlogPage from "./pages/footer/BlogPage";
+// Public pages
+const Auth = lazy(() => import("./pages/Auth"));
+const PublicVehicle = lazy(() => import("./pages/PublicVehicle"));
+const DealerPublicPage = lazy(() => import("./pages/DealerPublicPage"));
 
+// Footer pages
+const AboutPage = lazy(() => import("./pages/footer/AboutPage"));
+const HowItWorksPage = lazy(() => import("./pages/footer/HowItWorksPage"));
+const ContactPage = lazy(() => import("./pages/footer/ContactPage"));
+const FAQPage = lazy(() => import("./pages/footer/FAQPage"));
+const TermsPage = lazy(() => import("./pages/footer/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/footer/PrivacyPage"));
+const BlogPage = lazy(() => import("./pages/footer/BlogPage"));
+
+// Protected pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Vehicles = lazy(() => import("./pages/Vehicles"));
+const Customers = lazy(() => import("./pages/Customers"));
+const Vendors = lazy(() => import("./pages/Vendors"));
+const Sales = lazy(() => import("./pages/Sales"));
+const Purchases = lazy(() => import("./pages/Purchases"));
+const Payments = lazy(() => import("./pages/Payments"));
+const EMI = lazy(() => import("./pages/EMI"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const Documents = lazy(() => import("./pages/Documents"));
+const Leads = lazy(() => import("./pages/Leads"));
+const Services = lazy(() => import("./pages/Services"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Alerts = lazy(() => import("./pages/Alerts"));
+const Settings = lazy(() => import("./pages/Settings"));
+const DealerMarketplaceHub = lazy(() => import("./pages/DealerMarketplaceHub"));
+const MarketplaceAnalytics = lazy(() => import("./pages/MarketplaceAnalytics"));
+const PublicPageAnalytics = lazy(() => import("./pages/PublicPageAnalytics"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const VehicleInspection = lazy(() => import("./pages/VehicleInspection"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// ─── Query Client ────────────────────────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes - keep unused data in cache longer
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
       refetchOnWindowFocus: false,
-      refetchOnMount: 'always', // Use cache but revalidate if stale
+      refetchOnMount: "always",
       retry: 1,
-      structuralSharing: true, // Prevent unnecessary re-renders
+      structuralSharing: true,
     },
   },
 });
 
+// ─── Route wrapper helpers ───────────────────────────────────────────
+const SuspenseWrap = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<CarLoader />}>{children}</Suspense>
+);
+
+const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <Layout>
+      <SuspenseWrap>{children}</SuspenseWrap>
+    </Layout>
+  </ProtectedRoute>
+);
+
+// ─── Protected route configs ─────────────────────────────────────────
+const protectedRoutes = [
+  { path: "/dashboard", element: <Dashboard /> },
+  { path: "/vehicles", element: <Vehicles /> },
+  { path: "/customers", element: <Customers /> },
+  { path: "/vendors", element: <Vendors /> },
+  { path: "/sales", element: <Sales /> },
+  { path: "/purchases", element: <Purchases /> },
+  { path: "/payments", element: <Payments /> },
+  { path: "/emi", element: <EMI /> },
+  { path: "/expenses", element: <Expenses /> },
+  { path: "/documents", element: <Documents /> },
+  { path: "/leads", element: <Leads /> },
+  { path: "/services", element: <Services /> },
+  { path: "/reports", element: <Reports /> },
+  { path: "/marketplace-hub", element: <DealerMarketplaceHub /> },
+  { path: "/analytics/marketplace", element: <MarketplaceAnalytics /> },
+  { path: "/analytics/public-page", element: <PublicPageAnalytics /> },
+  { path: "/alerts", element: <Alerts /> },
+  { path: "/settings", element: <Settings /> },
+  { path: "/calendar", element: <CalendarPage /> },
+];
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ScrollToTop />
+            <Routes>
+              {/* ── Public Marketplace ── */}
+              <Route path="/" element={<SuspenseWrap><Marketplace /></SuspenseWrap>} />
+              <Route path="/marketplace/vehicle/:vehicleId" element={<SuspenseWrap><MarketplaceVehicle /></SuspenseWrap>} />
+              <Route path="/marketplace/dealer/:dealerId" element={<SuspenseWrap><MarketplaceDealer /></SuspenseWrap>} />
+              <Route path="/marketplace/compare" element={<SuspenseWrap><CompareVehicles /></SuspenseWrap>} />
+              <Route path="/marketplace/auction/:auctionId" element={<SuspenseWrap><AuctionDetail /></SuspenseWrap>} />
+              <Route path="/marketplace/wishlist" element={<SuspenseWrap><Wishlist /></SuspenseWrap>} />
+              <Route path="/marketplace/dealers" element={<SuspenseWrap><AllDealers /></SuspenseWrap>} />
+              <Route path="/marketplace/vehicles" element={<SuspenseWrap><AllVehicles /></SuspenseWrap>} />
+              <Route path="/sell-vehicle" element={<SuspenseWrap><SellVehicle /></SuspenseWrap>} />
+              <Route path="/sell-vehicle/form" element={<SuspenseWrap><SellVehicleFormPage /></SuspenseWrap>} />
+              <Route path="/admin/marketplace" element={<SuspenseWrap><MarketplaceAdmin /></SuspenseWrap>} />
 
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
-          {/* ---------- Public Marketplace ---------- */}
-          <Route path="/" element={<Marketplace />} />
-          <Route path="/marketplace/vehicle/:vehicleId" element={<MarketplaceVehicle />} />
-          <Route path="/marketplace/dealer/:dealerId" element={<MarketplaceDealer />} />
-          <Route path="/marketplace/compare" element={<CompareVehicles />} />
-          <Route path="/marketplace/auction/:auctionId" element={<AuctionDetail />} />
-          <Route path="/marketplace/wishlist" element={<Wishlist />} />
-          <Route path="/marketplace/dealers" element={<AllDealers />} />
-          <Route path="/marketplace/vehicles" element={<AllVehicles />} />
-          <Route path="/sell-vehicle" element={<SellVehicle />} />
-          <Route path="/sell-vehicle/form" element={<SellVehicleFormPage />} />
-          <Route path="/admin/marketplace" element={<MarketplaceAdmin />} />
-          
-          {/* Footer Pages */}
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/faq" element={<FAQPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/blog" element={<BlogPage />} />
-          
-          {/* ---------- Public Pages (Separate from Marketplace) ---------- */}
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/v/:pageId" element={<PublicVehicle />} />
-          <Route path="/d/:pageId" element={<DealerPublicPage />} />
-          <Route path="/d/:pageId/:vehicleId" element={<PublicVehicle />} />
-          {/* Catalogue routes: dealer-name-based slugs */}
-          <Route path="/catalogue/:dealerSlug" element={<DealerPublicPage />} />
-          <Route path="/catalogue/:dealerSlug/:vehicleCode" element={<PublicVehicle />} />
+              {/* ── Footer Pages ── */}
+              <Route path="/about" element={<SuspenseWrap><AboutPage /></SuspenseWrap>} />
+              <Route path="/how-it-works" element={<SuspenseWrap><HowItWorksPage /></SuspenseWrap>} />
+              <Route path="/contact" element={<SuspenseWrap><ContactPage /></SuspenseWrap>} />
+              <Route path="/faq" element={<SuspenseWrap><FAQPage /></SuspenseWrap>} />
+              <Route path="/terms" element={<SuspenseWrap><TermsPage /></SuspenseWrap>} />
+              <Route path="/privacy" element={<SuspenseWrap><PrivacyPage /></SuspenseWrap>} />
+              <Route path="/blog" element={<SuspenseWrap><BlogPage /></SuspenseWrap>} />
 
-          {/* ---------- Protected / Sidebar Layout ---------- */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/vehicles"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Vehicles />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/customers"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Customers />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/vendors"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Vendors />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/sales"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Sales />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/purchases"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Purchases />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/payments"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Payments />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/emi"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <EMI />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/expenses"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Expenses />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/documents"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Documents />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/leads"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Leads />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/services"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Services />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reports"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Reports />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/marketplace-hub"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <DealerMarketplaceHub />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analytics/marketplace"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <MarketplaceAnalytics />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analytics/public-page"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <PublicPageAnalytics />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/alerts"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Alerts />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Settings />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/calendar"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <CalendarPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          {/* Removed individual routes - now consolidated in Marketplace Hub */}
-          <Route path="/inspection/:vehicleId" element={<VehicleInspection />} />
+              {/* ── Public Catalogue / Auth ── */}
+              <Route path="/auth" element={<SuspenseWrap><Auth /></SuspenseWrap>} />
+              <Route path="/v/:pageId" element={<SuspenseWrap><PublicVehicle /></SuspenseWrap>} />
+              <Route path="/d/:pageId" element={<SuspenseWrap><DealerPublicPage /></SuspenseWrap>} />
+              <Route path="/d/:pageId/:vehicleId" element={<SuspenseWrap><PublicVehicle /></SuspenseWrap>} />
+              <Route path="/catalogue/:dealerSlug" element={<SuspenseWrap><DealerPublicPage /></SuspenseWrap>} />
+              <Route path="/catalogue/:dealerSlug/:vehicleCode" element={<SuspenseWrap><PublicVehicle /></SuspenseWrap>} />
 
-          {/* ---------- 404 ---------- */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+              {/* ── Protected Routes (data-isolated per user) ── */}
+              {protectedRoutes.map(({ path, element }) => (
+                <Route key={path} path={path} element={<ProtectedPage>{element}</ProtectedPage>} />
+              ))}
+
+              <Route path="/inspection/:vehicleId" element={<SuspenseWrap><VehicleInspection /></SuspenseWrap>} />
+              <Route path="*" element={<SuspenseWrap><NotFound /></SuspenseWrap>} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 
