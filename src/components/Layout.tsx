@@ -1,24 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { User } from "@supabase/supabase-js";
 import { Wifi, WifiOff, Info, LayoutDashboard, Car, ShoppingCart, Receipt, BarChart3, Settings, Menu, UserPlus, CreditCard, ReceiptText, CalendarClock, FileText, Bell, LogOut, UsersRound, UserCircle, Store } from "lucide-react";
-import { Calculator } from "lucide-react";
+import { Calculator, StickyNote } from "lucide-react";
 import EMICalculatorDialog from "@/components/EMICalculatorDialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { StickyNote } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StickyNotesPanel from "@/components/StickyNotesPanel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import GlobalSearch from "@/components/layout/GlobalSearch";
 import TopBarUserMenu from "@/components/layout/TopBarUserMenu";
 import TopBarCalendar from "@/components/layout/TopBarCalendar";
+import { supabase } from "@/integrations/supabase/client";
 
 const applyThemeByIndex = (index: number) => {
   const themeColors = [
@@ -35,10 +29,8 @@ const applyThemeByIndex = (index: number) => {
     { sidebar: "245 30% 12%", primary: "245 58% 48%", accent: "245 58% 58%" },
     { sidebar: "160 30% 10%", primary: "160 84% 35%", accent: "160 84% 39%" },
   ];
-
   const theme = themeColors[index];
   if (!theme) return;
-
   document.documentElement.style.setProperty("--sidebar-background", theme.sidebar);
   document.documentElement.style.setProperty("--primary", theme.primary);
   document.documentElement.style.setProperty("--chart-1", theme.accent);
@@ -50,121 +42,38 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [shopName, setShopName] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const location = useLocation();
+  const { user, shopName } = useAuth();
+
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [infoOpen, setInfoOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [emiCalcOpen, setEmiCalcOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
 
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        navigate("/auth");
-      }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        navigate("/auth");
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
+  // Apply saved theme — no DB call needed
   useEffect(() => {
     if (!user) return;
-
     const savedTheme = localStorage.getItem("theme-index");
-    if (savedTheme !== null) {
-      applyThemeByIndex(Number(savedTheme));
-    }
-
+    if (savedTheme !== null) applyThemeByIndex(Number(savedTheme));
     const darkMode = localStorage.getItem("dark-mode") === "true";
     document.documentElement.classList.toggle("dark", darkMode);
   }, [user]);
 
-  const checkInternet = async () => {
-    if (!navigator.onLine) return false;
-    try {
-      const { error } = await supabase
-        .from("settings")
-        .select("id")
-        .limit(1);
-      return !error;
-    } catch {
-      return false;
-    }
-  };
-
+  // Lightweight online/offline detection — no DB polling
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-
-    const updateStatus = async () => {
-      if (!navigator.onLine) {
-        setIsOnline(false);
-        return;
-      }
-      const backendOk = await checkInternet();
-      setIsOnline(backendOk);
-    };
-
-    updateStatus();
-    interval = setInterval(updateStatus, 30000);
-
-    const handleOnline = () => updateStatus();
+    const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
     return () => {
-      clearInterval(interval);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
-  useEffect(() => {
-    const fetchShopName = async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from("settings")
-        .select("dealer_name")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (data?.dealer_name) {
-        setShopName(data.dealer_name);
-      }
-    };
-    fetchShopName();
-  }, [user]);
+  if (!user) return null;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  // Mobile bottom nav items
   const bottomNavItems = [
     { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard" },
     { title: "Vehicles", icon: Car, url: "/vehicles" },
@@ -192,13 +101,11 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background pb-16 md:pb-0 overflow-x-hidden">
-        {/* Desktop Sidebar */}
         <div className="hidden md:block">
           <AppSidebar />
         </div>
 
         <div className="flex-1 flex flex-col w-full min-w-0 overflow-x-hidden max-w-full">
-          {/* Zoho-style Top Header */}
           <header className="h-14 border-b border-border bg-card flex items-center px-2 sm:px-4 md:px-6 sticky top-0 z-[60] shadow-sm min-w-0 overflow-x-hidden">
             {!isOnline && (
               <div className="absolute top-14 left-0 right-0 bg-destructive/10 border-b border-destructive/20 text-destructive px-4 py-2 text-sm flex items-center gap-2">
@@ -207,12 +114,10 @@ const Layout = ({ children }: LayoutProps) => {
               </div>
             )}
 
-            {/* Desktop: Sidebar trigger */}
             <div className="hidden md:block shrink-0">
               <SidebarTrigger className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-muted active:scale-95 transition-transform" />
             </div>
 
-            {/* Mobile: Brand */}
             <div className="md:hidden flex items-center gap-2 shrink-0">
               <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
                 <Car className="h-3.5 w-3.5 text-primary-foreground" />
@@ -220,63 +125,36 @@ const Layout = ({ children }: LayoutProps) => {
               <span className="font-bold text-sm text-foreground">VahanHub</span>
             </div>
 
-            {/* Global Search - Zoho Style */}
             <div className="ml-2 sm:ml-4 flex-1 min-w-0">
               <GlobalSearch />
             </div>
 
-            {/* Quick Actions - hidden on very small screens */}
             <div className="hidden sm:flex items-center gap-0.5 mx-1 md:mx-2 border-l border-r border-border px-1.5 md:px-3 shrink-0">
               <TopBarCalendar />
-              <button
-                onClick={() => setNotesOpen(true)}
-                className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors"
-                title="Sticky Notes"
-              >
+              <button onClick={() => setNotesOpen(true)} className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors" title="Sticky Notes">
                 <StickyNote className="h-4 w-4 text-muted-foreground" />
               </button>
-              <button
-                onClick={() => setInfoOpen(true)}
-                className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors hidden md:flex"
-                title="Platform Info"
-              >
+              <button onClick={() => setInfoOpen(true)} className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors hidden md:flex" title="Platform Info">
                 <Info className="h-4 w-4 text-muted-foreground" />
               </button>
-              <button
-                onClick={() => setEmiCalcOpen(true)}
-                className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors"
-                title="EMI Calculator"
-              >
+              <button onClick={() => setEmiCalcOpen(true)} className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors" title="EMI Calculator">
                 <Calculator className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
 
-            {/* Online Status - only on large screens */}
-            <div
-              className={`hidden xl:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mr-2 shrink-0 ${
-                isOnline
-                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                  : "bg-destructive/10 text-destructive"
-              }`}
-            >
-              {isOnline ? (
-                <>
-                  <Wifi className="h-3 w-3" /> Online
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-3 w-3" /> Offline
-                </>
-              )}
+            <div className={`hidden xl:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full mr-2 shrink-0 ${
+              isOnline
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                : "bg-destructive/10 text-destructive"
+            }`}>
+              {isOnline ? (<><Wifi className="h-3 w-3" /> Online</>) : (<><WifiOff className="h-3 w-3" /> Offline</>)}
             </div>
 
-            {/* User Menu with Settings, Alerts, Logout */}
             <div className="shrink-0">
               <TopBarUserMenu shopName={shopName} userEmail={user.email} />
             </div>
           </header>
 
-          {/* Main Content Area */}
           <main className="flex-1 p-4 sm:p-6 overflow-x-hidden overflow-y-auto transition-[opacity] duration-200 scrollbar-hide bg-muted/30">
             <div className="max-w-[1920px] mx-auto">
               {children}
@@ -288,25 +166,14 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-50">
           <div className="grid grid-cols-4 h-16">
             {bottomNavItems.map((item) => (
-              <Link
-                key={item.url}
-                to={item.url}
-                className={`flex flex-col items-center justify-center gap-0.5 ${
-                  isActive(item.url) ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                  isActive(item.url) ? "bg-primary/10" : ""
-                }`}>
+              <Link key={item.url} to={item.url} className={`flex flex-col items-center justify-center gap-0.5 ${isActive(item.url) ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isActive(item.url) ? "bg-primary/10" : ""}`}>
                   <item.icon className="h-5 w-5" />
                 </div>
                 <span className="text-[10px] font-medium">{item.title}</span>
               </Link>
             ))}
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground"
-            >
+            <button onClick={() => setMobileMenuOpen(true)} className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground">
               <div className="h-8 w-8 rounded-full flex items-center justify-center">
                 <Menu className="h-5 w-5" />
               </div>
@@ -315,34 +182,17 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
 
-        {/* Mobile More Menu Sheet */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh] overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>More Options</SheetTitle>
-            </SheetHeader>
+            <SheetHeader><SheetTitle>More Options</SheetTitle></SheetHeader>
             <div className="grid grid-cols-4 gap-3 py-4">
               {moreMenuItems.map((item) => (
-                <Link
-                  key={item.url}
-                  to={item.url}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-colors ${
-                    isActive(item.url) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-                  }`}
-                >
+                <Link key={item.url} to={item.url} onClick={() => setMobileMenuOpen(false)} className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-colors ${isActive(item.url) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}>
                   <item.icon className="h-5 w-5" />
                   <span className="text-[10px] font-medium text-center leading-tight">{item.title}</span>
                 </Link>
               ))}
-              {/* Logout button in mobile menu */}
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate("/auth");
-                }}
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
-              >
+              <button onClick={async () => { await supabase.auth.signOut(); navigate("/auth"); }} className="flex flex-col items-center gap-1.5 p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors">
                 <LogOut className="h-5 w-5" />
                 <span className="text-[10px] font-medium text-center leading-tight">Logout</span>
               </button>
@@ -353,9 +203,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Platform Usage & Guidelines</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Platform Usage & Guidelines</DialogTitle></DialogHeader>
           <div className="space-y-4 text-sm">
             <div>
               <h4 className="font-semibold">📌 General Usage</h4>
