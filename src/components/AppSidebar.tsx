@@ -146,11 +146,11 @@ export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { user } = useAuth();
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [marketplaceEnquiryCount, setMarketplaceEnquiryCount] = useState(0);
 
   const fetchNewLeadsCount = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const { count } = await supabase
@@ -162,7 +162,6 @@ export function AppSidebar() {
 
     setNewLeadsCount(count || 0);
 
-    // Fetch marketplace enquiry count - only new ones not viewed
     const { count: mpCount } = await supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
@@ -172,7 +171,7 @@ export function AppSidebar() {
       .is("last_viewed_at", null);
 
     setMarketplaceEnquiryCount(mpCount || 0);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchNewLeadsCount();
@@ -192,11 +191,8 @@ export function AppSidebar() {
   }, [fetchNewLeadsCount]);
 
   useEffect(() => {
-    if (location.pathname === "/leads") {
+    if (location.pathname === "/leads" && user) {
       const markAsViewed = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
         await supabase
           .from("leads")
           .update({ last_viewed_at: new Date().toISOString() })
@@ -210,15 +206,12 @@ export function AppSidebar() {
       const timeout = setTimeout(markAsViewed, 1000);
       return () => clearTimeout(timeout);
     }
-  }, [location.pathname, fetchNewLeadsCount]);
+  }, [location.pathname, fetchNewLeadsCount, user]);
 
   // Mark marketplace leads as viewed when visiting marketplace hub
   useEffect(() => {
-    if (location.pathname === "/marketplace-hub") {
+    if (location.pathname === "/marketplace-hub" && user) {
       const markMarketplaceAsViewed = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
         await supabase
           .from("leads")
           .update({ last_viewed_at: new Date().toISOString() })
@@ -233,7 +226,7 @@ export function AppSidebar() {
       const timeout = setTimeout(markMarketplaceAsViewed, 1000);
       return () => clearTimeout(timeout);
     }
-  }, [location.pathname, fetchNewLeadsCount]);
+  }, [location.pathname, fetchNewLeadsCount, user]);
 
   const mainMenuItems = useMemo(() => [
     { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard", badge: 0 },
