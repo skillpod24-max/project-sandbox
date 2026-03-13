@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Lead {
   id: string;
@@ -26,22 +27,23 @@ export interface Lead {
   converted_from_lead?: boolean | null;
 }
 
-async function fetchLeads(): Promise<Lead[]> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+async function fetchLeads(userId: string): Promise<Lead[]> {
   const { data } = await supabase
     .from("leads")
     .select("id, user_id, lead_number, customer_name, phone, email, vehicle_interest, budget_min, budget_max, source, status, priority, assigned_to, follow_up_date, last_contact_date, notes, created_at, updated_at, city, lead_type, last_viewed_at, converted_from_lead")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
   return (data || []) as Lead[];
 }
 
 export function useLeadsData() {
+  const { user } = useAuth();
+  const userId = user?.id;
+
   return useQuery({
-    queryKey: ['leads'],
-    queryFn: fetchLeads,
-    staleTime: 2 * 60 * 1000,
+    queryKey: ['leads', userId],
+    queryFn: () => fetchLeads(userId!),
+    enabled: !!userId,
   });
 }
 
