@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { subMonths, format, startOfDay, endOfDay } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardSummary {
   total_vehicles: number;
@@ -21,14 +22,12 @@ interface DashboardSummary {
   outstanding_balance: number;
 }
 
-// Fetch aggregated stats via single RPC call
 const fetchDashboardSummary = async (userId: string): Promise<DashboardSummary> => {
   const { data, error } = await supabase.rpc("dashboard_summary", { p_user_id: userId });
   if (error) throw error;
   return data as unknown as DashboardSummary;
 };
 
-// Fetch only the detail data needed for charts/widgets (lightweight queries)
 const fetchDashboardDetails = async (userId: string) => {
   const now = new Date();
 
@@ -151,28 +150,19 @@ const fetchDashboardDetails = async (userId: string) => {
 };
 
 export function useDashboardData() {
-  // First fetch the RPC summary (single DB call for all stats)
+  const { user } = useAuth();
+  const userId = user?.id;
+
   const summaryQuery = useQuery({
-    queryKey: ['dashboard-summary'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user");
-      return fetchDashboardSummary(user.id);
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    queryKey: ['dashboard-summary', userId],
+    queryFn: () => fetchDashboardSummary(userId!),
+    enabled: !!userId,
   });
 
-  // Then fetch detail data for charts/widgets
   const detailsQuery = useQuery({
-    queryKey: ['dashboard-details'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user");
-      return fetchDashboardDetails(user.id);
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    queryKey: ['dashboard-details', userId],
+    queryFn: () => fetchDashboardDetails(userId!),
+    enabled: !!userId,
   });
 
   const summary = summaryQuery.data;
