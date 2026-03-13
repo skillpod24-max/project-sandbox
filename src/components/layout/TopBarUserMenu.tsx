@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Bell, Settings, LogOut, ChevronDown, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,38 +22,35 @@ interface TopBarUserMenuProps {
 const TopBarUserMenu = ({ shopName, userEmail }: TopBarUserMenuProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [alertsCount, setAlertsCount] = useState(0);
+  const { user } = useAuth();
 
-  const fetchAlertsCount = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  // Use React Query instead of polling interval — cached, no getUser() calls
+  const { data: alertsCount = 0 } = useQuery({
+    queryKey: ['alerts-count', user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    // Count documents expiring in next 30 days
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      const [docsRes, vehiclesRes] = await Promise.all([
+        supabase
+          .from("documents")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .lte("expiry_date", thirtyDaysFromNow.toISOString())
+          .gte("expiry_date", new Date().toISOString()),
+        supabase
+          .from("vehicles")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .or(`insurance_expiry.lte.${thirtyDaysFromNow.toISOString()},puc_expiry.lte.${thirtyDaysFromNow.toISOString()},fitness_expiry.lte.${thirtyDaysFromNow.toISOString()}`),
+      ]);
 
-    const { count: docsCount } = await supabase
-      .from("documents")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .lte("expiry_date", thirtyDaysFromNow.toISOString())
-      .gte("expiry_date", new Date().toISOString());
-
-    // Count vehicles with expiring documents
-    const { count: vehiclesCount } = await supabase
-      .from("vehicles")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .or(`insurance_expiry.lte.${thirtyDaysFromNow.toISOString()},puc_expiry.lte.${thirtyDaysFromNow.toISOString()},fitness_expiry.lte.${thirtyDaysFromNow.toISOString()}`);
-
-    setAlertsCount((docsCount || 0) + (vehiclesCount || 0));
-  }, []);
-
-  useEffect(() => {
-    fetchAlertsCount();
-    const interval = setInterval(fetchAlertsCount, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, [fetchAlertsCount]);
+      return (docsRes.count || 0) + (vehiclesRes.count || 0);
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 min — no more 60s polling
+  });
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
