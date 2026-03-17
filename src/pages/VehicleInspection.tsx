@@ -14,7 +14,7 @@ import {
   Wrench, Gauge, Battery, Disc, Paintbrush, Settings, Save, ArrowLeft
 } from "lucide-react";
 import Layout from "@/components/Layout";
-import CarLoader from "@/components/CarLoader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 interface InspectionChecklist {
   exterior: {
