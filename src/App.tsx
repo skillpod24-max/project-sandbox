@@ -9,7 +9,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
-import CarLoader from "./components/CarLoader";
+import { PageSkeleton, DashboardSkeleton } from "./components/ui/page-skeleton";
+import FooterPageSkeleton from "./components/marketplace/FooterPageSkeleton";
 
 // ─── Lazy-loaded pages (code-split per route) ───────────────────────
 // Public marketplace
@@ -77,8 +78,8 @@ const queryClient = new QueryClient({
 });
 
 // ─── Route wrapper helpers ───────────────────────────────────────────
-const SuspenseWrap = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<CarLoader />}>{children}</Suspense>
+const SuspenseWrap = ({ children, skeleton }: { children: React.ReactNode; skeleton?: React.ReactNode }) => (
+  <Suspense fallback={skeleton || <PageSkeleton />}>{children}</Suspense>
 );
 
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
@@ -136,13 +137,13 @@ const App = () => (
               <Route path="/admin/marketplace" element={<SuspenseWrap><MarketplaceAdmin /></SuspenseWrap>} />
 
               {/* ── Footer Pages ── */}
-              <Route path="/about" element={<SuspenseWrap><AboutPage /></SuspenseWrap>} />
-              <Route path="/how-it-works" element={<SuspenseWrap><HowItWorksPage /></SuspenseWrap>} />
-              <Route path="/contact" element={<SuspenseWrap><ContactPage /></SuspenseWrap>} />
-              <Route path="/faq" element={<SuspenseWrap><FAQPage /></SuspenseWrap>} />
-              <Route path="/terms" element={<SuspenseWrap><TermsPage /></SuspenseWrap>} />
-              <Route path="/privacy" element={<SuspenseWrap><PrivacyPage /></SuspenseWrap>} />
-              <Route path="/blog" element={<SuspenseWrap><BlogPage /></SuspenseWrap>} />
+              <Route path="/about" element={<SuspenseWrap skeleton={<FooterPageSkeleton />}><AboutPage /></SuspenseWrap>} />
+              <Route path="/how-it-works" element={<SuspenseWrap skeleton={<FooterPageSkeleton />}><HowItWorksPage /></SuspenseWrap>} />
+              <Route path="/contact" element={<SuspenseWrap skeleton={<FooterPageSkeleton />}><ContactPage /></SuspenseWrap>} />
+              <Route path="/faq" element={<SuspenseWrap skeleton={<FooterPageSkeleton />}><FAQPage /></SuspenseWrap>} />
+              <Route path="/terms" element={<SuspenseWrap skeleton={<FooterPageSkeleton />}><TermsPage /></SuspenseWrap>} />
+              <Route path="/privacy" element={<SuspenseWrap skeleton={<FooterPageSkeleton />}><PrivacyPage /></SuspenseWrap>} />
+              <Route path="/blog" element={<SuspenseWrap skeleton={<FooterPageSkeleton />}><BlogPage /></SuspenseWrap>} />
 
               {/* ── Public Catalogue / Auth ── */}
               <Route path="/auth" element={<SuspenseWrap><Auth /></SuspenseWrap>} />
