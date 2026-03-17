@@ -17,7 +17,7 @@ const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceVehicle = lazy(() => import("./pages/marketplace/MarketplaceVehicle"));
 const MarketplaceDealer = lazy(() => import("./pages/marketplace/MarketplaceDealer"));
 const CompareVehicles = lazy(() => import("./pages/marketplace/CompareVehicles"));
-const AuctionDetail = lazy(() => import("./pages/marketplace/AuctionDetail"));
+
 const Wishlist = lazy(() => import("./pages/marketplace/Wishlist"));
 const AllDealers = lazy(() => import("./pages/marketplace/AllDealers"));
 const AllVehicles = lazy(() => import("./pages/marketplace/AllVehicles"));
