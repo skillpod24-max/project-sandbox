@@ -104,13 +104,6 @@ const TermsPage = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">6. Auctions and Bidding</h2>
-                <p className="text-slate-600 leading-relaxed">
-                  Participation in auctions is binding. Winning bidders must complete the purchase unless the seller 
-                  fails to confirm. Repeated bid defaults may result in account suspension.
-                </p>
-              </section>
 
               <section className="mb-8">
                 <h2 className="text-xl font-bold text-slate-900 mb-4">7. Limitation of Liability</h2>

@@ -146,7 +146,7 @@ const HowItWorksPage = () => {
               { title: "Complete Documentation", description: "All vehicles come with verified documents" },
               { title: "Easy EMI Options", description: "Flexible financing options from leading banks" },
               { title: "Vehicle Comparison", description: "Compare multiple vehicles side by side" },
-              { title: "Real-time Auctions", description: "Participate in live vehicle auctions" },
+              { title: "Dealer Network", description: "Access verified dealers across India" },
             ].map((feature, i) => (
               <div key={i} className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
