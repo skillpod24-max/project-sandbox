@@ -85,6 +85,8 @@ const Services = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("services");
+  const { user } = useAuth();
+  const userId = user?.id;
   const [searchTerm, setSearchTerm] = useState("");
   const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
