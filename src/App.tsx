@@ -9,7 +9,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
-import CarLoader from "./components/CarLoader";
+import { PageSkeleton, DashboardSkeleton } from "./components/ui/page-skeleton";
+import FooterPageSkeleton from "./components/marketplace/FooterPageSkeleton";
 
 // ─── Lazy-loaded pages (code-split per route) ───────────────────────
 // Public marketplace
