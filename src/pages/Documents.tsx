@@ -71,6 +71,8 @@ const Documents = () => {
   const { viewMode, setViewMode } = useViewMode("documents");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.id;
   const [selectedVehicle, setSelectedVehicle] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [docViewerOpen, setDocViewerOpen] = useState(false);
@@ -88,16 +90,16 @@ const Documents = () => {
   const [uploading, setUploading] = useState(false);
 
   const { data: queryData, isLoading: loading } = useQuery({
-    queryKey: ['documents'],
+    queryKey: ['documents', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { documents: [], vehicles: [] };
+      if (!userId) return { documents: [], vehicles: [] };
       const [docsRes, vehiclesRes] = await Promise.all([
-        supabase.from("documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicles").select("id,brand,model,variant,code").eq("user_id", user.id).order("brand"),
+        supabase.from("documents").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("id,brand,model,variant,code").eq("user_id", userId).order("brand"),
       ]);
       return { documents: docsRes.data || [], vehicles: vehiclesRes.data || [] };
     },
+    enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 

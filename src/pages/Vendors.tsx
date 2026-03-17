@@ -56,15 +56,16 @@ const Vendors = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { viewMode, setViewMode } = useViewMode("vendors");
+  const { user } = useAuth();
+  const userId = user?.id;
   const { data: pageData, isLoading: loading } = useQuery({
-    queryKey: ['vendors-page'],
+    queryKey: ['vendors-page', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { vendors: [] as Vendor[], purchases: [] as VehiclePurchase[], vehicles: [] as Vehicle[] };
+      if (!userId) return { vendors: [] as Vendor[], purchases: [] as VehiclePurchase[], vehicles: [] as Vehicle[] };
       const [vendorsRes, purchasesRes, vehiclesRes] = await Promise.all([
-        supabase.from("vendors").select("id,code,name,phone,email,address,contact_person,gst_number,bank_name,bank_account_number,bank_ifsc,notes,is_active,vendor_type,created_at,user_id,converted_from_lead,lead_id").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicle_purchases").select("id,vehicle_id,vendor_id,purchase_price,balance_amount,purchase_date,purchase_number").eq("user_id", user.id).order("purchase_date", { ascending: false }),
-        supabase.from("vehicles").select("id,brand,model,variant,code,status").eq("user_id", user.id),
+        supabase.from("vendors").select("id,code,name,phone,email,address,contact_person,gst_number,bank_name,bank_account_number,bank_ifsc,notes,is_active,vendor_type,created_at,user_id,converted_from_lead,lead_id").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("vehicle_purchases").select("id,vehicle_id,vendor_id,purchase_price,balance_amount,purchase_date,purchase_number").eq("user_id", userId).order("purchase_date", { ascending: false }),
+        supabase.from("vehicles").select("id,brand,model,variant,code,status").eq("user_id", userId),
       ]);
       return {
         vendors: (vendorsRes.data || []) as Vendor[],
@@ -72,6 +73,7 @@ const Vendors = () => {
         vehicles: (vehiclesRes.data || []) as Vehicle[],
       };
     },
+    enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 
