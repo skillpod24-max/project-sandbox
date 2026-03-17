@@ -123,16 +123,16 @@ const Services = () => {
   });
 
   const { data: queryData, isLoading: loading } = useQuery({
-    queryKey: ['services'],
+    queryKey: ['services', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { packages: [], services: [] };
+      if (!userId) return { packages: [], services: [] };
       const [packagesRes, servicesRes] = await Promise.all([
-        supabase.from("service_packages").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("service_records").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("service_packages").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("service_records").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
       ]);
       return { packages: packagesRes.data || [], services: servicesRes.data || [] };
     },
+    enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 
