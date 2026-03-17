@@ -78,8 +78,8 @@ const queryClient = new QueryClient({
 });
 
 // ─── Route wrapper helpers ───────────────────────────────────────────
-const SuspenseWrap = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<CarLoader />}>{children}</Suspense>
+const SuspenseWrap = ({ children, skeleton }: { children: React.ReactNode; skeleton?: React.ReactNode }) => (
+  <Suspense fallback={skeleton || <PageSkeleton />}>{children}</Suspense>
 );
 
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (

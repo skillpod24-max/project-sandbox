@@ -292,7 +292,7 @@ const VehicleInspection = () => {
   };
 
   if (loading) {
-    return <Layout><CarLoader /></Layout>;
+    return <Layout><PageSkeleton /></Layout>;
   }
 
   if (!vehicle) {
