@@ -58,7 +58,7 @@ const TermsPage = () => {
                 <ul className="list-disc pl-6 text-slate-600 space-y-2">
                   <li>Vehicle listing and discovery platform</li>
                   <li>Dealer verification and management tools</li>
-                  <li>Vehicle auctions and bidding system</li>
+                  <li>Dealer verification and management tools</li>
                   <li>Lead generation and enquiry management</li>
                   <li>Analytics and reporting tools for dealers</li>
                 </ul>
