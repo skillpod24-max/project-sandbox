@@ -1,0 +1,1 @@
+TRUNCATE TABLE auction_bids, auction_state_log, auction_listings, public_page_events, emi_documents, emi_schedules, payments, expenses, documents, vehicle_images, vehicle_inspections, vehicle_purchases, sales, service_records, service_packages, dealer_testimonials, sticky_notes, leads, customers, vehicles, vendors, support_tickets, marketplace_moderation CASCADE;
