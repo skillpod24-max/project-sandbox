@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,17 +54,18 @@ const Sales = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("sales");
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const { data: pageData, isLoading: loading } = useQuery({
-    queryKey: ['sales-page'],
+    queryKey: ['sales-page', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!userId) return null;
       const [salesRes, vehiclesRes, customersRes, settingsRes] = await Promise.all([
-        supabase.from("sales").select("id, sale_number, vehicle_id, customer_id, selling_price, discount, tax_amount, total_amount, down_payment, amount_paid, balance_amount, payment_mode, status, is_emi, emi_configured, annual_interest_rate, notes, sale_date, created_at, user_id").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicles").select("id, brand, model, variant, status, selling_price, manufacturing_year, registration_number, vehicle_type").eq("user_id", user.id),
-        supabase.from("customers").select("id, full_name, phone, email, code").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("settings").select("dealer_name, dealer_address, dealer_phone, dealer_email, dealer_gst, shop_logo_url, sale_prefix, tax_rate, currency").eq("user_id", user.id).maybeSingle(),
+        supabase.from("sales").select("id, sale_number, vehicle_id, customer_id, selling_price, discount, tax_amount, total_amount, down_payment, amount_paid, balance_amount, payment_mode, status, is_emi, emi_configured, annual_interest_rate, notes, sale_date, created_at, user_id").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("id, brand, model, variant, status, selling_price, manufacturing_year, registration_number, vehicle_type").eq("user_id", userId),
+        supabase.from("customers").select("id, full_name, phone, email, code").eq("is_active", true).eq("user_id", userId),
+        supabase.from("settings").select("dealer_name, dealer_address, dealer_phone, dealer_email, dealer_gst, shop_logo_url, sale_prefix, tax_rate, currency").eq("user_id", userId).maybeSingle(),
       ]);
       return {
         sales: (salesRes.data || []) as Sale[],
@@ -72,6 +74,7 @@ const Sales = () => {
         settings: settingsRes.data as Settings | null,
       };
     },
+    enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 

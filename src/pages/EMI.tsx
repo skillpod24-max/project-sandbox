@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,17 +30,18 @@ const EMI = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const { data: emiPageData, isLoading: loading } = useQuery({
-    queryKey: ['emi-page'],
+    queryKey: ['emi-page', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { emis: [] as EMISchedule[], sales: [] as Sale[], vehicles: [] as Vehicle[], customers: [] as Customer[] };
+      if (!userId) return { emis: [] as EMISchedule[], sales: [] as Sale[], vehicles: [] as Vehicle[], customers: [] as Customer[] };
       const [emisRes, salesRes, vehiclesRes, customersRes] = await Promise.all([
-        supabase.from("emi_schedules").select("id,emi_number,due_date,emi_amount,amount_paid,status,sale_id,principal_component,interest_component,principal_paid,interest_paid,paid_date,notes,user_id").eq("user_id", user.id).order("due_date", { ascending: true }),
-        supabase.from("sales").select("id,sale_number,vehicle_id,customer_id,total_amount,amount_paid,balance_amount,down_payment,is_emi,emi_configured,annual_interest_rate,status,selling_price").eq("is_emi", true).eq("user_id", user.id),
-        supabase.from("vehicles").select("id,brand,model,variant,code,status").eq("user_id", user.id),
-        supabase.from("customers").select("id,full_name,phone,code").eq("user_id", user.id),
+        supabase.from("emi_schedules").select("id,emi_number,due_date,emi_amount,amount_paid,status,sale_id,principal_component,interest_component,principal_paid,interest_paid,paid_date,notes,user_id").eq("user_id", userId).order("due_date", { ascending: true }),
+        supabase.from("sales").select("id,sale_number,vehicle_id,customer_id,total_amount,amount_paid,balance_amount,down_payment,is_emi,emi_configured,annual_interest_rate,status,selling_price").eq("is_emi", true).eq("user_id", userId),
+        supabase.from("vehicles").select("id,brand,model,variant,code,status").eq("user_id", userId),
+        supabase.from("customers").select("id,full_name,phone,code").eq("user_id", userId),
       ]);
       return {
         emis: (emisRes.data || []) as EMISchedule[],
@@ -48,6 +50,7 @@ const EMI = () => {
         customers: (customersRes.data || []) as Customer[],
       };
     },
+    enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 

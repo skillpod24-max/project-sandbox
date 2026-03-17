@@ -17,7 +17,7 @@ const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MarketplaceVehicle = lazy(() => import("./pages/marketplace/MarketplaceVehicle"));
 const MarketplaceDealer = lazy(() => import("./pages/marketplace/MarketplaceDealer"));
 const CompareVehicles = lazy(() => import("./pages/marketplace/CompareVehicles"));
-const AuctionDetail = lazy(() => import("./pages/marketplace/AuctionDetail"));
+
 const Wishlist = lazy(() => import("./pages/marketplace/Wishlist"));
 const AllDealers = lazy(() => import("./pages/marketplace/AllDealers"));
 const AllVehicles = lazy(() => import("./pages/marketplace/AllVehicles"));
@@ -127,7 +127,7 @@ const App = () => (
               <Route path="/marketplace/vehicle/:vehicleId" element={<SuspenseWrap><MarketplaceVehicle /></SuspenseWrap>} />
               <Route path="/marketplace/dealer/:dealerId" element={<SuspenseWrap><MarketplaceDealer /></SuspenseWrap>} />
               <Route path="/marketplace/compare" element={<SuspenseWrap><CompareVehicles /></SuspenseWrap>} />
-              <Route path="/marketplace/auction/:auctionId" element={<SuspenseWrap><AuctionDetail /></SuspenseWrap>} />
+              
               <Route path="/marketplace/wishlist" element={<SuspenseWrap><Wishlist /></SuspenseWrap>} />
               <Route path="/marketplace/dealers" element={<SuspenseWrap><AllDealers /></SuspenseWrap>} />
               <Route path="/marketplace/vehicles" element={<SuspenseWrap><AllVehicles /></SuspenseWrap>} />

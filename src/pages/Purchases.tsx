@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -43,17 +44,18 @@ const Purchases = () => {
   const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("purchases");
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const { data: pageData, isLoading: loading } = useQuery({
-    queryKey: ['purchases-page'],
+    queryKey: ['purchases-page', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!userId) return null;
       const [purchasesRes, vehiclesRes, vendorsRes, imagesRes] = await Promise.all([
-        supabase.from("vehicle_purchases").select("id,purchase_number,vehicle_id,vendor_id,purchase_price,amount_paid,balance_amount,payment_mode,purchase_date,notes,created_at,user_id").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("vehicles").select("id,brand,model,variant,code,status,purchase_price,selling_price").eq("user_id", user.id),
-        supabase.from("vendors").select("id,name,code,phone,is_active").eq("is_active", true).eq("user_id", user.id),
-        supabase.from("vehicle_images").select("id,vehicle_id,image_url,is_primary").eq("user_id", user.id),
+        supabase.from("vehicle_purchases").select("id,purchase_number,vehicle_id,vendor_id,purchase_price,amount_paid,balance_amount,payment_mode,purchase_date,notes,created_at,user_id").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("vehicles").select("id,brand,model,variant,code,status,purchase_price,selling_price").eq("user_id", userId),
+        supabase.from("vendors").select("id,name,code,phone,is_active").eq("is_active", true).eq("user_id", userId),
+        supabase.from("vehicle_images").select("id,vehicle_id,image_url,is_primary").eq("user_id", userId),
       ]);
       return {
         purchases: (purchasesRes.data || []) as Purchase[],
@@ -62,6 +64,7 @@ const Purchases = () => {
         vehicleImages: (imagesRes.data || []) as VehicleImage[],
       };
     },
+    enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 

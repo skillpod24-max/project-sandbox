@@ -58,7 +58,7 @@ const TermsPage = () => {
                 <ul className="list-disc pl-6 text-slate-600 space-y-2">
                   <li>Vehicle listing and discovery platform</li>
                   <li>Dealer verification and management tools</li>
-                  <li>Vehicle auctions and bidding system</li>
+                  <li>Dealer verification and management tools</li>
                   <li>Lead generation and enquiry management</li>
                   <li>Analytics and reporting tools for dealers</li>
                 </ul>
@@ -104,13 +104,6 @@ const TermsPage = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">6. Auctions and Bidding</h2>
-                <p className="text-slate-600 leading-relaxed">
-                  Participation in auctions is binding. Winning bidders must complete the purchase unless the seller 
-                  fails to confirm. Repeated bid defaults may result in account suspension.
-                </p>
-              </section>
 
               <section className="mb-8">
                 <h2 className="text-xl font-bold text-slate-900 mb-4">7. Limitation of Liability</h2>
