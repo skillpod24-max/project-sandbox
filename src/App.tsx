@@ -85,7 +85,7 @@ const SuspenseWrap = ({ children, skeleton }: { children: React.ReactNode; skele
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
     <Layout>
-      <SuspenseWrap>{children}</SuspenseWrap>
+      <Suspense fallback={null}>{children}</Suspense>
     </Layout>
   </ProtectedRoute>
 );
