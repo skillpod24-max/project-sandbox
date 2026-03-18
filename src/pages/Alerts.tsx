@@ -1,258 +1,156 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, FileWarning, Calendar, CreditCard } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { format, addDays, isBefore } from "date-fns";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { formatIndianNumber } from "@/lib/formatters";
 
+async function fetchAlertData(userId: string) {
+  const today = new Date();
+
+  const [vehiclesRes, emisRes, docsRes, salesRes, leadsRes, expensesRes] = await Promise.all([
+    supabase.from("vehicles").select("id, brand, model, status, insurance_expiry, puc_expiry, fitness_expiry, road_tax_expiry, created_at").eq("status", "in_stock").eq("user_id", userId),
+    supabase.from("emi_schedules").select("id, emi_number, due_date, status").eq("status", "pending").eq("user_id", userId),
+    supabase.from("documents").select("id, document_name, expiry_date").eq("user_id", userId),
+    supabase.from("sales").select("id, sale_number, balance_amount, is_emi, emi_configured, created_at").gt("balance_amount", 0).eq("user_id", userId),
+    supabase.from("leads").select("id, customer_name, follow_up_date, last_contact_date, status, created_at").eq("user_id", userId).lt("follow_up_date", today.toISOString()).neq("status", "closed"),
+    supabase.from("expenses").select("amount, expense_date").eq("user_id", userId),
+  ]);
+
+  return {
+    vehicles: vehiclesRes.data || [],
+    emis: emisRes.data || [],
+    docs: docsRes.data || [],
+    sales: salesRes.data || [],
+    leads: leadsRes.data || [],
+    expenses: expensesRes.data || [],
+  };
+}
+
 const Alerts = () => {
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const userId = user?.id;
 
-  useEffect(() => {
-    fetchAlerts();
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ["alerts-data", userId],
+    queryFn: () => fetchAlertData(userId!),
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
 
-  const fetchAlerts = async () => {
-    const alertsList: any[] = [];
+  const alerts = useMemo(() => {
+    if (!data) return [];
+    const list: { type: string; icon: any; title: string; message: string }[] = [];
     const today = new Date();
     const nextWeek = addDays(today, 7);
 
-    // Get current user for explicit filtering
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const [vehiclesRes, emis, docs, sales] = await Promise.all([
-      supabase.from("vehicles").select("*").eq("status", "in_stock").eq("user_id", user.id),
-      supabase.from("emi_schedules").select("*").eq("status", "pending").eq("user_id", user.id),
-      supabase.from("documents").select("*").eq("user_id", user.id),
-      supabase.from("sales").select("*").gt("balance_amount", 0).eq("user_id", user.id),
-    ]);
-
-    // 📞 Missed lead follow-ups
-const { data: leads } = await supabase
-  .from("leads")
-  .select("*")
-  .eq("user_id", user.id)
-  .lt("follow_up_date", today.toISOString())
-  .neq("status", "closed");
-
-leads?.forEach((l) => {
-  alertsList.push({
-    type: "danger",
-    icon: AlertTriangle,
-    title: "Missed Follow-up",
-    message: `Follow-up missed for lead ${l.customer_name}`,
-  });
-});
-
-// 🧍 Inactive leads (no contact)
-const inactiveLeads = leads?.filter(
-  l =>
-    !l.last_contact_date &&
-    isBefore(new Date(l.created_at), addDays(today, -3))
-);
-
-inactiveLeads?.forEach((l) => {
-  alertsList.push({
-    type: "warning",
-    icon: AlertTriangle,
-    title: "Inactive Lead",
-    message: `No contact made for ${l.customer_name}`,
-  });
-});
-
-
-// ⚠️ EMI sale without EMI schedule
-sales.data?.forEach((s) => {
-  if (s.is_emi && !s.emi_configured) {
-    alertsList.push({
-      type: "danger",
-      icon: CreditCard,
-      title: "EMI Not Configured",
-      message: `Sale ${s.sale_number} is EMI but schedule not configured`,
+    // Missed follow-ups
+    data.leads.forEach((l) => {
+      list.push({ type: "danger", icon: AlertTriangle, title: "Missed Follow-up", message: `Follow-up missed for lead ${l.customer_name}` });
     });
-  }
-});
 
-// 🚗 Vehicle expiry alerts
-vehiclesRes.data?.forEach((v) => {
-  const checks = [
-    { date: v.insurance_expiry, label: "Insurance" },
-    { date: v.puc_expiry, label: "PUC" },
-    { date: v.fitness_expiry, label: "Fitness" },
-    { date: v.road_tax_expiry, label: "Road Tax" },
-  ];
-
-  checks.forEach((c) => {
-    if (!c.date) return;
-
-    const expiry = new Date(c.date);
-
-    if (isBefore(expiry, today)) {
-      alertsList.push({
-        type: "danger",
-        icon: FileWarning,
-        title: `${c.label} Expired`,
-        message: `${v.brand} ${v.model} ${c.label} expired`,
-      });
-    } else if (isBefore(expiry, nextWeek)) {
-      alertsList.push({
-        type: "warning",
-        icon: FileWarning,
-        title: `${c.label} Expiring Soon`,
-        message: `${v.brand} ${v.model} ${c.label} expires on ${format(expiry, "dd MMM")}`,
-      });
-    }
-  });
-});
-
-
-
-
-    // Low stock alert
-    if ((vehiclesRes.data?.length || 0) < 5) {
-      alertsList.push({ type: "warning", icon: AlertTriangle, title: "Low Stock", message: `Only ${formatIndianNumber(vehiclesRes.data?.length || 0)} vehicles in stock` });
-    }
-
-    // 🚗 Idle inventory alert (30+ days unsold)
-vehiclesRes.data?.forEach((v) => {
-  const addedDate = new Date(v.created_at);
-  if (isBefore(addedDate, addDays(today, -30))) {
-    alertsList.push({
-      type: "warning",
-      icon: AlertTriangle,
-      title: "Idle Inventory",
-      message: `${v.brand} ${v.model} has been in stock for over 30 days`,
+    // Inactive leads
+    data.leads.filter(l => !l.last_contact_date && isBefore(new Date(l.created_at), addDays(today, -3))).forEach((l) => {
+      list.push({ type: "warning", icon: AlertTriangle, title: "Inactive Lead", message: `No contact made for ${l.customer_name}` });
     });
-  }
-});
 
-// ❌ EMI overdue alerts
-emis.data?.forEach((e) => {
-  if (isBefore(new Date(e.due_date), today)) {
-    alertsList.push({
-      type: "danger",
-      icon: CreditCard,
-      title: "EMI Overdue",
-      message: `EMI #${e.emi_number} was due on ${format(new Date(e.due_date), "dd MMM")}`,
-    });
-  }
-});
-
-
-    // EMI due alerts
-    emis.data?.forEach((e) => {
-  const due = new Date(e.due_date);
-  if (
-    isBefore(due, nextWeek) &&
-    !isBefore(due, today) // NOT overdue
-  ) {
-        alertsList.push({ type: "danger", icon: CreditCard, title: "EMI Due", message: `EMI #${e.emi_number} due on ${format(new Date(e.due_date), "dd MMM")}` });
+    // EMI not configured
+    data.sales.forEach((s) => {
+      if (s.is_emi && !s.emi_configured) {
+        list.push({ type: "danger", icon: CreditCard, title: "EMI Not Configured", message: `Sale ${s.sale_number} is EMI but schedule not configured` });
       }
     });
 
-    const recentSales = sales.data?.filter(s =>
-  isBefore(addDays(today, -7), new Date(s.created_at))
-);
+    // Vehicle expiry
+    data.vehicles.forEach((v) => {
+      [
+        { date: v.insurance_expiry, label: "Insurance" },
+        { date: v.puc_expiry, label: "PUC" },
+        { date: v.fitness_expiry, label: "Fitness" },
+        { date: v.road_tax_expiry, label: "Road Tax" },
+      ].forEach((c) => {
+        if (!c.date) return;
+        const expiry = new Date(c.date);
+        if (isBefore(expiry, today)) {
+          list.push({ type: "danger", icon: FileWarning, title: `${c.label} Expired`, message: `${v.brand} ${v.model} ${c.label} expired` });
+        } else if (isBefore(expiry, nextWeek)) {
+          list.push({ type: "warning", icon: FileWarning, title: `${c.label} Expiring Soon`, message: `${v.brand} ${v.model} ${c.label} expires on ${format(expiry, "dd MMM")}` });
+        }
+      });
+    });
 
-if (!recentSales || recentSales.length === 0) {
-  alertsList.push({
-    type: "warning",
-    icon: AlertTriangle,
-    title: "No Recent Sales",
-    message: "No sales recorded in the last 7 days",
-  });
-}
+    // Low stock
+    if (data.vehicles.length < 5) {
+      list.push({ type: "warning", icon: AlertTriangle, title: "Low Stock", message: `Only ${formatIndianNumber(data.vehicles.length)} vehicles in stock` });
+    }
 
-if ((emis.data?.length || 0) > 10) {
-  alertsList.push({
-    type: "warning",
-    icon: CreditCard,
-    title: "High EMI Exposure",
-    message: `${emis.data?.length} active EMI schedules pending`,
-  });
-}
+    // Idle inventory
+    data.vehicles.forEach((v) => {
+      if (isBefore(new Date(v.created_at), addDays(today, -30))) {
+        list.push({ type: "warning", icon: AlertTriangle, title: "Idle Inventory", message: `${v.brand} ${v.model} has been in stock for over 30 days` });
+      }
+    });
 
+    // EMI overdue
+    data.emis.forEach((e) => {
+      if (isBefore(new Date(e.due_date), today)) {
+        list.push({ type: "danger", icon: CreditCard, title: "EMI Overdue", message: `EMI #${e.emi_number} was due on ${format(new Date(e.due_date), "dd MMM")}` });
+      }
+    });
 
-    // Document expiry alerts
-    docs.data?.forEach((d) => {
+    // EMI due soon
+    data.emis.forEach((e) => {
+      const due = new Date(e.due_date);
+      if (isBefore(due, nextWeek) && !isBefore(due, today)) {
+        list.push({ type: "danger", icon: CreditCard, title: "EMI Due", message: `EMI #${e.emi_number} due on ${format(due, "dd MMM")}` });
+      }
+    });
+
+    // No recent sales
+    const recentSales = data.sales.filter(s => isBefore(addDays(today, -7), new Date(s.created_at)));
+    if (recentSales.length === 0) {
+      list.push({ type: "warning", icon: AlertTriangle, title: "No Recent Sales", message: "No sales recorded in the last 7 days" });
+    }
+
+    // High EMI exposure
+    if (data.emis.length > 10) {
+      list.push({ type: "warning", icon: CreditCard, title: "High EMI Exposure", message: `${data.emis.length} active EMI schedules pending` });
+    }
+
+    // Document expiry
+    data.docs.forEach((d) => {
       if (d.expiry_date) {
-  const expiry = new Date(d.expiry_date);
-
-  if (isBefore(expiry, today)) {
-    alertsList.push({
-      type: "danger",
-      icon: FileWarning,
-      title: "Document Expired",
-      message: `${d.document_name} expired on ${format(expiry, "dd MMM")}`,
-    });
-  } else if (isBefore(expiry, nextWeek)) {
-    alertsList.push({
-      type: "warning",
-      icon: FileWarning,
-      title: "Document Expiring",
-      message: `${d.document_name} expires on ${format(expiry, "dd MMM")}`,
-    });
-  }
-}
-
+        const expiry = new Date(d.expiry_date);
+        if (isBefore(expiry, today)) {
+          list.push({ type: "danger", icon: FileWarning, title: "Document Expired", message: `${d.document_name} expired on ${format(expiry, "dd MMM")}` });
+        } else if (isBefore(expiry, nextWeek)) {
+          list.push({ type: "warning", icon: FileWarning, title: "Document Expiring", message: `${d.document_name} expires on ${format(expiry, "dd MMM")}` });
+        }
+      }
     });
 
     // Pending payments
-    sales.data?.forEach((s) => {
-  if (s.balance_amount > 0) {
-    alertsList.push({
-      type: s.balance_amount > 50000 ? "danger" : "info",
-      icon: Calendar,
-      title: s.balance_amount > 50000 ? "High Pending Payment" : "Pending Payment",
-      message: `₹${formatIndianNumber(s.balance_amount)} pending for ${s.sale_number}`,
+    data.sales.forEach((s) => {
+      if (s.balance_amount > 0) {
+        list.push({ type: s.balance_amount > 50000 ? "danger" : "info", icon: Calendar, title: s.balance_amount > 50000 ? "High Pending Payment" : "Pending Payment", message: `₹${formatIndianNumber(s.balance_amount)} pending for ${s.sale_number}` });
+      }
     });
-  }
-});
 
+    // Expense spike
+    const sum = (arr: any[]) => arr.reduce((t: number, e: any) => t + e.amount, 0);
+    const last7 = data.expenses.filter(e => isBefore(addDays(today, -7), new Date(e.expense_date)));
+    const prev7 = data.expenses.filter(e => isBefore(addDays(today, -14), new Date(e.expense_date)) && isBefore(new Date(e.expense_date), addDays(today, -7)));
+    if (sum(prev7) > 0 && sum(last7) > sum(prev7) * 1.4) {
+      list.push({ type: "warning", icon: AlertTriangle, title: "Expense Spike", message: "Expenses increased sharply this week" });
+    }
 
-// 📉 Expense spike alert
-const { data: expenses } = await supabase
-  .from("expenses")
-  .select("amount, expense_date")
-  .eq("user_id", user.id);
+    return list;
+  }, [data]);
 
-if (expenses) {
-  const last7 = expenses.filter(e =>
-    isBefore(addDays(today, -7), new Date(e.expense_date))
-  );
-  const prev7 = expenses.filter(e =>
-    isBefore(addDays(today, -14), new Date(e.expense_date)) &&
-    isBefore(new Date(e.expense_date), addDays(today, -7))
-  );
-
-  const sum = (arr: any[]) => arr.reduce((t, e) => t + e.amount, 0);
-
-  if (sum(prev7) > 0 && sum(last7) > sum(prev7) * 1.4) {
-    alertsList.push({
-      type: "warning",
-      icon: AlertTriangle,
-      title: "Expense Spike",
-      message: "Expenses increased sharply this week",
-    });
-  }
-}
-
-
-
-    setAlerts(alertsList);
-    setLoading(false);
-  };
-
-  if (loading) {
-    return <PageSkeleton />;
-  }
+  if (isLoading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6 animate-fade-in">
