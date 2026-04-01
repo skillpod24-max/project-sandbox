@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Store, Globe, Upload, Copy, ExternalLink, Eye, MessageCircle, CheckCircle2 } from "lucide-react";
+import { Store, Globe, Upload, Copy, ExternalLink, Eye, MessageCircle, CheckCircle2, X } from "lucide-react";
 import { getCatalogueUrl } from "@/lib/catalogueUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
