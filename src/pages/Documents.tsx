@@ -133,6 +133,18 @@ const Documents = () => {
     return vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.code})` : "Unknown";
   };
 
+  const handleDeleteDocument = async (docId: string) => {
+    if (!confirm("Delete this document?")) return;
+    try {
+      const { error } = await supabase.from("documents").delete().eq("id", docId);
+      if (error) throw error;
+      toast({ title: "Document deleted" });
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleAddDocument = async () => {
     if (!selectedFile || !addForm.documentName) {
       toast({ title: "Please fill document name and select a file", variant: "destructive" });
