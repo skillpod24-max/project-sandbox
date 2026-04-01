@@ -258,10 +258,19 @@ const Documents = () => {
             {filteredDocuments.map((d) => (
               <Card key={d.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDocViewer(d)}>
                 <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-muted-foreground shrink-0" /><p className="font-medium text-foreground truncate">{d.document_name}</p></div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <p className="font-medium text-foreground truncate flex-1">{d.document_name}</p>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(d.id); }} className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0" title="Delete">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <span className={`inline-block px-2 py-0.5 rounded text-xs border ${documentTypeMeta[d.document_type as DocumentType]?.className}`}>{documentTypeMeta[d.document_type as DocumentType]?.label || d.document_type}</span>
                   <p className="text-xs text-muted-foreground truncate">{d.reference_type === "vehicle" ? getVehicleName(d.reference_id) : d.reference_type}</p>
-                  <Badge className={getStatusColor(d.status) + " text-xs"}>{d.status}</Badge>
+                  <div className="flex items-center justify-between">
+                    <Badge className={getStatusColor(d.status) + " text-xs"}>{d.status}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{format(new Date(d.created_at), "dd MMM yyyy")}</span>
+                  </div>
                 </CardContent>
               </Card>
             ))}
