@@ -244,6 +244,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       <StickyNotesPanel open={notesOpen} onOpenChange={setNotesOpen} />
       <EMICalculatorDialog open={emiCalcOpen} onOpenChange={setEmiCalcOpen} />
+      <ScrollToTopButton />
     </SidebarProvider>
   );
 };
