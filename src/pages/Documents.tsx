@@ -229,7 +229,7 @@ const Documents = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Vehicle</TableHead><TableHead>Status</TableHead>
+                  <TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Vehicle</TableHead><TableHead>Uploaded</TableHead><TableHead>Status</TableHead><TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -238,11 +238,17 @@ const Documents = () => {
                     <TableCell className="font-medium"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />{d.document_name}</div></TableCell>
                     <TableCell><span className={`inline-block px-2 py-0.5 rounded text-xs border ${documentTypeMeta[d.document_type as DocumentType]?.className}`}>{documentTypeMeta[d.document_type as DocumentType]?.label || d.document_type}</span></TableCell>
                     <TableCell className="text-sm text-muted-foreground">{d.reference_type === "vehicle" ? getVehicleName(d.reference_id) : d.reference_type}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{format(new Date(d.created_at), "dd MMM yyyy")}</TableCell>
                     <TableCell><Badge className={getStatusColor(d.status)}>{d.status}</Badge></TableCell>
+                    <TableCell>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(d.id); }} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {filteredDocuments.length === 0 && (
-                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{selectedVehicle === "all" ? "No documents found" : "No documents found for this vehicle"}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{selectedVehicle === "all" ? "No documents found" : "No documents found for this vehicle"}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
