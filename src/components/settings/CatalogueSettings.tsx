@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Store, Globe, Upload, Copy, ExternalLink, Eye, MessageCircle, CheckCircle2 } from "lucide-react";
+import { Store, Globe, Upload, Copy, ExternalLink, Eye, MessageCircle, CheckCircle2, X } from "lucide-react";
 import { getCatalogueUrl } from "@/lib/catalogueUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -117,13 +117,24 @@ const CatalogueSettings = ({ settings, setSettings, uploadingLogo, setUploadingL
               <div className="space-y-2">
                 <Label>Shop Logo</Label>
                 <div className="flex items-center gap-4">
-                  {settings.shop_logo_url ? (
-                    <img src={settings.shop_logo_url} alt="Shop logo" className="h-16 w-16 object-contain rounded-xl border" />
-                  ) : (
-                    <div className="h-16 w-16 bg-muted rounded-xl flex items-center justify-center">
-                      <Store className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
+                  <div className="relative group">
+                    {settings.shop_logo_url ? (
+                      <>
+                        <img src={settings.shop_logo_url} alt="Shop logo" className="h-16 w-16 object-contain rounded-xl border" />
+                        <button
+                          type="button"
+                          onClick={() => setSettings({ ...settings, shop_logo_url: null })}
+                          className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="h-16 w-16 bg-muted rounded-xl flex items-center justify-center">
+                        <Store className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <Input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" id="catalogue-logo-upload" />
                     <label htmlFor="catalogue-logo-upload">

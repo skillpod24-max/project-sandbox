@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Wifi, WifiOff, Info, LayoutDashboard, Car, ShoppingCart, Receipt, BarChart3, Settings, Menu, UserPlus, CreditCard, ReceiptText, CalendarClock, FileText, Bell, LogOut, UsersRound, UserCircle, Store } from "lucide-react";
 import { Calculator, StickyNote } from "lucide-react";
 import EMICalculatorDialog from "@/components/EMICalculatorDialog";
+import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StickyNotesPanel from "@/components/StickyNotesPanel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -243,6 +244,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       <StickyNotesPanel open={notesOpen} onOpenChange={setNotesOpen} />
       <EMICalculatorDialog open={emiCalcOpen} onOpenChange={setEmiCalcOpen} />
+      <ScrollToTopButton />
     </SidebarProvider>
   );
 };

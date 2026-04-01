@@ -46,7 +46,7 @@ export const MetricCard = memo(({ title, value, change, icon: Icon, subtitle, co
           </div>
         </div>
         <div className="space-y-1">
-          <h3 className="text-2xl font-bold text-foreground tracking-tight">{value}</h3>
+          <h3 className="text-lg sm:text-2xl font-bold text-foreground tracking-tight tabular-nums break-all">{value}</h3>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           {subtitle && <p className="text-xs text-muted-foreground/70">{subtitle}</p>}
         </div>

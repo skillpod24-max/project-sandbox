@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Car, UsersRound, Receipt, FileText, Settings, X, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SearchResult {
   type: "vehicle" | "customer" | "sale" | "document" | "page" | "dealer";
@@ -12,24 +13,41 @@ interface SearchResult {
   url: string;
 }
 
+const quickPages: SearchResult[] = [
+  { type: "page", id: "dashboard", title: "Dashboard", url: "/dashboard" },
+  { type: "page", id: "vehicles", title: "Vehicles", url: "/vehicles" },
+  { type: "page", id: "customers", title: "Customers", url: "/customers" },
+  { type: "page", id: "sales", title: "Sales", url: "/sales" },
+  { type: "page", id: "purchases", title: "Purchases", url: "/purchases" },
+  { type: "page", id: "reports", title: "Reports", url: "/reports" },
+  { type: "page", id: "settings", title: "Settings", url: "/settings" },
+  { type: "page", id: "leads", title: "Leads", url: "/leads" },
+  { type: "page", id: "payments", title: "Payments", url: "/payments" },
+  { type: "page", id: "expenses", title: "Expenses", url: "/expenses" },
+  { type: "page", id: "documents", title: "Documents", url: "/documents" },
+];
+
+const getIcon = (type: string) => {
+  switch (type) {
+    case "vehicle": return Car;
+    case "customer": return UsersRound;
+    case "dealer": return Building2;
+    case "sale": return Receipt;
+    case "document": return FileText;
+    default: return Settings;
+  }
+};
+
 const GlobalSearch = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-
-  const quickPages: SearchResult[] = [
-    { type: "page", id: "dashboard", title: "Dashboard", url: "/dashboard" },
-    { type: "page", id: "vehicles", title: "Vehicles", url: "/vehicles" },
-    { type: "page", id: "customers", title: "Customers", url: "/customers" },
-    { type: "page", id: "sales", title: "Sales", url: "/sales" },
-    { type: "page", id: "purchases", title: "Purchases", url: "/purchases" },
-    { type: "page", id: "reports", title: "Reports", url: "/reports" },
-    { type: "page", id: "settings", title: "Settings", url: "/settings" },
-  ];
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -42,141 +60,128 @@ const GlobalSearch = () => {
   }, []);
 
   useEffect(() => {
+    if (query.length < 2) {
+      const filtered = quickPages.filter(p =>
+        p.title.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5);
+      setResults(filtered);
+      setSelectedIdx(-1);
+      return;
+    }
+
+    if (!user) return;
+
+    setLoading(true);
+    const controller = new AbortController();
+
     const searchData = async () => {
-      if (query.length < 2) {
-        setResults(quickPages.filter(p =>
-          p.title.toLowerCase().includes(query.toLowerCase())
-        ).slice(0, 5));
-        return;
-      }
+      try {
+        const q = query.trim();
+        const searchResults: SearchResult[] = [];
 
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+        // Run all searches in parallel
+        const [vehiclesRes, leadsRes, salesRes, customersRes] = await Promise.all([
+          supabase
+            .from("vehicles")
+            .select("id, brand, model, registration_number, manufacturing_year, code")
+            .eq("user_id", user.id)
+            .or(`brand.ilike.%${q}%,model.ilike.%${q}%,registration_number.ilike.%${q}%,code.ilike.%${q}%`)
+            .limit(4),
+          supabase
+            .from("leads")
+            .select("id, customer_name, phone, lead_number")
+            .eq("user_id", user.id)
+            .or(`customer_name.ilike.%${q}%,phone.ilike.%${q}%,lead_number.ilike.%${q}%`)
+            .limit(4),
+          supabase
+            .from("sales")
+            .select("id, sale_number, total_amount")
+            .eq("user_id", user.id)
+            .ilike("sale_number", `%${q}%`)
+            .limit(3),
+          supabase
+            .from("customers")
+            .select("id, full_name, phone, code")
+            .eq("user_id", user.id)
+            .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,code.ilike.%${q}%`)
+            .limit(4),
+        ]);
 
-      const searchResults: SearchResult[] = [];
-
-      // Search vehicles
-      const { data: vehicles } = await supabase
-        .from("vehicles")
-        .select("id, brand, model, registration_number, manufacturing_year, code, selling_price")
-        .eq("user_id", user.id)
-        .or(`brand.ilike.%${query}%,model.ilike.%${query}%,registration_number.ilike.%${query}%,code.ilike.%${query}%`)
-        .limit(5);
-
-      vehicles?.forEach(v => {
-        searchResults.push({
-          type: "vehicle",
-          id: v.id,
-          title: `${v.manufacturing_year} ${v.brand} ${v.model}`,
-          subtitle: v.registration_number || v.code || undefined,
-          url: `/vehicles?search=${v.id}`,
+        vehiclesRes.data?.forEach(v => {
+          searchResults.push({
+            type: "vehicle", id: v.id,
+            title: `${v.manufacturing_year} ${v.brand} ${v.model}`,
+            subtitle: v.registration_number || v.code || undefined,
+            url: `/vehicles?search=${v.id}`,
+          });
         });
-      });
 
-      // Search leads
-      const { data: leads } = await supabase
-        .from("leads")
-        .select("id, customer_name, phone, lead_number, source")
-        .eq("user_id", user.id)
-        .or(`customer_name.ilike.%${query}%,phone.ilike.%${query}%,lead_number.ilike.%${query}%`)
-        .limit(5);
-
-      leads?.forEach(l => {
-        searchResults.push({
-          type: "customer",
-          id: l.id,
-          title: l.customer_name,
-          subtitle: `${l.lead_number} · ${l.phone}`,
-          url: `/leads?search=${l.id}`,
+        leadsRes.data?.forEach(l => {
+          searchResults.push({
+            type: "customer", id: `lead-${l.id}`,
+            title: l.customer_name,
+            subtitle: `${l.lead_number} · ${l.phone}`,
+            url: `/leads?search=${l.id}`,
+          });
         });
-      });
 
-      // Search sales
-      const { data: salesData } = await supabase
-        .from("sales")
-        .select("id, sale_number, total_amount")
-        .eq("user_id", user.id)
-        .ilike("sale_number", `%${query}%`)
-        .limit(3);
-
-      salesData?.forEach(s => {
-        searchResults.push({
-          type: "sale",
-          id: s.id,
-          title: s.sale_number,
-          subtitle: `₹${Number(s.total_amount).toLocaleString("en-IN")}`,
-          url: `/sales?search=${s.id}`,
+        salesRes.data?.forEach(s => {
+          searchResults.push({
+            type: "sale", id: s.id,
+            title: s.sale_number,
+            subtitle: `₹${Number(s.total_amount).toLocaleString("en-IN")}`,
+            url: `/sales?search=${s.id}`,
+          });
         });
-      });
 
-      // Search customers
-      const { data: customers } = await supabase
-        .from("customers")
-        .select("id, full_name, phone, code")
-        .eq("user_id", user.id)
-        .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%,code.ilike.%${query}%`)
-        .limit(5);
-
-      customers?.forEach(c => {
-        searchResults.push({
-          type: "customer",
-          id: c.id,
-          title: c.full_name,
-          subtitle: c.phone,
-          url: `/customers?search=${c.id}`,
+        customersRes.data?.forEach(c => {
+          searchResults.push({
+            type: "customer", id: c.id,
+            title: c.full_name, subtitle: c.phone,
+            url: `/customers?search=${c.id}`,
+          });
         });
-      });
 
-      // Search marketplace dealers
-      const { data: dealers } = await supabase
-        .from("settings")
-        .select("user_id, dealer_name, dealer_address, public_page_id")
-        .ilike("dealer_name", `%${query}%`)
-        .eq("marketplace_enabled", true)
-        .limit(3);
-
-      dealers?.forEach(d => {
-        searchResults.push({
-          type: "dealer",
-          id: d.user_id,
-          title: d.dealer_name || "Dealer",
-          subtitle: d.dealer_address || undefined,
-          url: `/marketplace/dealer/${d.user_id}`,
+        // Add matching pages
+        quickPages.forEach(p => {
+          if (p.title.toLowerCase().includes(q.toLowerCase())) {
+            searchResults.push(p);
+          }
         });
-      });
 
-      // Add matching pages
-      quickPages.forEach(p => {
-        if (p.title.toLowerCase().includes(query.toLowerCase())) {
-          searchResults.push(p);
+        if (!controller.signal.aborted) {
+          setResults(searchResults.slice(0, 12));
+          setSelectedIdx(-1);
+          setLoading(false);
         }
-      });
-
-      setResults(searchResults.slice(0, 12));
-      setLoading(false);
+      } catch {
+        if (!controller.signal.aborted) setLoading(false);
+      }
     };
 
-    const debounce = setTimeout(searchData, 300);
-    return () => clearTimeout(debounce);
-  }, [query]);
+    const debounce = setTimeout(searchData, 250);
+    return () => { clearTimeout(debounce); controller.abort(); };
+  }, [query, user]);
 
-  const handleSelect = (result: SearchResult) => {
+  const handleSelect = useCallback((result: SearchResult) => {
     navigate(result.url);
     setQuery("");
     setIsOpen(false);
-  };
+  }, [navigate]);
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "vehicle": return Car;
-      case "customer": return UsersRound;
-      case "dealer": return Building2;
-      case "sale": return Receipt;
-      case "document": return FileText;
-      default: return Settings;
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIdx(i => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIdx(i => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && selectedIdx >= 0 && results[selectedIdx]) {
+      handleSelect(results[selectedIdx]);
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
     }
-  };
+  }, [results, selectedIdx, handleSelect]);
 
   return (
     <div ref={containerRef} className="relative hidden sm:block">
@@ -189,10 +194,11 @@ const GlobalSearch = () => {
           value={query}
           onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
           className="w-48 md:w-64 lg:w-80 pl-9 pr-8 h-9 bg-muted/50 border-transparent focus:border-primary focus:bg-background transition-colors"
         />
         {query && (
-          <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded">
+          <button onClick={() => { setQuery(""); setResults(quickPages.slice(0, 5)); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded">
             <X className="h-3 w-3 text-muted-foreground" />
           </button>
         )}
@@ -210,7 +216,9 @@ const GlobalSearch = () => {
                   <button
                     key={`${result.type}-${result.id}-${idx}`}
                     onClick={() => handleSelect(result)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left border-b border-border last:border-0"
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left border-b border-border last:border-0 ${
+                      idx === selectedIdx ? "bg-muted" : ""
+                    }`}
                   >
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                       result.type === "dealer" ? "bg-blue-100" : "bg-muted"

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Download, ExternalLink, FileText, Plus, Upload } from "lucide-react";
+import { Eye, Download, ExternalLink, FileText, Plus, Upload, Trash2 } from "lucide-react";
 import ViewToggle from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { useToast } from "@/hooks/use-toast";
@@ -133,6 +133,18 @@ const Documents = () => {
     return vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.code})` : "Unknown";
   };
 
+  const handleDeleteDocument = async (docId: string) => {
+    if (!confirm("Delete this document?")) return;
+    try {
+      const { error } = await supabase.from("documents").delete().eq("id", docId);
+      if (error) throw error;
+      toast({ title: "Document deleted" });
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleAddDocument = async () => {
     if (!selectedFile || !addForm.documentName) {
       toast({ title: "Please fill document name and select a file", variant: "destructive" });
@@ -229,7 +241,7 @@ const Documents = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Vehicle</TableHead><TableHead>Status</TableHead>
+                  <TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Vehicle</TableHead><TableHead>Uploaded</TableHead><TableHead>Status</TableHead><TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -238,11 +250,17 @@ const Documents = () => {
                     <TableCell className="font-medium"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" />{d.document_name}</div></TableCell>
                     <TableCell><span className={`inline-block px-2 py-0.5 rounded text-xs border ${documentTypeMeta[d.document_type as DocumentType]?.className}`}>{documentTypeMeta[d.document_type as DocumentType]?.label || d.document_type}</span></TableCell>
                     <TableCell className="text-sm text-muted-foreground">{d.reference_type === "vehicle" ? getVehicleName(d.reference_id) : d.reference_type}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{format(new Date(d.created_at), "dd MMM yyyy")}</TableCell>
                     <TableCell><Badge className={getStatusColor(d.status)}>{d.status}</Badge></TableCell>
+                    <TableCell>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(d.id); }} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {filteredDocuments.length === 0 && (
-                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{selectedVehicle === "all" ? "No documents found" : "No documents found for this vehicle"}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{selectedVehicle === "all" ? "No documents found" : "No documents found for this vehicle"}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -252,10 +270,19 @@ const Documents = () => {
             {filteredDocuments.map((d) => (
               <Card key={d.id} className="cursor-pointer hover:shadow-md transition-shadow border border-border" onClick={() => openDocViewer(d)}>
                 <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-muted-foreground shrink-0" /><p className="font-medium text-foreground truncate">{d.document_name}</p></div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <p className="font-medium text-foreground truncate flex-1">{d.document_name}</p>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(d.id); }} className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0" title="Delete">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <span className={`inline-block px-2 py-0.5 rounded text-xs border ${documentTypeMeta[d.document_type as DocumentType]?.className}`}>{documentTypeMeta[d.document_type as DocumentType]?.label || d.document_type}</span>
                   <p className="text-xs text-muted-foreground truncate">{d.reference_type === "vehicle" ? getVehicleName(d.reference_id) : d.reference_type}</p>
-                  <Badge className={getStatusColor(d.status) + " text-xs"}>{d.status}</Badge>
+                  <div className="flex items-center justify-between">
+                    <Badge className={getStatusColor(d.status) + " text-xs"}>{d.status}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{format(new Date(d.created_at), "dd MMM yyyy")}</span>
+                  </div>
                 </CardContent>
               </Card>
             ))}

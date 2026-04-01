@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,110 +23,54 @@ import {
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 const MarketplaceAnalytics = () => {
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalViews: 0,
-    totalEnquiries: 0,
-    totalCalls: 0,
-    totalWhatsapp: 0,
-    publicVehicles: 0,
-    conversionRate: 0,
-  });
-  const [prevStats, setPrevStats] = useState({
-    totalViews: 0,
-    totalEnquiries: 0,
-    totalCalls: 0,
-    totalWhatsapp: 0,
-  });
-  const [dailyData, setDailyData] = useState<any[]>([]);
-  const [vehicleStats, setVehicleStats] = useState<any[]>([]);
-  const [hourStats, setHourStats] = useState<any[]>([]);
   const [period, setPeriod] = useState("7d");
+  const { user } = useAuth();
+  const userId = user?.id;
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [period]);
-
-  const fetchAnalytics = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    try {
+  const { data: analyticsData, isLoading: loading } = useQuery({
+    queryKey: ['marketplace-analytics', userId, period],
+    queryFn: async () => {
+      if (!userId) return null;
       const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
       const startDate = startOfDay(subDays(new Date(), days));
       const prevStartDate = startOfDay(subDays(new Date(), days * 2));
 
-      // Fetch marketplace-specific events
-      const { data: events } = await supabase
-        .from("public_page_events")
-        .select("*")
-        .eq("dealer_user_id", user.id)
-        .eq("public_page_id", "marketplace")
-        .gte("created_at", startDate.toISOString());
+      const [{ data: events }, { data: prevEvents }, { count: publicVehiclesCount }] = await Promise.all([
+        supabase.from("public_page_events").select("event_type, vehicle_id, created_at, session_id")
+          .eq("dealer_user_id", userId).eq("public_page_id", "marketplace")
+          .gte("created_at", startDate.toISOString()),
+        supabase.from("public_page_events").select("event_type")
+          .eq("dealer_user_id", userId).eq("public_page_id", "marketplace")
+          .gte("created_at", prevStartDate.toISOString()).lt("created_at", startDate.toISOString()),
+        supabase.from("vehicles").select("id", { count: "exact", head: true })
+          .eq("user_id", userId).eq("is_public", true).eq("marketplace_status", "listed"),
+      ]);
 
-      // Fetch previous period for comparison
-      const { data: prevEvents } = await supabase
-        .from("public_page_events")
-        .select("event_type")
-        .eq("dealer_user_id", user.id)
-        .eq("public_page_id", "marketplace")
-        .gte("created_at", prevStartDate.toISOString())
-        .lt("created_at", startDate.toISOString());
-
-      // Fetch marketplace-enabled vehicles count
-      const { count: publicVehiclesCount } = await supabase
-        .from("vehicles")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("is_public", true)
-        .eq("marketplace_status", "listed");
-
-      // Calculate stats - separate vehicle and dealer views
-      const vehicleViews = (events || []).filter(e => e.event_type === "vehicle_view").length;
-      const dealerViews = (events || []).filter(e => e.event_type === "dealer_view").length;
+      const allEvents = events || [];
+      const vehicleViews = allEvents.filter(e => e.event_type === "vehicle_view").length;
+      const dealerViews = allEvents.filter(e => e.event_type === "dealer_view").length;
       const totalViews = vehicleViews + dealerViews;
-      const enquiries = (events || []).filter(e => e.event_type === "enquiry_submit").length;
-      const calls = (events || []).filter(e => e.event_type === "cta_call").length;
-      const whatsapp = (events || []).filter(e => e.event_type === "cta_whatsapp").length;
-      const formOpened = (events || []).filter(e => e.event_type === "form_opened").length;
+      const enquiries = allEvents.filter(e => e.event_type === "enquiry_submit").length;
+      const calls = allEvents.filter(e => e.event_type === "cta_call").length;
+      const whatsapp = allEvents.filter(e => e.event_type === "cta_whatsapp").length;
 
-      // Previous period stats
-      const prevVehicleViews = (prevEvents || []).filter(e => e.event_type === "vehicle_view").length;
-      const prevDealerViews = (prevEvents || []).filter(e => e.event_type === "dealer_view").length;
-      const prevTotalViews = prevVehicleViews + prevDealerViews;
-      const prevEnquiries = (prevEvents || []).filter(e => e.event_type === "enquiry_submit").length;
-      const prevCalls = (prevEvents || []).filter(e => e.event_type === "cta_call").length;
-      const prevWhatsapp = (prevEvents || []).filter(e => e.event_type === "cta_whatsapp").length;
+      const prevAllEvents = prevEvents || [];
+      const prevTotalViews = prevAllEvents.filter(e => ["vehicle_view", "dealer_view"].includes(e.event_type)).length;
+      const prevEnquiries = prevAllEvents.filter(e => e.event_type === "enquiry_submit").length;
+      const prevCalls = prevAllEvents.filter(e => e.event_type === "cta_call").length;
+      const prevWhatsapp = prevAllEvents.filter(e => e.event_type === "cta_whatsapp").length;
 
-      // Engagement rate = (enquiries + calls + whatsapp + form_opened) / total views
       const totalInteractions = enquiries + calls + whatsapp;
       const engagementRate = totalViews > 0 ? (totalInteractions / totalViews) * 100 : 0;
 
-      setStats({
-        totalViews,
-        totalEnquiries: enquiries,
-        totalCalls: calls,
-        totalWhatsapp: whatsapp,
-        publicVehicles: publicVehiclesCount || 0,
-        conversionRate: engagementRate,
-      });
-
-      setPrevStats({
-        totalViews: prevTotalViews,
-        totalEnquiries: prevEnquiries,
-        totalCalls: prevCalls,
-        totalWhatsapp: prevWhatsapp,
-      });
-
-      // Daily breakdown for reach graph
+      // Daily breakdown
       const dailyMap: Record<string, { date: string; reach: number; impressions: number }> = {};
       for (let i = 0; i < days; i++) {
         const d = format(subDays(new Date(), i), "MMM dd");
         dailyMap[d] = { date: d, reach: 0, impressions: 0 };
       }
-
       const sessionsByDate: Record<string, Set<string>> = {};
-      (events || []).forEach(e => {
+      allEvents.forEach(e => {
         const d = format(new Date(e.created_at), "MMM dd");
         if (dailyMap[d]) {
           dailyMap[d].impressions++;
@@ -132,53 +78,49 @@ const MarketplaceAnalytics = () => {
           sessionsByDate[d].add(e.session_id);
         }
       });
+      Object.keys(dailyMap).forEach(d => { dailyMap[d].reach = sessionsByDate[d]?.size || 0; });
 
-      Object.keys(dailyMap).forEach(d => {
-        dailyMap[d].reach = sessionsByDate[d]?.size || 0;
-      });
-
-      setDailyData(Object.values(dailyMap).reverse());
-
-      // Hour stats for heatmap
+      // Hour stats
       const hourMap: Record<number, number> = {};
-      (events || []).forEach(e => {
-        const hour = new Date(e.created_at).getHours();
-        hourMap[hour] = (hourMap[hour] || 0) + 1;
-      });
-      setHourStats(Array.from({ length: 24 }, (_, i) => ({ hour: i, count: hourMap[i] || 0 })));
+      allEvents.forEach(e => { const h = new Date(e.created_at).getHours(); hourMap[h] = (hourMap[h] || 0) + 1; });
+      const hourStats = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: hourMap[i] || 0 }));
 
-      // Vehicle-wise stats
+      // Vehicle stats
       const vehicleMap: Record<string, { id: string; views: number; enquiries: number }> = {};
-      (events || []).filter(e => e.vehicle_id).forEach(e => {
-        if (!vehicleMap[e.vehicle_id]) {
-          vehicleMap[e.vehicle_id] = { id: e.vehicle_id, views: 0, enquiries: 0 };
-        }
-        if (e.event_type === "vehicle_view") vehicleMap[e.vehicle_id].views++;
-        if (e.event_type === "enquiry_submit") vehicleMap[e.vehicle_id].enquiries++;
+      allEvents.filter(e => e.vehicle_id).forEach(e => {
+        if (!vehicleMap[e.vehicle_id!]) vehicleMap[e.vehicle_id!] = { id: e.vehicle_id!, views: 0, enquiries: 0 };
+        if (e.event_type === "vehicle_view") vehicleMap[e.vehicle_id!].views++;
+        if (e.event_type === "enquiry_submit") vehicleMap[e.vehicle_id!].enquiries++;
       });
 
+      let vehicleStats: any[] = [];
       const vehicleIds = Object.keys(vehicleMap);
       if (vehicleIds.length > 0) {
         const { data: vehiclesData } = await supabase
-          .from("vehicles")
-          .select("id, brand, model, manufacturing_year, selling_price")
-          .in("id", vehicleIds);
-
-        const enriched = (vehiclesData || []).map(v => ({
-          ...v,
-          ...vehicleMap[v.id],
+          .from("vehicles").select("id, brand, model, manufacturing_year, selling_price").in("id", vehicleIds);
+        vehicleStats = (vehiclesData || []).map(v => ({
+          ...v, ...vehicleMap[v.id],
           name: `${v.manufacturing_year} ${v.brand} ${v.model}`,
-        })).sort((a, b) => b.views - a.views);
-
-        setVehicleStats(enriched.slice(0, 10));
+        })).sort((a, b) => b.views - a.views).slice(0, 10);
       }
 
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return {
+        stats: { totalViews, totalEnquiries: enquiries, totalCalls: calls, totalWhatsapp: whatsapp, publicVehicles: publicVehiclesCount || 0, conversionRate: engagementRate },
+        prevStats: { totalViews: prevTotalViews, totalEnquiries: prevEnquiries, totalCalls: prevCalls, totalWhatsapp: prevWhatsapp },
+        dailyData: Object.values(dailyMap).reverse(),
+        hourStats,
+        vehicleStats,
+      };
+    },
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const stats = analyticsData?.stats || { totalViews: 0, totalEnquiries: 0, totalCalls: 0, totalWhatsapp: 0, publicVehicles: 0, conversionRate: 0 };
+  const prevStats = analyticsData?.prevStats || { totalViews: 0, totalEnquiries: 0, totalCalls: 0, totalWhatsapp: 0 };
+  const dailyData = analyticsData?.dailyData || [];
+  const hourStats = analyticsData?.hourStats || [];
+  const vehicleStats = analyticsData?.vehicleStats || [];
 
   const calculateChange = (current: number, previous: number) => {
     if (previous === 0) return current > 0 ? 100 : 0;
