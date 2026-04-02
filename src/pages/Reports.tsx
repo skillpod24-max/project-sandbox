@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,6 +29,7 @@ Partial: "hsl(38, 92%, 50%)",
 };
 
 const Reports = () => {
+const { user } = useAuth();
 const [salesData, setSalesData] = useState<any[]>([]);
 const [vehicleData, setVehicleData] = useState<any[]>([]);
 const [vehicleStatusData, setVehicleStatusData] = useState<any[]>([]);
@@ -41,7 +43,6 @@ const [vehicleAgingData, setVehicleAgingData] = useState<any[]>([]);
 const [inventoryTurnover, setInventoryTurnover] = useState({ ratio: 0, avgDays: 0 });
 const [fuelTypeData, setFuelTypeData] = useState<any[]>([]);
 const [loading, setLoading] = useState(true);
-// Accounting mode toggle
 const [accountingMode, setAccountingMode] = useState<"simple" | "nbfc">("simple");
 // NBFC view switch (visual vs accounting)
 const [nbfcView, setNbfcView] = useState<"visual" | "breakdown">("visual");
@@ -149,13 +150,20 @@ totalExpenses: 0,
 
 
 
-useEffect(() => {
-  fetchReportData();
-}, [period, accountingMode]);
+useQuery({
+  queryKey: ["reports-data", user?.id, period, accountingMode],
+  queryFn: async () => { await fetchReportData(); return null; },
+  enabled: !!user,
+  staleTime: 2 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
+});
 
-useEffect(() => {
-  fetchDailyPublicAnalytics();
-}, [selectedDate]);
+useQuery({
+  queryKey: ["reports-daily-analytics", user?.id, selectedDate],
+  queryFn: async () => { await fetchDailyPublicAnalytics(); return null; },
+  enabled: !!user,
+  staleTime: 2 * 60 * 1000,
+});
 
 
 
@@ -174,8 +182,6 @@ type MonthlyBucket = {
 
 const fetchReportData = async () => {
 setLoading(true);
-// Get current user for explicit filtering
-const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
 setLoading(false);
 return;
@@ -1094,7 +1100,6 @@ setLoading(false);
 
 
 const fetchDailyPublicAnalytics = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
   const start = new Date(selectedDate);
