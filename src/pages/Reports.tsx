@@ -29,21 +29,17 @@ Partial: "hsl(38, 92%, 50%)",
 };
 
 const Reports = () => {
-const [salesData, setSalesData] = useState<any[]>([]);
-const [vehicleData, setVehicleData] = useState<any[]>([]);
-const [vehicleStatusData, setVehicleStatusData] = useState<any[]>([]);
-const [paymentData, setPaymentData] = useState<any[]>([]);
-const [emiData, setEmiData] = useState<any[]>([]);
-const [profitData, setProfitData] = useState<any[]>([]);
-const [customerData, setCustomerData] = useState<any[]>([]);
-const [topVehicles, setTopVehicles] = useState<any[]>([]);
-const [expenseData, setExpenseData] = useState<any[]>([]);
-const [vehicleAgingData, setVehicleAgingData] = useState<any[]>([]);
-const [inventoryTurnover, setInventoryTurnover] = useState({ ratio: 0, avgDays: 0 });
-const [fuelTypeData, setFuelTypeData] = useState<any[]>([]);
-const [loading, setLoading] = useState(true);
-// Accounting mode toggle
+const { user } = useAuth();
+
 const [accountingMode, setAccountingMode] = useState<"simple" | "nbfc">("simple");
+const [nbfcView, setNbfcView] = useState<"visual" | "breakdown">("visual");
+const [period, setPeriod] = useState("6months");
+const [profitMode, setProfitMode] = useState<"normal" | "emi">("normal");
+const [reportView, setReportView] = useState<"business" | "public">("business");
+const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+const [activeEmi, setActiveEmi] = useState<{ name: string; value: number; } | null>(null);
+const [activeVehicleLedger, setActiveVehicleLedger] = useState<any | null>(null);
+const [showVehicleDrilldown, setShowVehicleDrilldown] = useState(false);
 // NBFC view switch (visual vs accounting)
 const [nbfcView, setNbfcView] = useState<"visual" | "breakdown">("visual");
 
