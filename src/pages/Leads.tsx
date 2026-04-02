@@ -168,26 +168,28 @@ const Leads = () => {
     enabled: !!userId,
   });
 
-  // Realtime subscription for lead updates - only invalidates React Query cache
+  // Realtime subscription - invalidates both stats and display queries
   useEffect(() => {
+    if (!userId) return;
     const channel = supabase
       .channel("leads-page-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => {
-        queryClient.invalidateQueries({ queryKey: ['leads'] });
+        queryClient.invalidateQueries({ queryKey: ['leads-stats'] });
+        invalidateLeads();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
+  }, [queryClient, userId, invalidateLeads]);
 
-  // Dynamic city list from leads
-  const uniqueCities = Array.from(
-    new Set(leads.map(l => l.city?.trim()).filter(Boolean))
-  ).sort((a, b) => a!.localeCompare(b!)) as string[];
+  // Dynamic city list from stats data
+  const uniqueCities = useMemo(() => Array.from(
+    new Set((statsData || []).map(l => l.city?.trim()).filter(Boolean))
+  ).sort((a, b) => a!.localeCompare(b!)) as string[], [statsData]);
 
-  // Dynamic source list from leads
-  const uniqueSources = Array.from(
-    new Set(leads.map(l => l.source).filter(Boolean))
-  ).sort();
+  // Dynamic source list from stats data
+  const uniqueSources = useMemo(() => Array.from(
+    new Set((statsData || []).map(l => l.source).filter(Boolean))
+  ).sort(), [statsData]);
 
   const generateCustomerCode = () => `CUS${Date.now().toString(36).toUpperCase()}`;
   const generateLeadNumber = () => `LD${Date.now().toString(36).toUpperCase()}`;
