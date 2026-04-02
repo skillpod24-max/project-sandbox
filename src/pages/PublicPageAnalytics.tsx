@@ -162,57 +162,163 @@ StatCard.displayName = "StatCard";
 /* ---------------- MAIN COMPONENT ---------------- */
 
 const PublicPageAnalytics = () => {
-  const [loading, setLoading] = useState(true);
-  const [publicEnabled, setPublicEnabled] = useState(false);
-  const [dealerUserId, setDealerUserId] = useState<string | null>(null);
-  const [publicPageId, setPublicPageId] = useState<string | null>(null);
-  const [dealerName, setDealerName] = useState<string | null>(null);
-
-  const [stats, setStats] = useState<InsightStats | null>(null);
-  const [trend, setTrend] = useState<TrendRow[]>([]);
-  const [vehicleStats, setVehicleStats] = useState<VehicleStat[]>([]);
-  const [hourStats, setHourStats] = useState<HourStat[]>([]);
-  const [ctaStats, setCtaStats] = useState<CTAStats>({ whatsapp: 0, call: 0 });
-  const [comparison, setComparison] = useState<Record<string, Comparison>>({});
+  const { user } = useAuth();
   const [rangeDays, setRangeDays] = useState<7 | 14 | 30>(7);
   const [viewMode, setViewMode] = useState<"charts" | "insights">("charts");
   const [showShareModal, setShowShareModal] = useState(false);
 
-  useEffect(() => {
-    init();
-  }, [rangeDays]);
+  // Single query for settings
+  const { data: settingsData } = useQuery({
+    queryKey: ["catalogue-settings", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("settings")
+        .select("public_page_enabled, user_id, public_page_id, dealer_name")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+  });
 
-  const init = useCallback(async () => {
-    setLoading(true);
+  const publicEnabled = settingsData?.public_page_enabled ?? false;
+  const dealerUserId = settingsData?.user_id ?? null;
+  const publicPageId = settingsData?.public_page_id ?? null;
+  const dealerName = settingsData?.dealer_name ?? null;
 
-    const { data: settings } = await supabase
-      .from("settings")
-      .select("public_page_enabled, user_id, public_page_id, dealer_name")
-      .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
-      .maybeSingle();
+  // Single consolidated query for ALL events + vehicles
+  const { data: rawData, isLoading: loading } = useQuery({
+    queryKey: ["catalogue-analytics", dealerUserId, rangeDays],
+    queryFn: async () => {
+      const [eventsRes, vehiclesRes] = await Promise.all([
+        supabase
+          .from("public_page_events")
+          .select("event_type, session_id, vehicle_id, created_at")
+          .eq("dealer_user_id", dealerUserId!)
+          .neq("public_page_id", "marketplace"),
+        supabase
+          .from("vehicles")
+          .select("id, brand, model, status")
+          .eq("user_id", dealerUserId!),
+      ]);
+      return {
+        events: eventsRes.data || [],
+        vehicles: vehiclesRes.data || [],
+      };
+    },
+    enabled: !!dealerUserId && publicEnabled,
+    staleTime: 2 * 60 * 1000,
+  });
 
-    if (!settings?.public_page_enabled) {
-      setPublicEnabled(false);
-      setLoading(false);
-      return;
+  // Compute all analytics from single data source
+  const { stats, trend, vehicleStats, hourStats, ctaStats, comparison } = useMemo(() => {
+    const events = rawData?.events || [];
+    const vehicles = rawData?.vehicles || [];
+
+    if (events.length === 0 && vehicles.length === 0) {
+      return {
+        stats: null as InsightStats | null,
+        trend: [] as TrendRow[],
+        vehicleStats: [] as VehicleStat[],
+        hourStats: [] as HourStat[],
+        ctaStats: { whatsapp: 0, call: 0 } as CTAStats,
+        comparison: {} as Record<string, Comparison>,
+      };
     }
 
-    setPublicEnabled(true);
-    setDealerUserId(settings.user_id);
-    setPublicPageId(settings.public_page_id);
-    setDealerName(settings.dealer_name);
+    // Stats
+    const visitors = new Set(events.map(d => d.session_id)).size;
+    const pageViews = events.filter(d => d.event_type === "page_view" || d.event_type === "vehicle_view").length;
+    const enquiries = events.filter(d => d.event_type === "enquiry_submit").length;
+    const engaged = events.filter(d => d.event_type === "engaged_30s").length;
+    const deepScroll = events.filter(d => d.event_type === "scroll_75").length;
+    const formOpened = events.filter(d => d.event_type === "form_opened").length;
+    const formAbandoned = events.filter(d => d.event_type === "form_abandoned").length;
+    const formSubmitted = enquiries;
+    const formConversion = formOpened > 0 ? +((formSubmitted / formOpened) * 100).toFixed(1) : 0;
 
-    await Promise.all([
-      fetchStats(settings.user_id),
-      fetchTrend(settings.user_id),
-      fetchVehicleStats(settings.user_id),
-      fetchHourStats(settings.user_id),
-      fetchCTAStats(settings.user_id),
-      fetchComparison(settings.user_id),
-    ]);
+    const computedStats: InsightStats = {
+      visitors, pageViews, enquiries,
+      avgViewsPerVisitor: visitors ? +(pageViews / visitors).toFixed(2) : 0,
+      conversion: pageViews ? +((enquiries / pageViews) * 100).toFixed(2) : 0,
+      dropOff: pageViews ? +(100 - (enquiries / pageViews) * 100).toFixed(2) : 0,
+      engagedUsers: engaged,
+      deepScrollRate: visitors ? +((deepScroll / visitors) * 100).toFixed(1) : 0,
+      formOpened, formAbandoned, formSubmitted, formConversion,
+    };
 
-    setLoading(false);
-  }, [rangeDays]);
+    // Trend
+    const from = new Date(Date.now() - rangeDays * 86400000).toISOString();
+    const rangedEvents = events.filter(e => e.created_at >= from);
+    const trendMap: Record<string, TrendRow> = {};
+    rangedEvents.forEach(e => {
+      const date = e.created_at.slice(0, 10);
+      if (!trendMap[date]) trendMap[date] = { date, views: 0, enquiries: 0 };
+      if (e.event_type === "page_view") trendMap[date].views++;
+      if (e.event_type === "enquiry_submit") trendMap[date].enquiries++;
+    });
+    const computedTrend = Object.values(trendMap).sort((a, b) => a.date.localeCompare(b.date));
+
+    // Vehicle stats
+    const vMap: Record<string, VehicleStat> = {};
+    vehicles.forEach(v => {
+      vMap[v.id] = { vehicle_id: v.id, brand: v.brand, model: v.model, status: v.status, views: 0, uniqueVisitors: 0, enquiries: 0, ctaClicks: 0, clickRate: 0, conversion: 0 };
+    });
+    const visitorMap: Record<string, Set<string>> = {};
+    events.forEach(e => {
+      if (!e.vehicle_id || !vMap[e.vehicle_id]) return;
+      const v = vMap[e.vehicle_id];
+      if (e.event_type === "vehicle_view") v.views++;
+      if (e.event_type === "enquiry_submit") v.enquiries++;
+      if (e.event_type === "cta_call" || e.event_type === "cta_whatsapp") v.ctaClicks++;
+      if (!visitorMap[e.vehicle_id]) visitorMap[e.vehicle_id] = new Set();
+      visitorMap[e.vehicle_id].add(e.session_id);
+    });
+    Object.values(vMap).forEach(v => {
+      v.uniqueVisitors = visitorMap[v.vehicle_id]?.size || 0;
+      v.clickRate = v.views ? +((v.ctaClicks / v.views) * 100).toFixed(1) : 0;
+      v.conversion = v.views ? +((v.enquiries / v.views) * 100).toFixed(1) : 0;
+    });
+    const statusOrder = { in_stock: 1, reserved: 2, sold: 3 } as const;
+    const computedVehicleStats = Object.values(vMap).sort((a, b) => (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9));
+
+    // Hour stats
+    const hourMap: Record<number, number> = {};
+    events.forEach(e => { const h = new Date(e.created_at).getHours(); hourMap[h] = (hourMap[h] || 0) + 1; });
+    const computedHourStats = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: hourMap[i] || 0 }));
+
+    // CTA stats
+    const computedCtaStats = {
+      whatsapp: events.filter(d => d.event_type === "cta_whatsapp").length,
+      call: events.filter(d => d.event_type === "cta_call").length,
+    };
+
+    // Comparison
+    const now = Date.now();
+    const currFrom = new Date(now - rangeDays * 86400000).toISOString();
+    const prevFrom = new Date(now - rangeDays * 2 * 86400000).toISOString();
+    const curr = events.filter(e => e.created_at >= currFrom);
+    const prev = events.filter(e => e.created_at >= prevFrom && e.created_at < currFrom);
+    const metric = (type: string, arr: typeof events) => arr.filter(e => e.event_type === type).length;
+    const make = (c: number, p: number): Comparison => ({
+      current: c, previous: p,
+      change: p ? +(((c - p) / p) * 100).toFixed(1) : 100,
+    });
+    const computedComparison = {
+      views: make(metric("page_view", curr), metric("page_view", prev)),
+      enquiries: make(metric("enquiry_submit", curr), metric("enquiry_submit", prev)),
+    };
+
+    return {
+      stats: computedStats,
+      trend: computedTrend,
+      vehicleStats: computedVehicleStats,
+      hourStats: computedHourStats,
+      ctaStats: computedCtaStats,
+      comparison: computedComparison,
+    };
+  }, [rawData, rangeDays]);
 
   const fetchStats = async (dealerId: string) => {
     const { data } = await supabase
