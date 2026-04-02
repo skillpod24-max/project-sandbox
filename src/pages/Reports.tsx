@@ -182,8 +182,6 @@ type MonthlyBucket = {
 
 const fetchReportData = async () => {
 setLoading(true);
-// Get current user for explicit filtering
-const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
 setLoading(false);
 return;
