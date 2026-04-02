@@ -771,7 +771,9 @@ const deleteExistingImage = async (img: VehicleImage) => {
     `${v.brand} ${v.model} ${v.code} ${v.registration_number || ""}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const { displayedItems: displayedVehicles, hasMore: hasMoreVehicles, loaderRef: vehiclesLoaderRef } = useInfiniteScroll(filteredVehicles, 30);
+  const displayedVehicles = filteredVehicles;
+  const hasMoreVehicles = false;
+  const vehiclesLoaderRef = { current: null } as React.RefObject<HTMLDivElement>;
 
   const getStatusColor = (status: string) => {
     switch (status) {
