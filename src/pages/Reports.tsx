@@ -43,6 +43,7 @@ const [vehicleAgingData, setVehicleAgingData] = useState<any[]>([]);
 const [inventoryTurnover, setInventoryTurnover] = useState({ ratio: 0, avgDays: 0 });
 const [fuelTypeData, setFuelTypeData] = useState<any[]>([]);
 const [loading, setLoading] = useState(true);
+const [accountingMode, setAccountingMode] = useState<"simple" | "nbfc">("simple");
 // NBFC view switch (visual vs accounting)
 const [nbfcView, setNbfcView] = useState<"visual" | "breakdown">("visual");
 
