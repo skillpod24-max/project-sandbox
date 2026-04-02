@@ -103,7 +103,10 @@ const Leads = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { viewMode, setViewMode } = useViewMode("leads");
+  const { user } = useAuth();
+  const userId = user?.id;
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
@@ -130,23 +133,40 @@ const Leads = () => {
     lead_type: "buying",
   });
 
-  const { data: leadsData, isLoading: loading } = useQuery({
-    queryKey: ['leads'],
+  // Lightweight stats query - fetches only id+status for aggregates
+  const { data: statsData } = useQuery({
+    queryKey: ['leads-stats', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("leads")
-        .select("id, user_id, lead_number, customer_name, phone, email, vehicle_interest, budget_min, budget_max, source, status, priority, assigned_to, follow_up_date, last_contact_date, notes, created_at, updated_at, city, lead_type, last_viewed_at, converted_from_lead")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as Lead[];
+        .select("id, status, city, source")
+        .eq("user_id", userId!);
+      return data || [];
     },
-    staleTime: 60 * 1000,
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
   });
 
-  const leads = leadsData || [];
+  // Server-side paginated display data
+  const { items: leads, isLoading: loading, hasMore, loaderRef, invalidate: invalidateLeads } = useServerPagination<Lead>({
+    queryKey: ['leads-display', userId, debouncedSearch, statusFilter, cityFilter, sourceFilter, dateFilter],
+    fetchFn: async ({ from, to }) => {
+      let query = supabase
+        .from("leads")
+        .select("id, user_id, lead_number, customer_name, phone, email, vehicle_interest, budget_min, budget_max, source, status, priority, assigned_to, follow_up_date, last_contact_date, notes, created_at, updated_at, city, lead_type, last_viewed_at, converted_from_lead")
+        .eq("user_id", userId!);
+      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (cityFilter !== "all") query = query.eq("city", cityFilter);
+      if (sourceFilter !== "all") query = query.eq("source", sourceFilter);
+      if (dateFilter) query = query.gte("created_at", dateFilter).lt("created_at", dateFilter + "T23:59:59");
+      if (debouncedSearch) {
+        query = query.or(`customer_name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,lead_number.ilike.%${debouncedSearch}%,vehicle_interest.ilike.%${debouncedSearch}%`);
+      }
+      const { data } = await query.order("created_at", { ascending: false }).range(from, to);
+      return (data || []) as Lead[];
+    },
+    enabled: !!userId,
+  });
 
   // Realtime subscription for lead updates - only invalidates React Query cache
   useEffect(() => {
