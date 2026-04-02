@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import ScrollLoader from "@/components/ScrollLoader";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDebounce } from "@/hooks/useDebounce";
 import { supabase } from "@/integrations/supabase/client";
 import { useVehiclesPageData, useInvalidateVehicles } from "@/services/api";
 import { Button } from "@/components/ui/button";
