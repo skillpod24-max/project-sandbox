@@ -775,7 +775,7 @@ const Leads = () => {
                   </Card>
                 );
               })}
-              {filteredLeads.length === 0 && (
+              {leads.length === 0 && !loading && (
                 <div className="col-span-full text-center py-8 text-muted-foreground">No leads found</div>
               )}
             </div>
