@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,7 +103,10 @@ const Leads = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { viewMode, setViewMode } = useViewMode("leads");
+  const { user } = useAuth();
+  const userId = user?.id;
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
@@ -128,44 +133,63 @@ const Leads = () => {
     lead_type: "buying",
   });
 
-  const { data: leadsData, isLoading: loading } = useQuery({
-    queryKey: ['leads'],
+  // Lightweight stats query - fetches only id+status for aggregates
+  const { data: statsData } = useQuery({
+    queryKey: ['leads-stats', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("leads")
-        .select("id, user_id, lead_number, customer_name, phone, email, vehicle_interest, budget_min, budget_max, source, status, priority, assigned_to, follow_up_date, last_contact_date, notes, created_at, updated_at, city, lead_type, last_viewed_at, converted_from_lead")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as Lead[];
+        .select("id, status, city, source")
+        .eq("user_id", userId!);
+      return data || [];
     },
-    staleTime: 60 * 1000,
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
   });
 
-  const leads = leadsData || [];
+  // Server-side paginated display data
+  const { items: leads, isLoading: loading, hasMore, loaderRef, invalidate: invalidateLeads } = useServerPagination<Lead>({
+    queryKey: ['leads-display', userId, debouncedSearch, statusFilter, cityFilter, sourceFilter, dateFilter],
+    fetchFn: async ({ from, to }) => {
+      let query = supabase
+        .from("leads")
+        .select("id, user_id, lead_number, customer_name, phone, email, vehicle_interest, budget_min, budget_max, source, status, priority, assigned_to, follow_up_date, last_contact_date, notes, created_at, updated_at, city, lead_type, last_viewed_at, converted_from_lead")
+        .eq("user_id", userId!);
+      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (cityFilter !== "all") query = query.eq("city", cityFilter);
+      if (sourceFilter !== "all") query = query.eq("source", sourceFilter);
+      if (dateFilter) query = query.gte("created_at", dateFilter).lt("created_at", dateFilter + "T23:59:59");
+      if (debouncedSearch) {
+        query = query.or(`customer_name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,lead_number.ilike.%${debouncedSearch}%,vehicle_interest.ilike.%${debouncedSearch}%`);
+      }
+      const { data } = await query.order("created_at", { ascending: false }).range(from, to);
+      return (data || []) as Lead[];
+    },
+    enabled: !!userId,
+  });
 
-  // Realtime subscription for lead updates - only invalidates React Query cache
+  // Realtime subscription - invalidates both stats and display queries
   useEffect(() => {
+    if (!userId) return;
     const channel = supabase
       .channel("leads-page-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => {
-        queryClient.invalidateQueries({ queryKey: ['leads'] });
+        queryClient.invalidateQueries({ queryKey: ['leads-stats'] });
+        invalidateLeads();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
+  }, [queryClient, userId, invalidateLeads]);
 
-  // Dynamic city list from leads
-  const uniqueCities = Array.from(
-    new Set(leads.map(l => l.city?.trim()).filter(Boolean))
-  ).sort((a, b) => a!.localeCompare(b!)) as string[];
+  // Dynamic city list from stats data
+  const uniqueCities = useMemo(() => Array.from(
+    new Set((statsData || []).map(l => l.city?.trim()).filter(Boolean))
+  ).sort((a, b) => a!.localeCompare(b!)) as string[], [statsData]);
 
-  // Dynamic source list from leads
-  const uniqueSources = Array.from(
-    new Set(leads.map(l => l.source).filter(Boolean))
-  ).sort();
+  // Dynamic source list from stats data
+  const uniqueSources = useMemo(() => Array.from(
+    new Set((statsData || []).map(l => l.source).filter(Boolean))
+  ).sort(), [statsData]);
 
   const generateCustomerCode = () => `CUS${Date.now().toString(36).toUpperCase()}`;
   const generateLeadNumber = () => `LD${Date.now().toString(36).toUpperCase()}`;
@@ -246,7 +270,7 @@ const Leads = () => {
 
       setDialogOpen(false);
       resetForm();
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-stats'] }); invalidateLeads();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -261,7 +285,7 @@ const Leads = () => {
       if (error) throw error;
       toast({ title: "Lead deleted successfully" });
       setDetailDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-stats'] }); invalidateLeads();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -283,7 +307,7 @@ const Leads = () => {
         .eq("id", leadId);
       if (error) throw error;
       toast({ title: "Status updated" });
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-stats'] }); invalidateLeads();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -334,16 +358,8 @@ const Leads = () => {
     setBudgetMaxInput("");
   };
 
-  const filteredLeads = leads.filter((l) => {
-    const matchesSearch = `${l.customer_name} ${l.phone} ${l.lead_number} ${l.vehicle_interest || ""} ${l.city || ""}`.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || l.status === statusFilter;
-    const matchesCity = cityFilter === "all" || (l.city || "").toLowerCase() === cityFilter.toLowerCase();
-    const matchesSource = sourceFilter === "all" || l.source === sourceFilter;
-    const matchesDate = !dateFilter || l.created_at.startsWith(dateFilter);
-    return matchesSearch && matchesStatus && matchesCity && matchesSource && matchesDate;
-  });
-
-  const { displayedItems: displayedLeads, hasMore, loaderRef } = useInfiniteScroll(filteredLeads, 30);
+  // Filtering is now done server-side via useServerPagination queryKey deps
+  const displayedLeads = leads;
 
   const exportLeads = () => {
     if (leads.length === 0) { toast({ title: "No leads to export" }); return; }
@@ -402,15 +418,16 @@ const Leads = () => {
     }
   };
 
+  const allLeadsForStats = statsData || [];
   const stats = {
-    total: leads.length,
-    new: leads.filter(l => l.status === "new").length,
-    contacted: leads.filter(l => l.status === "contacted").length,
-    qualified: leads.filter(l => l.status === "qualified").length,
-    proposal: leads.filter(l => l.status === "proposal").length,
-    negotiation: leads.filter(l => l.status === "negotiation").length,
-    won: leads.filter(l => l.status === "won").length,
-    lost: leads.filter(l => l.status === "lost").length,
+    total: allLeadsForStats.length,
+    new: allLeadsForStats.filter(l => l.status === "new").length,
+    contacted: allLeadsForStats.filter(l => l.status === "contacted").length,
+    qualified: allLeadsForStats.filter(l => l.status === "qualified").length,
+    proposal: allLeadsForStats.filter(l => l.status === "proposal").length,
+    negotiation: allLeadsForStats.filter(l => l.status === "negotiation").length,
+    won: allLeadsForStats.filter(l => l.status === "won").length,
+    lost: allLeadsForStats.filter(l => l.status === "lost").length,
   };
 
   if (loading) return <PageSkeleton />;
@@ -469,7 +486,7 @@ const Leads = () => {
 
       setDetailDialogOpen(false);
       window.dispatchEvent(new Event("vendor-updated"));
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-stats'] }); invalidateLeads();
     } catch (err: any) {
       toast({ title: "Conversion failed", description: err.message, variant: "destructive" });
     } finally {
@@ -588,7 +605,7 @@ const Leads = () => {
         <CardHeader>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <CardTitle>All Leads ({filteredLeads.length})</CardTitle>
+              <CardTitle>All Leads ({leads.length}{hasMore ? "+" : ""})</CardTitle>
               <div className="flex items-center gap-2">
                 {isMobile && (
                   <Button
@@ -698,7 +715,7 @@ const Leads = () => {
                       <TableCell>{lead.follow_up_date ? format(new Date(lead.follow_up_date), "dd MMM") : "-"}</TableCell>
                     </TableRow>
                   ))}
-                  {filteredLeads.length === 0 && (
+                  {leads.length === 0 && !loading && (
                     <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No leads found</TableCell></TableRow>
                   )}
                 </TableBody>
@@ -758,7 +775,7 @@ const Leads = () => {
                   </Card>
                 );
               })}
-              {filteredLeads.length === 0 && (
+              {leads.length === 0 && !loading && (
                 <div className="col-span-full text-center py-8 text-muted-foreground">No leads found</div>
               )}
             </div>

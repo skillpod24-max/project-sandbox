@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,19 +33,11 @@ const Payments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("payments");
-
-  const { data: payments = [] as Payment[], isLoading: loading } = useQuery({
-    queryKey: ['payments'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [] as Payment[];
-      const { data } = await supabase.from("payments").select("id, payment_number, amount, payment_type, payment_mode, payment_date, effective_date, payment_purpose, description, reference_id, reference_type, customer_id, vendor_id, principal_amount, interest_amount, profit_amount, user_id, created_at").eq("user_id", user.id).order("created_at", { ascending: false });
-      return (data || []) as Payment[];
-    },
-    staleTime: 2 * 60 * 1000,
-  });
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<PaymentInsert>>({ amount: 0, payment_mode: "cash", payment_type: "customer_payment" });
   const [showFilters, setShowFilters] = useState(false);
@@ -52,16 +46,32 @@ const Payments = () => {
   const [toDate, setToDate] = useState<string>("");
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
+  // Server-side paginated display
+  const { items: payments, isLoading: loading, hasMore: hasMorePayments, loaderRef: paymentsLoaderRef, invalidate: invalidatePayments } = useServerPagination<Payment>({
+    queryKey: ['payments-display', userId, debouncedSearch, filterType, fromDate, toDate],
+    fetchFn: async ({ from, to }) => {
+      let query = supabase.from("payments").select("id, payment_number, amount, payment_type, payment_mode, payment_date, effective_date, payment_purpose, description, reference_id, reference_type, customer_id, vendor_id, principal_amount, interest_amount, profit_amount, user_id, created_at").eq("user_id", userId!);
+      if (filterType !== "all") query = query.eq("payment_type", filterType as any);
+      if (fromDate) query = query.gte("payment_date", fromDate);
+      if (toDate) query = query.lte("payment_date", toDate);
+      if (debouncedSearch) query = query.ilike("payment_number", `%${debouncedSearch}%`);
+      const { data } = await query.order("created_at", { ascending: false }).range(from, to);
+      return (data || []) as Payment[];
+    },
+    enabled: !!userId,
+  });
+
+  const displayedPayments = payments;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
     try {
-      const { error } = await supabase.from("payments").insert([{ ...formData, payment_number: `PAY${Date.now().toString(36).toUpperCase()}`, user_id: user.id } as PaymentInsert]);
+      const { error } = await supabase.from("payments").insert([{ ...formData, payment_number: `PAY${Date.now().toString(36).toUpperCase()}`, user_id: userId } as PaymentInsert]);
       if (error) throw error;
       toast({ title: "Payment recorded successfully" });
       setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      invalidatePayments();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -81,32 +91,6 @@ const Payments = () => {
       return "bg-muted text-muted-foreground";
   }
 };
-
-
-  const filteredPayments = payments.filter((p) => {
-  // Search
-  if (
-    searchTerm &&
-    !p.payment_number.toLowerCase().includes(searchTerm.toLowerCase())
-  ) {
-    return false;
-  }
-
-  // Type filter
-  if (filterType !== "all" && p.payment_type !== filterType) {
-    return false;
-  }
-
-  // Date filters
-  const paymentDate = new Date(p.payment_date);
-
-  if (fromDate && paymentDate < new Date(fromDate)) return false;
-  if (toDate && paymentDate > new Date(toDate)) return false;
-
-  return true;
-});
-
-  const { displayedItems: displayedPayments, hasMore: hasMorePayments, loaderRef: paymentsLoaderRef } = useInfiniteScroll(filteredPayments, 30);
 
   if (loading) {
     return <PageSkeleton />;
@@ -192,7 +176,7 @@ const Payments = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Payment List ({filteredPayments.length})</CardTitle>
+            <CardTitle>Payment List ({payments.length}{hasMorePayments ? "+" : ""})</CardTitle>
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
         </CardHeader>
@@ -239,7 +223,7 @@ const Payments = () => {
                 </CardContent>
               </Card>
             ))}
-            {filteredPayments.length === 0 && (
+            {payments.length === 0 && !loading && (
               <div className="col-span-full text-center py-8 text-muted-foreground">No payments found</div>
             )}
           </div>

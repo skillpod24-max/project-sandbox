@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import ScrollLoader from "@/components/ScrollLoader";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDebounce } from "@/hooks/useDebounce";
 import { supabase } from "@/integrations/supabase/client";
 import { useVehiclesPageData, useInvalidateVehicles } from "@/services/api";
 import { Button } from "@/components/ui/button";
@@ -769,7 +771,9 @@ const deleteExistingImage = async (img: VehicleImage) => {
     `${v.brand} ${v.model} ${v.code} ${v.registration_number || ""}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const { displayedItems: displayedVehicles, hasMore: hasMoreVehicles, loaderRef: vehiclesLoaderRef } = useInfiniteScroll(filteredVehicles, 30);
+  const displayedVehicles = filteredVehicles;
+  const hasMoreVehicles = false;
+  const vehiclesLoaderRef = { current: null } as React.RefObject<HTMLDivElement>;
 
   const getStatusColor = (status: string) => {
     switch (status) {

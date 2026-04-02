@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import ScrollLoader from "@/components/ScrollLoader";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,24 +84,11 @@ const Expenses = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("expenses");
-
-  const { data: expenses = [] as Expense[], isLoading: loading } = useQuery({
-    queryKey: ['expenses'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [] as Expense[];
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("id,expense_number,amount,category,description,expense_date,payment_mode,vehicle_id,notes,created_at,user_id")
-        .eq("user_id", user.id)
-        .order("expense_date", { ascending: false });
-      if (error) throw error;
-      return (data || []) as Expense[];
-    },
-    staleTime: 2 * 60 * 1000,
-  });
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -194,7 +183,7 @@ toast({ title: "Expense added successfully" });
 
       }
       setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses-stats'] }); invalidateExpenses();
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -225,7 +214,7 @@ toast({ title: "Expense added successfully" });
       description: "Linked payment entry was also removed",
     });
 
-    queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    queryClient.invalidateQueries({ queryKey: ['expenses-stats'] }); invalidateExpenses();
   } catch (error: any) {
     toast({
       title: "Delete failed",
@@ -272,30 +261,35 @@ toast({ title: "Expense added successfully" });
     return expenseCategories.find(c => c.value === category) || { label: category, icon: "📦" };
   };
 
-  
+  // Server-side paginated display
+  const { items: expenses, isLoading: loading, hasMore: hasMoreExpenses, loaderRef: expensesLoaderRef, invalidate: invalidateExpenses } = useServerPagination<Expense>({
+    queryKey: ['expenses-display', userId, debouncedSearch, categoryFilter, dateFilter?.from?.toISOString(), dateFilter?.to?.toISOString()],
+    fetchFn: async ({ from, to }) => {
+      let query = supabase.from("expenses")
+        .select("id,expense_number,amount,category,description,expense_date,payment_mode,vehicle_id,notes,created_at,user_id")
+        .eq("user_id", userId!);
+      if (categoryFilter !== "all") query = query.eq("category", categoryFilter);
+      if (dateFilter?.from) query = query.gte("expense_date", format(dateFilter.from, 'yyyy-MM-dd'));
+      if (dateFilter?.to) query = query.lte("expense_date", format(dateFilter.to, 'yyyy-MM-dd'));
+      if (debouncedSearch) query = query.or(`expense_number.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%,category.ilike.%${debouncedSearch}%`);
+      const { data } = await query.order("expense_date", { ascending: false }).range(from, to);
+      return (data || []) as Expense[];
+    },
+    enabled: !!userId,
+  });
 
-  const filteredExpenses = expenses.filter((e) => {
-  const matchesSearch =
-    `${e.expense_number} ${e.description} ${e.category}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+  const displayedExpenses = expenses;
 
-  const matchesCategory =
-    categoryFilter === "all" || e.category === categoryFilter;
-
-  const expenseDate = new Date(e.expense_date);
-
-  const matchesDate =
-  !dateFilter?.from ||
-  (expenseDate >= dateFilter.from &&
-    (!dateFilter.to || expenseDate <= dateFilter.to));
-
-
-  return matchesSearch && matchesCategory && matchesDate;
-});
-
-  const { displayedItems: displayedExpenses, hasMore: hasMoreExpenses, loaderRef: expensesLoaderRef } = useInfiniteScroll(filteredExpenses, 30);
-
+  // Lightweight stats query
+  const { data: statsExpenses = [] } = useQuery({
+    queryKey: ['expenses-stats', userId],
+    queryFn: async () => {
+      const { data } = await supabase.from("expenses").select("id, amount, expense_date, category").eq("user_id", userId!);
+      return data || [];
+    },
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
 
   // Stats calculations
   const now = new Date();
@@ -304,21 +298,21 @@ toast({ title: "Expense added successfully" });
   const lastMonthStart = startOfMonth(subMonths(now, 1));
   const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
-  const thisMonthExpenses = expenses.filter(e => {
+  const thisMonthExpenses = statsExpenses.filter(e => {
     const date = new Date(e.expense_date);
     return date >= thisMonthStart && date <= thisMonthEnd;
   });
 
-  const lastMonthExpenses = expenses.filter(e => {
+  const lastMonthExpenses = statsExpenses.filter(e => {
     const date = new Date(e.expense_date);
     return date >= lastMonthStart && date <= lastMonthEnd;
   });
 
   const stats = {
-    totalExpenses: expenses.reduce((sum, e) => sum + Number(e.amount), 0),
+    totalExpenses: statsExpenses.reduce((sum, e) => sum + Number(e.amount), 0),
     thisMonth: thisMonthExpenses.reduce((sum, e) => sum + Number(e.amount), 0),
     lastMonth: lastMonthExpenses.reduce((sum, e) => sum + Number(e.amount), 0),
-    todayExpenses: expenses.filter(e => e.expense_date === format(now, 'yyyy-MM-dd')).reduce((sum, e) => sum + Number(e.amount), 0),
+    todayExpenses: statsExpenses.filter(e => e.expense_date === format(now, 'yyyy-MM-dd')).reduce((sum, e) => sum + Number(e.amount), 0),
   };
 
   const monthChange = stats.lastMonth > 0 
@@ -330,9 +324,6 @@ toast({ title: "Expense added successfully" });
     ...cat,
     amount: thisMonthExpenses.filter(e => e.category === cat.value).reduce((sum, e) => sum + Number(e.amount), 0),
   })).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);
-
-  
-
 
   if (loading) {
     return <PageSkeleton />;
@@ -521,7 +512,7 @@ const visibleCategories = showAllCategories
       <Card className="border border-border">
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <CardTitle>Expenses ({filteredExpenses.length})</CardTitle>
+            <CardTitle>Expenses ({expenses.length})</CardTitle>
             <div className="flex gap-2 items-center flex-wrap">
               <div className="relative max-w-xs flex-1 min-w-[150px]">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -656,7 +647,7 @@ const visibleCategories = showAllCategories
                     </TableRow>
                   );
                 })}
-                {filteredExpenses.length === 0 && (
+                {expenses.length === 0 && (
                   <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No expenses found</TableCell></TableRow>
                 )}
               </TableBody>
@@ -689,7 +680,7 @@ const visibleCategories = showAllCategories
                 </Card>
               );
             })}
-            {filteredExpenses.length === 0 && (
+            {expenses.length === 0 && (
               <div className="col-span-full text-center py-8 text-muted-foreground">No expenses found</div>
             )}
           </div>
