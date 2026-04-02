@@ -51,7 +51,7 @@ const Payments = () => {
     queryKey: ['payments-display', userId, debouncedSearch, filterType, fromDate, toDate],
     fetchFn: async ({ from, to }) => {
       let query = supabase.from("payments").select("id, payment_number, amount, payment_type, payment_mode, payment_date, effective_date, payment_purpose, description, reference_id, reference_type, customer_id, vendor_id, principal_amount, interest_amount, profit_amount, user_id, created_at").eq("user_id", userId!);
-      if (filterType !== "all") query = query.eq("payment_type", filterType);
+      if (filterType !== "all") query = query.eq("payment_type", filterType as any);
       if (fromDate) query = query.gte("payment_date", fromDate);
       if (toDate) query = query.lte("payment_date", toDate);
       if (debouncedSearch) query = query.ilike("payment_number", `%${debouncedSearch}%`);
