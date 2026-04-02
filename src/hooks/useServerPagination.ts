@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useEffect, useCallback } from "react";
 
 interface ServerPaginationOptions<T> {
@@ -21,6 +21,7 @@ export function useServerPagination<T>({
   staleTime = 2 * 60 * 1000,
 }: ServerPaginationOptions<T>) {
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
 
   const query = useInfiniteQuery({
     queryKey,
@@ -32,7 +33,6 @@ export function useServerPagination<T>({
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
-      // If last page returned fewer items than pageSize, no more pages
       if (lastPage.length < pageSize) return undefined;
       return allPages.length;
     },
@@ -66,8 +66,11 @@ export function useServerPagination<T>({
     return () => observer.disconnect();
   }, [hasNextPage, loadMore]);
 
-  // Flatten all pages into a single array
   const items = query.data?.pages.flat() ?? [];
+
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   return {
     items,
@@ -76,5 +79,6 @@ export function useServerPagination<T>({
     loaderRef,
     isFetchingNextPage,
     refetch: query.refetch,
+    invalidate,
   };
 }
