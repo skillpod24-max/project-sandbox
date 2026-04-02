@@ -715,7 +715,7 @@ const Leads = () => {
                       <TableCell>{lead.follow_up_date ? format(new Date(lead.follow_up_date), "dd MMM") : "-"}</TableCell>
                     </TableRow>
                   ))}
-                  {filteredLeads.length === 0 && (
+                  {leads.length === 0 && !loading && (
                     <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No leads found</TableCell></TableRow>
                   )}
                 </TableBody>
