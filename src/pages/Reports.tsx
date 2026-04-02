@@ -1100,7 +1100,6 @@ setLoading(false);
 
 
 const fetchDailyPublicAnalytics = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
   const start = new Date(selectedDate);
