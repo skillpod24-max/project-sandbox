@@ -150,13 +150,20 @@ totalExpenses: 0,
 
 
 
-useEffect(() => {
-  fetchReportData();
-}, [period, accountingMode]);
+useQuery({
+  queryKey: ["reports-data", user?.id, period, accountingMode],
+  queryFn: async () => { await fetchReportData(); return null; },
+  enabled: !!user,
+  staleTime: 2 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
+});
 
-useEffect(() => {
-  fetchDailyPublicAnalytics();
-}, [selectedDate]);
+useQuery({
+  queryKey: ["reports-daily-analytics", user?.id, selectedDate],
+  queryFn: async () => { await fetchDailyPublicAnalytics(); return null; },
+  enabled: !!user,
+  staleTime: 2 * 60 * 1000,
+});
 
 
 
