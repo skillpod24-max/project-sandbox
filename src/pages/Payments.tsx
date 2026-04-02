@@ -223,7 +223,7 @@ const Payments = () => {
                 </CardContent>
               </Card>
             ))}
-            {filteredPayments.length === 0 && (
+            {payments.length === 0 && !loading && (
               <div className="col-span-full text-center py-8 text-muted-foreground">No payments found</div>
             )}
           </div>
