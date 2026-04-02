@@ -418,15 +418,16 @@ const Leads = () => {
     }
   };
 
+  const allLeadsForStats = statsData || [];
   const stats = {
-    total: leads.length,
-    new: leads.filter(l => l.status === "new").length,
-    contacted: leads.filter(l => l.status === "contacted").length,
-    qualified: leads.filter(l => l.status === "qualified").length,
-    proposal: leads.filter(l => l.status === "proposal").length,
-    negotiation: leads.filter(l => l.status === "negotiation").length,
-    won: leads.filter(l => l.status === "won").length,
-    lost: leads.filter(l => l.status === "lost").length,
+    total: allLeadsForStats.length,
+    new: allLeadsForStats.filter(l => l.status === "new").length,
+    contacted: allLeadsForStats.filter(l => l.status === "contacted").length,
+    qualified: allLeadsForStats.filter(l => l.status === "qualified").length,
+    proposal: allLeadsForStats.filter(l => l.status === "proposal").length,
+    negotiation: allLeadsForStats.filter(l => l.status === "negotiation").length,
+    won: allLeadsForStats.filter(l => l.status === "won").length,
+    lost: allLeadsForStats.filter(l => l.status === "lost").length,
   };
 
   if (loading) return <PageSkeleton />;
