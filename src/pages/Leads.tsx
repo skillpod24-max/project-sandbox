@@ -358,16 +358,8 @@ const Leads = () => {
     setBudgetMaxInput("");
   };
 
-  const filteredLeads = leads.filter((l) => {
-    const matchesSearch = `${l.customer_name} ${l.phone} ${l.lead_number} ${l.vehicle_interest || ""} ${l.city || ""}`.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || l.status === statusFilter;
-    const matchesCity = cityFilter === "all" || (l.city || "").toLowerCase() === cityFilter.toLowerCase();
-    const matchesSource = sourceFilter === "all" || l.source === sourceFilter;
-    const matchesDate = !dateFilter || l.created_at.startsWith(dateFilter);
-    return matchesSearch && matchesStatus && matchesCity && matchesSource && matchesDate;
-  });
-
-  const { displayedItems: displayedLeads, hasMore, loaderRef } = useInfiniteScroll(filteredLeads, 30);
+  // Filtering is now done server-side via useServerPagination queryKey deps
+  const displayedLeads = leads;
 
   const exportLeads = () => {
     if (leads.length === 0) { toast({ title: "No leads to export" }); return; }
