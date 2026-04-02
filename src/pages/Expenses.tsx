@@ -183,7 +183,7 @@ toast({ title: "Expense added successfully" });
 
       }
       setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses-stats'] }); invalidateExpenses();
       resetForm();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -214,7 +214,7 @@ toast({ title: "Expense added successfully" });
       description: "Linked payment entry was also removed",
     });
 
-    queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    queryClient.invalidateQueries({ queryKey: ['expenses-stats'] }); invalidateExpenses();
   } catch (error: any) {
     toast({
       title: "Delete failed",
@@ -512,7 +512,7 @@ const visibleCategories = showAllCategories
       <Card className="border border-border">
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <CardTitle>Expenses ({filteredExpenses.length})</CardTitle>
+            <CardTitle>Expenses ({expenses.length})</CardTitle>
             <div className="flex gap-2 items-center flex-wrap">
               <div className="relative max-w-xs flex-1 min-w-[150px]">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -647,7 +647,7 @@ const visibleCategories = showAllCategories
                     </TableRow>
                   );
                 })}
-                {filteredExpenses.length === 0 && (
+                {expenses.length === 0 && (
                   <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No expenses found</TableCell></TableRow>
                 )}
               </TableBody>
@@ -680,7 +680,7 @@ const visibleCategories = showAllCategories
                 </Card>
               );
             })}
-            {filteredExpenses.length === 0 && (
+            {expenses.length === 0 && (
               <div className="col-span-full text-center py-8 text-muted-foreground">No expenses found</div>
             )}
           </div>
