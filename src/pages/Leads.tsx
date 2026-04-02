@@ -605,7 +605,7 @@ const Leads = () => {
         <CardHeader>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <CardTitle>All Leads ({filteredLeads.length})</CardTitle>
+              <CardTitle>All Leads ({leads.length}{hasMore ? "+" : ""})</CardTitle>
               <div className="flex items-center gap-2">
                 {isMobile && (
                   <Button
