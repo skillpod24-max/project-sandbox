@@ -84,22 +84,8 @@ const Expenses = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("expenses");
-
-  const { data: expenses = [] as Expense[], isLoading: loading } = useQuery({
-    queryKey: ['expenses'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [] as Expense[];
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("id,expense_number,amount,category,description,expense_date,payment_mode,vehicle_id,notes,created_at,user_id")
-        .eq("user_id", user.id)
-        .order("expense_date", { ascending: false });
-      if (error) throw error;
-      return (data || []) as Expense[];
-    },
-    staleTime: 2 * 60 * 1000,
-  });
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");

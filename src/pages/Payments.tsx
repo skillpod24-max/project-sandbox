@@ -33,17 +33,8 @@ const Payments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { viewMode, setViewMode } = useViewMode("payments");
-
-  const { data: payments = [] as Payment[], isLoading: loading } = useQuery({
-    queryKey: ['payments'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [] as Payment[];
-      const { data } = await supabase.from("payments").select("id, payment_number, amount, payment_type, payment_mode, payment_date, effective_date, payment_purpose, description, reference_id, reference_type, customer_id, vendor_id, principal_amount, interest_amount, profit_amount, user_id, created_at").eq("user_id", user.id).order("created_at", { ascending: false });
-      return (data || []) as Payment[];
-    },
-    staleTime: 2 * 60 * 1000,
-  });
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
