@@ -176,7 +176,7 @@ const Payments = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Payment List ({filteredPayments.length})</CardTitle>
+            <CardTitle>Payment List ({payments.length}{hasMorePayments ? "+" : ""})</CardTitle>
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
         </CardHeader>
