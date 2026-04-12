@@ -49,6 +49,7 @@ const AllVehicles = () => {
         .from("vehicles")
         .select("id, brand, model, variant, selling_price, strikeout_price, manufacturing_year, fuel_type, transmission, vehicle_type, odometer_reading, color, user_id, created_at, status, marketplace_status, image_badge_text, image_badge_color, number_of_owners, registration_number, mileage, condition")
         .in("user_id", dealerIds)
+        .eq("is_public", true)
         .eq("status", "in_stock")
         .in("marketplace_status", ["approved", "featured"]);
 
