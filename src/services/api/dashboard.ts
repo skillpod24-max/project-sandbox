@@ -30,15 +30,16 @@ const fetchDashboardSummary = async (userId: string): Promise<DashboardSummary> 
 
 const fetchDashboardDetails = async (userId: string) => {
   const now = new Date();
+  const sixMonthsAgo = subMonths(now, 6).toISOString();
 
   const [paymentsRes, leadsRes, salesRes, customersRes, vehiclesRes, imagesRes, eventsRes] = await Promise.all([
-    supabase.from("payments").select("id, amount, payment_type, created_at").eq("user_id", userId),
+    supabase.from("payments").select("id, amount, payment_type, created_at").eq("user_id", userId).gte("created_at", sixMonthsAgo),
     supabase.from("leads").select("id, customer_name, phone, vehicle_interest, status, priority, source, follow_up_date, notes, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
     supabase.from("sales").select("id, status, balance_amount, customer_id, vehicle_id").eq("user_id", userId).eq("status", "completed"),
     supabase.from("customers").select("id, full_name").eq("user_id", userId),
     supabase.from("vehicles").select("id, brand, model, selling_price").eq("user_id", userId),
     supabase.from("vehicle_images").select("vehicle_id, image_url, is_primary").eq("user_id", userId),
-    supabase.from("public_page_events").select("event_type, vehicle_id, public_page_id, created_at").eq("dealer_user_id", userId),
+    supabase.from("public_page_events").select("event_type, vehicle_id, public_page_id, created_at").eq("dealer_user_id", userId).gte("created_at", sixMonthsAgo).limit(200),
   ]);
 
   const payments = paymentsRes.data || [];

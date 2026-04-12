@@ -70,7 +70,7 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000,
       gcTime: 30 * 60 * 1000,
       refetchOnWindowFocus: false,
-      refetchOnMount: "always",
+      refetchOnMount: true,
       retry: 1,
       structuralSharing: true,
     },
